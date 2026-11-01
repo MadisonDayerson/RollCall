@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key><string>RollCall</string>
+	<key>CFBundleDisplayName</key><string>RollCall</string>
+	<key>CFBundleIdentifier</key><string>au.madiday.rollcall</string>
+	<key>CFBundleExecutable</key><string>RollCall</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>1.0</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSMinimumSystemVersion</key><string>14.0</string>
+	<key>LSApplicationCategoryType</key><string>public.app-category.lifestyle</string>
+	<key>LSUIElement</key><true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>RollCall adds the rides you're going to to a “RollCall” calendar, and updates or removes them if plans change.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>RollCall adds the rides you're going to to a “RollCall” calendar.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>RollCall picks up event files you download from Facebook so you don't have to import them by hand.</string>
+</dict>
+</plist>

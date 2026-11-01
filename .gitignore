@@ -1,0 +1,4 @@
+build/
+.DS_Store
+# Bosieh is free for personal use only, so the font file isn't shared here (see Design/fonts/bosieh/ABOUT.txt).
+Design/fonts/bosieh/*.otf

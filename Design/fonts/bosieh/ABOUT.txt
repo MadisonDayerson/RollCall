@@ -1,0 +1,7 @@
+Bosieh by imoodev, from https://www.1001fonts.com/bosieh-font.html
+Licence: 1001Fonts Free For Personal Use (demo font, no commercial use).
+
+It's only used to draw the RollCall icon (Design/RollCall.png and Design/MenuIcon.png, which are in
+the repository). The font file itself isn't in the repository: to redraw the icon, download
+bosieh.regular.otf from the page above, save it here as Bosieh-Regular.otf, and run
+  swift Design/make_icon.swift Design/RollCall.png

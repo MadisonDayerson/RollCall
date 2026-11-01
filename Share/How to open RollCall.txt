@@ -1,0 +1,28 @@
+How to install RollCall
+=======================
+
+RollCall needs a Mac running macOS 14 (Sonoma) or newer. It works on Apple silicon and Intel Macs.
+
+1. Drag RollCall into the Applications folder (in this window).
+2. Open Applications and double-click RollCall.
+
+The first time, your Mac says RollCall can't be opened, because it isn't from the App Store
+and hasn't been checked by Apple. That's expected. To open it anyway:
+
+3. Click Done (or OK) on that message.
+4. Open System Settings → Privacy & Security.
+5. Scroll down to the message about RollCall and click Open Anyway.
+6. Enter your Mac password, then click Open Anyway again.
+
+You only need to do this once. RollCall then opens its setup, which walks you through:
+
+  • your home area, so you only see rides nearby
+  • your group chats, through the free Beeper app (WhatsApp, Messenger, Messages and more)
+  • the clubs, groups, forums and Instagram accounts you follow
+  • Apple Calendar or Google Calendar for the rides you're going to
+
+RollCall lives in the menu bar at the top of the screen (the gothic RC).
+Everything stays on your Mac: RollCall never posts, sends messages or RSVPs for you.
+
+Plan summaries for chats use Apple Intelligence where it's available (macOS 26 on Apple silicon);
+other Macs get RollCall's own simpler summaries.

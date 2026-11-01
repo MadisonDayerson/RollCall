@@ -1,0 +1,12 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:MotoRides sample
+BEGIN:VEVENT
+UID:motorides-sample-1
+DTSTART;TZID=Australia/Melbourne:20261108T090000
+DTEND;TZID=Australia/Melbourne:20261108T140000
+SUMMARY:TEST RIDE – Black Spur breakfast run (delete me)
+LOCATION:Shell Coldstream, Maroondah Hwy, Coldstream VIC
+DESCRIPTION:A sample ride for trying MotoRides. Mark it Attending, check Calendar, then choose Skip to remove it.
+END:VEVENT
+END:VCALENDAR
