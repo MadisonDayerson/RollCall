@@ -165,6 +165,10 @@ check(TextDetect.title(from: caption).contains("RIDE OUT"), "title from first li
 let dateOnly = TextDetect.scan("Bike night on Saturday 14 November 2026, Customs Lawn", now: now)
 check(dateOnly.start.map { comps($0).day == 14 && comps($0).hour == 0 } ?? false && !dateOnly.hasTime, "date without time -> all day")
 check(TextDetect.scan("What a ride that was on 3 October 2026!", now: now).start == nil, "past dates ignored")
+// Times without am/pm are read as written, whatever the clock says when the test runs.
+check(TextDetect.scan("Saturday 14 November 2026, kickstands up 7:45", now: now).start.map { comps($0).hour == 7 && comps($0).minute == 45 } == true, "7:45 with no am/pm is the morning")
+check(TextDetect.scan("Saturday 14 November 2026, meet 2:30", now: now).start.map { comps($0).hour == 14 && comps($0).minute == 30 } == true, "2:30 with no am/pm is the afternoon")
+check(TextDetect.scan("Saturday 14 November 2026, meet 8:30pm", now: now).start.map { comps($0).hour == 20 } == true, "pm when written")
 
 // Ride words
 check(RideWords.matches("Sikh motorcycle club annual dinner", strict: true), "strict: motorcycle")

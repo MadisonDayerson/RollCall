@@ -55,7 +55,7 @@ enum TextDetect {
         let timePattern = #"\d\s*(am|pm|a\.m\.|p\.m\.)|\d[:.]\d\d|noon|midday"#
 
         // The detector often splits "Sunday 8 November, meet 8:30am" into a date and a separate time.
-        struct Hit { var date: Date; var range: NSRange; var hasTime: Bool; var timeOnly: Bool }
+        struct Hit { var date: Date; var range: NSRange; var hasTime: Bool; var timeOnly: Bool; var piece: String }
         var hits: [Hit] = []
         for m in det.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
             if m.resultType == .date, let d = m.date {
@@ -65,19 +65,36 @@ enum TextDetect {
                                                           with: "", options: .regularExpression)
                 let timeOnly = hasTime && stripped.isEmpty
                 if absoluteOnly, !timeOnly, piece.range(of: absoluteDate, options: .regularExpression) == nil { continue }
-                hits.append(Hit(date: d, range: m.range, hasTime: hasTime, timeOnly: timeOnly))
+                hits.append(Hit(date: d, range: m.range, hasTime: hasTime, timeOnly: timeOnly, piece: piece))
             } else if m.resultType == .address, found.address == nil {
                 found.address = ns.substring(with: m.range).replacingOccurrences(of: "\n", with: ", ")
             }
+        }
+
+        /// The time as written. With no am or pm, the detector picks the next such time after the current clock
+        /// time (so "8:30" read at 9am becomes 8:30pm); rides start in the daytime, so 1 to 6 means pm and 7 to 12 as written.
+        func written(_ hit: Hit) -> (Int, Int) {
+            let tc = cal.dateComponents([.hour, .minute], from: hit.date)
+            guard hit.piece.range(of: #"am|pm|a\.m\.|p\.m\.|noon|midday"#, options: .regularExpression) == nil,
+                  let r = hit.piece.range(of: #"\b(\d{1,2})[:.](\d{2})\b"#, options: .regularExpression) else {
+                return (tc.hour ?? 0, tc.minute ?? 0)
+            }
+            let parts = hit.piece[r].split(whereSeparator: { $0 == ":" || $0 == "." }).compactMap { Int($0) }
+            guard parts.count == 2, (0..<24).contains(parts[0]), (0..<60).contains(parts[1]) else { return (tc.hour ?? 0, tc.minute ?? 0) }
+            let h = parts[0] >= 1 && parts[0] <= 6 ? parts[0] + 12 : parts[0]
+            return (h, parts[1])
         }
 
         var best: (Date, Bool)?
         for h in hits where !h.timeOnly {
             var date = h.date
             var hasTime = h.hasTime
-            if !hasTime, let t = hits.first(where: { $0.timeOnly && abs($0.range.location - (h.range.location + h.range.length)) < 60 }) {
-                let tc = cal.dateComponents([.hour, .minute], from: t.date)
-                date = cal.date(bySettingHour: tc.hour ?? 0, minute: tc.minute ?? 0, second: 0, of: date) ?? date
+            if hasTime {
+                let (hh, mm) = written(h)
+                date = cal.date(bySettingHour: hh, minute: mm, second: 0, of: date) ?? date
+            } else if let t = hits.first(where: { $0.timeOnly && abs($0.range.location - (h.range.location + h.range.length)) < 60 }) {
+                let (hh, mm) = written(t)
+                date = cal.date(bySettingHour: hh, minute: mm, second: 0, of: date) ?? date
                 hasTime = true
             }
             // A date with no time comes back at noon; keep anything from today on.
