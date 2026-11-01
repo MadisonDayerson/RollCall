@@ -146,7 +146,7 @@ struct MainView: View {
                 Label("Sources", systemImage: "antenna.radiowaves.left.and.right").tag(UIModel.Page.sources)
                 Label("Settings", systemImage: "gearshape").tag(UIModel.Page.settings)
             }
-            .navigationSplitViewColumnWidth(min: 170, ideal: 190)
+            .navigationSplitViewColumnWidth(min: 150, ideal: 190)
         } detail: {
             switch model.page {
             case .rides: RidesPage(model: model)
@@ -177,7 +177,7 @@ struct RidesPage: View {
 
     var body: some View {
         let rides = model.rides()
-        HSplitView {
+        ListAndDetail(showingDetail: model.selectedRide != nil, back: "Rides", close: { model.selectedRide = nil }) {
             VStack(spacing: 0) {
                 Picker("Show", selection: $model.rideFilter) {
                     ForEach(UIModel.RideFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -196,8 +196,7 @@ struct RidesPage: View {
                     }
                 }
             }
-            .frame(minWidth: 330, idealWidth: 400)
-
+        } detail: {
             Group {
                 if let id = model.selectedRide, let ride = model.store.state.events[id] {
                     RideDetail(ride: ride, model: model)
@@ -207,7 +206,6 @@ struct RidesPage: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(minWidth: 340, maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle("Rides")
     }
@@ -492,7 +490,7 @@ struct SourcesPage: View {
 
     var body: some View {
         let rows = model.sourceRows()
-        HSplitView {
+        ListAndDetail(showingDetail: model.selectedSource != nil, back: "Sources", close: { model.selectedSource = nil }) {
             VStack(spacing: 0) {
                 List(selection: $model.selectedSource) {
                     Section("Checked automatically") {
@@ -517,8 +515,7 @@ struct SourcesPage: View {
                 .buttonStyle(.borderless)
                 .padding(6)
             }
-            .frame(minWidth: 280, idealWidth: 330)
-
+        } detail: {
             Group {
                 if let id = model.selectedSource, let row = rows.first(where: { $0.id == id }) {
                     SourceDetail(row: row, model: model)
@@ -534,7 +531,6 @@ struct SourcesPage: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle("Sources")
     }
@@ -1068,4 +1064,43 @@ struct CrewLinksEditor: View {
     }
 
     func save() { model.app.setCrewLinks(key, CrewLinks(discord: discord.value, tags: tags.value)) }
+}
+
+// MARK: - Layout
+
+/// A list beside its details when there's room. In a narrow window (a quarter of the screen, say)
+/// the list fills the window and choosing an item shows its details with a Back button.
+struct ListAndDetail<ListContent: View, Detail: View>: View {
+    var showingDetail: Bool
+    var back: String
+    var close: () -> Void
+    @ViewBuilder var list: ListContent
+    @ViewBuilder var detail: Detail
+
+    /// Below this width the two columns would be cramped.
+    static var sideBySide: CGFloat { 600 }
+
+    var body: some View {
+        GeometryReader { g in
+            if g.size.width >= Self.sideBySide {
+                HSplitView {
+                    list.frame(minWidth: 250, idealWidth: 360)
+                    detail.frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else if showingDetail {
+                VStack(spacing: 0) {
+                    HStack {
+                        Button(action: close) { Label(back, systemImage: "chevron.left") }
+                            .buttonStyle(.borderless)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    Divider()
+                    detail.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else {
+                list.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
 }

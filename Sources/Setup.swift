@@ -340,7 +340,7 @@ struct SetupView: View {
             .padding(16)
             }
         }
-        .frame(minWidth: 620, minHeight: 560)
+        .frame(minWidth: 520, minHeight: 400)
         // Black and white, like the logo (near-black so white button text still reads in dark mode).
         .tint(Color(white: 0.12))
     }

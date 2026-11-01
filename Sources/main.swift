@@ -503,9 +503,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                              backing: .buffered, defer: false)
             w.title = "RollCall"
-            w.contentViewController = NSHostingController(rootView: MainView(model: ui))
+            let host = NSHostingController(rootView: MainView(model: ui))
+            // The window keeps the size it's given (snapped to half or a quarter of the screen) instead of growing to fit.
+            host.sizingOptions = []
+            w.contentViewController = host
             w.setContentSize(NSSize(width: 980, height: 640))
-            w.minSize = NSSize(width: 760, height: 480)
+            // Small enough to tile into a quarter of a laptop screen; narrow windows show one column at a time.
+            w.minSize = NSSize(width: 480, height: 340)
             w.isReleasedWhenClosed = false
             w.setFrameAutosaveName("RollCallWindow")
             w.delegate = self
@@ -531,6 +535,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 .write(to: folder.appendingPathComponent(name + ".png"))
         }
         showWindow(page: .rides)
+        // `--snapshot-size 640x400` checks how the window looks tiled into a corner of the screen.
+        if let i = CommandLine.arguments.firstIndex(of: "--snapshot-size"), i + 1 < CommandLine.arguments.count {
+            let wh = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
+            if wh.count == 2 { window?.setContentSize(NSSize(width: wh[0], height: wh[1])); window?.center() }
+        }
         if ui.rides().isEmpty { ui.rideFilter = .skipped }
         ui.selectedRide = ui.rides().first?.id
         await snap("1-rides", window)
@@ -558,6 +567,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         ui.showAdd = false
         window?.close()
         showSetup()
+        if let i = CommandLine.arguments.firstIndex(of: "--snapshot-size"), i + 1 < CommandLine.arguments.count {
+            let wh = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
+            if wh.count == 2 { setupWindow?.setContentSize(NSSize(width: max(520, wh[0]), height: max(400, wh[1]))) }
+        }
         for step in SetupModel.Step.allCases {
             setup.go(step)
             if step == .messages { await setup.checkBeeper() }
@@ -766,11 +779,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     func showSetup() {
         if setupWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 660, height: 620),
-                             styleMask: [.titled, .closable, .miniaturizable],
+                             styleMask: [.titled, .closable, .miniaturizable, .resizable],
                              backing: .buffered, defer: false)
             w.title = "Set up RollCall"
-            w.contentViewController = NSHostingController(rootView: SetupView(model: setup))
+            let host = NSHostingController(rootView: SetupView(model: setup))
+            host.sizingOptions = []
+            w.contentViewController = host
             w.setContentSize(NSSize(width: 660, height: 620))
+            w.minSize = NSSize(width: 520, height: 400)
             w.isReleasedWhenClosed = false
             w.delegate = self
             w.center()
