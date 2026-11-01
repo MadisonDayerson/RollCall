@@ -8,7 +8,7 @@ final class UIModel: ObservableObject {
         case rides, review, sources, settings
     }
     enum RideFilter: String, CaseIterable {
-        case toDecide = "To decide", upcoming = "All upcoming", going = "Going", skipped = "Skipped", past = "Past"
+        case toDecide = "To decide", all = "All", going = "Going", skipped = "Skipped", past = "Past"
     }
 
     unowned let app: AppDelegate
@@ -17,7 +17,7 @@ final class UIModel: ObservableObject {
     @Published var selectedSource: String?
     @Published var selectedRide: String?
     @Published var selectedReview: String?
-    @Published var rideFilter: RideFilter = .upcoming
+    @Published var rideFilter: RideFilter = .all
     private var observer: NSObjectProtocol?
 
     init(app: AppDelegate) {
@@ -42,10 +42,47 @@ final class UIModel: ObservableObject {
         switch rideFilter {
         case .past: return []
         case .toDecide: return all.filter { store.decision($0.id) == .undecided }
-        case .upcoming: return all.filter { store.decision($0.id) != .skip }
+        case .all: return rideSections().flatMap(\.rides)
         case .going: return all.filter { store.decision($0.id) == .attending }
         case .skipped: return all.filter { store.decision($0.id) == .skip }
         }
+    }
+
+    /// The All tab: every ride once, in folding sections.
+    struct RideSection: Identifiable {
+        var id: String { name }
+        var name: String
+        var rides: [RideEvent]
+    }
+
+    func rideSections() -> [RideSection] {
+        let all = store.upcoming()
+        return [
+            RideSection(name: "Upcoming", rides: all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }),
+            RideSection(name: "Going", rides: all.filter { store.decision($0.id) == .attending }),
+            RideSection(name: "Skipped", rides: all.filter { store.decision($0.id) == .skip }),
+            RideSection(name: "Past", rides: store.past()),
+        ]
+    }
+
+    func section(of id: String) -> String? { rideSections().first { $0.rides.contains { $0.id == id } }?.name }
+
+    /// Skipped and Past start folded away; whatever the person opens or closes is remembered.
+    @Published var closedRideSections = Set(UserDefaults.standard.stringArray(forKey: "closedRideSections") ?? ["Skipped", "Past"]) {
+        didSet { UserDefaults.standard.set(Array(closedRideSections).sorted(), forKey: "closedRideSections") }
+    }
+
+    func rideSectionOpen(_ name: String) -> Binding<Bool> {
+        Binding(get: { !self.closedRideSections.contains(name) },
+                set: { open in if open { self.closedRideSections.remove(name) } else { self.closedRideSections.insert(name) } })
+    }
+
+    /// Shows a ride on the Rides page, opening its section on the All tab.
+    func reveal(ride id: String) {
+        if rideFilter != .all { rideFilter = .all }
+        if let s = section(of: id) { closedRideSections.remove(s) }
+        selectedRide = id
+        page = .rides
     }
 
     func isPast(_ ride: RideEvent) -> Bool { (ride.end ?? ride.start.addingTimeInterval(3 * 3600)) < Date() }
@@ -244,7 +281,26 @@ struct RidesPage: View {
                     Spacer()
                 } else {
                     List(selection: $model.selectedRide) {
-                        ForEach(rides, id: \.id) { RideRow(ride: $0, model: model).tag($0.id) }
+                        if model.rideFilter == .all {
+                            ForEach(model.rideSections()) { s in
+                                DisclosureGroup(isExpanded: model.rideSectionOpen(s.name)) {
+                                    if s.rides.isEmpty {
+                                        Text(s.name == "Past" ? "Rides you went on show here once they're over." : "None right now.")
+                                            .font(.callout).foregroundStyle(.secondary)
+                                    }
+                                    ForEach(s.rides, id: \.id) {
+                                        RideRow(ride: $0, model: model).frame(maxWidth: .infinity, alignment: .leading).tag($0.id)
+                                    }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Text(s.name).fontWeight(.semibold)
+                                        Text("\(s.rides.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        } else {
+                            ForEach(rides, id: \.id) { RideRow(ride: $0, model: model).tag($0.id) }
+                        }
                     }
                 }
             }
@@ -845,9 +901,7 @@ struct SourceRides: View {
                 .font(.headline)
             ForEach(rides.prefix(12), id: \.id) { r in
                 Button {
-                    model.rideFilter = model.store.decision(r.id) == .skip ? .skipped : .upcoming
-                    model.selectedRide = r.id
-                    model.page = .rides
+                    model.reveal(ride: r.id)
                 } label: {
                     HStack {
                         Text(decisionMark(model.store.decision(r.id), needsCheck: r.needsCheck == true))
