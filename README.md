@@ -40,6 +40,8 @@ Choose **Open RollCall…** (⌘O) for the full window:
 
 - **Rides:** every upcoming ride. Click one for details, the event page (to RSVP), the group page
   (to join) and directions. 🔎 means the date was read from a post, so double-check it.
+  Rides you went on move to **Past** once they're over, so you can still share footage and find
+  everyone's posts with the ride's tag.
 - **To review:** possible ride plans from your chats, plus ride posts that didn't say when.
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change

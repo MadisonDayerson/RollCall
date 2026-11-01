@@ -144,6 +144,16 @@ store.merge(m, source: "meetup-x", sourceName: "X", groupURL: nil, now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.prune(refreshedSources: ["meetup-x"], refreshStarted: later, now: later)
 check(store.state.events.count == 1, "...unless you're attending")
+let monthOn = now.addingTimeInterval(40 * 86400)
+check(store.past(now: monthOn).map(\.id) == ["meetup-x:event_316000001@meetup.com"], "attended ride listed under past rides once it's over")
+check(store.past(now: now).isEmpty, "...but not before")
+store.prune(refreshedSources: [], refreshStarted: monthOn, now: monthOn)
+check(store.state.events.count == 1 && store.decision("meetup-x:event_316000001@meetup.com") == .attending, "attended rides kept after they pass")
+store.state.decisions["meetup-x:event_316000001@meetup.com"] = .undecided
+store.prune(refreshedSources: [], refreshStarted: monthOn, now: monthOn)
+check(store.state.events.isEmpty, "removed from past rides, it's cleared away")
+store.merge(m, source: "meetup-x", sourceName: "X", groupURL: nil, now: now)
+store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.save()
 check(Store(file: tmp).state.decisions.count == 1, "state saves and reloads")
 try? FileManager.default.removeItem(at: tmp)

@@ -8,7 +8,7 @@ final class UIModel: ObservableObject {
         case rides, review, sources, settings
     }
     enum RideFilter: String, CaseIterable {
-        case toDecide = "To decide", upcoming = "All upcoming", going = "Going", skipped = "Skipped"
+        case toDecide = "To decide", upcoming = "All upcoming", going = "Going", skipped = "Skipped", past = "Past"
     }
 
     unowned let app: AppDelegate
@@ -37,14 +37,18 @@ final class UIModel: ObservableObject {
     // MARK: Rides
 
     func rides() -> [RideEvent] {
+        if rideFilter == .past { return store.past() }
         let all = store.upcoming()
         switch rideFilter {
+        case .past: return []
         case .toDecide: return all.filter { store.decision($0.id) == .undecided }
         case .upcoming: return all.filter { store.decision($0.id) != .skip }
         case .going: return all.filter { store.decision($0.id) == .attending }
         case .skipped: return all.filter { store.decision($0.id) == .skip }
         }
     }
+
+    func isPast(_ ride: RideEvent) -> Bool { (ride.end ?? ride.start.addingTimeInterval(3 * 3600)) < Date() }
 
     var undecidedCount: Int { store.upcoming().filter { store.decision($0.id) == .undecided }.count }
 
@@ -232,8 +236,11 @@ struct RidesPage: View {
                 .padding(10)
                 if rides.isEmpty {
                     Spacer()
-                    Text(model.app.refreshing ? "Checking sources…" : "No rides here.")
+                    Text(model.rideFilter == .past ? "Rides you mark Attending move here once they're over, so you can still share footage and find everyone's posts."
+                         : model.app.refreshing ? "Checking sources…" : "No rides here.")
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
                     Spacer()
                 } else {
                     List(selection: $model.selectedRide) {
@@ -328,16 +335,22 @@ struct RideDetail: View {
                     GridRow { Text("From").foregroundStyle(.secondary); Text(ride.sourceName) }
                 }
 
-                Picker("Going?", selection: model.decision(ride.id)) {
-                    Text("Attending").tag(Decision.attending)
-                    Text("Maybe").tag(Decision.maybe)
-                    Text("Skip").tag(Decision.skip)
-                    Text("Undecided").tag(Decision.undecided)
+                if model.isPast(ride) {
+                    Label("You went on this ride", systemImage: "checkmark.seal")
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.secondary.opacity(0.14), in: Capsule())
+                } else {
+                    Picker("Going?", selection: model.decision(ride.id)) {
+                        Text("Attending").tag(Decision.attending)
+                        Text("Maybe").tag(Decision.maybe)
+                        Text("Skip").tag(Decision.skip)
+                        Text("Undecided").tag(Decision.undecided)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Text("Attending adds it to the RollCall calendar, with a reminder the evening before.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                Text("Attending adds it to the RollCall calendar, with a reminder the evening before.")
-                    .font(.caption).foregroundStyle(.secondary)
 
                 HStack {
                     if let url = ride.url {
@@ -346,6 +359,12 @@ struct RideDetail: View {
                     if !ride.location.isEmpty {
                         Button("Show in Maps") { app.openMaps(place: ride.location) }
                     }
+                    if model.isPast(ride) {
+                        Button("Remove from past rides") {
+                            model.selectedRide = nil
+                            model.later { model.app.forgetPastRide(ride.id) }
+                        }
+                    }
                 }
                 HStack {
                     if let g = ride.groupURL {
@@ -353,7 +372,7 @@ struct RideDetail: View {
                     } else if ride.isFacebook {
                         Button("Add the Facebook group link…") { model.later { app.setGroupLink(rideID: ride.id) } }
                     }
-                    if Store.userAdded.contains(ride.source) || ride.needsCheck == true {
+                    if !model.isPast(ride), Store.userAdded.contains(ride.source) || ride.needsCheck == true {
                         Button("Remove this ride", role: .destructive) {
                             model.selectedRide = nil
                             app.removeRide(id: ride.id)
@@ -1031,9 +1050,17 @@ struct RideTogether: View {
                         Button("Reset") { app.setRideTag(ride.id, ""); tag.value = app.rideTag(ride) }
                     }
                 }
-                Text("Everyone using RollCall gets the same tag for this ride, so posts end up together. It's in the invite, the calendar event and the caption.")
+                Text(past ? "Everyone using RollCall gets the same tag for this ride. It's in the caption, so your footage ends up with everyone else's."
+                     : "Everyone using RollCall gets the same tag for this ride, so posts end up together. It's in the invite, the calendar event and the caption.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
 
+                if past {
+                    Text("After the ride").font(.headline)
+                    after
+                    if let d = discord {
+                        HStack { Button("Open Discord") { app.open(d) } }
+                    }
+                } else {
                 Text("Before").font(.headline)
                 HStack {
                     Button("Invite friends…") { app.shareInvite(ride) }
@@ -1049,14 +1076,7 @@ struct RideTogether: View {
                 Text(duringNote(crew, discord: discord)).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("After").font(.headline)
-                HStack {
-                    Button("Share footage…") { app.shareFootage(ride) }
-                        .help("Pick photos or videos and send them with the caption and tags")
-                    Button("Copy caption & tags") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
-                    Menu("See posts") {
-                        ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
-                    }
-                    .fixedSize()
+                after
                 }
                 if let c = copied.value { Label(c, systemImage: "doc.on.clipboard").font(.callout) }
             }
@@ -1066,6 +1086,26 @@ struct RideTogether: View {
         }
         .onAppear { tag.value = app.rideTag(ride); copied.value = nil }
         .onChange(of: ride.id) { _, _ in tag.value = app.rideTag(ride); copied.value = nil }
+    }
+
+    var past: Bool { model.isPast(ride) }
+
+    var after: some View {
+        let app = model.app
+        let buttons = Group {
+            Button("Share footage…") { app.shareFootage(ride) }
+                .help("Pick photos or videos and send them with the caption and tags")
+            Button("Copy caption & tags") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
+            Menu("See posts") {
+                ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
+            }
+            .fixedSize()
+        }
+        // Side by side when there's room, stacked in a narrow window.
+        return ViewThatFits(in: .horizontal) {
+            HStack { buttons }.fixedSize()
+            VStack(alignment: .leading) { buttons }
+        }
     }
 
     func duringNote(_ crew: Together, discord: String?) -> String {

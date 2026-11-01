@@ -312,6 +312,13 @@ final class Store {
             .sorted { $0.start < $1.start }
     }
 
+    /// Rides you went on that have finished, most recent first. Distance doesn't matter: you went.
+    func past(now: Date = Date()) -> [RideEvent] {
+        state.events.values
+            .filter { ($0.end ?? $0.start.addingTimeInterval(3 * 3600)) < now && decision($0.id) == .attending }
+            .sorted { $0.start > $1.start }
+    }
+
     /// Adds or refreshes events from one source. Returns ids that changed (for calendar updates).
     @discardableResult
     func merge(_ items: [ICSEvent], source: String, sourceName: String, groupURL: String?,
@@ -388,7 +395,8 @@ final class Store {
     func prune(refreshedSources: Set<String>, refreshStarted: Date, now: Date = Date()) {
         let weekAgo = now.addingTimeInterval(-7 * 86400)
         for (id, e) in state.events {
-            let past = (e.end ?? e.start) < weekAgo
+            // Rides you went on stay, under Past rides, so the footage and tag tools still work.
+            let past = (e.end ?? e.start) < weekAgo && decision(id) != .attending
             let vanished = refreshedSources.contains(e.source) && e.lastSeen < refreshStarted && e.start > now
             if past || (vanished && decision(id) != .attending) {
                 state.events[id] = nil

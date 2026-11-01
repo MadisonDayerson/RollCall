@@ -307,6 +307,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
     }
 
+    /// Takes a finished ride off Past rides; the calendar event stays, as a record of the day.
+    func forgetPastRide(_ id: String) {
+        store.state.decisions[id] = nil
+        store.state.calendarItems[id] = nil
+        store.prune(refreshedSources: [], refreshStarted: Date())
+        store.save()
+        NotificationCenter.default.post(name: Store.changed, object: nil)
+    }
+
     func syncCalendar(_ id: String) {
         let attending = store.decision(id) == .attending
         let existing = store.state.calendarItems[id]
@@ -548,6 +557,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         if ui.rides().isEmpty { ui.rideFilter = .skipped }
         ui.selectedRide = ui.rides().first?.id
         await snap("1-rides", window)
+        let filter = ui.rideFilter
+        ui.rideFilter = .past
+        // A sample finished ride if there isn't a real one (never saved: it's removed straight after).
+        let pastDemo: RideEvent? = store.past().isEmpty ? RideEvent(
+            id: "demo:past", title: "Sunday breakfast run, Black Spur", start: Date().addingTimeInterval(-2 * 86400),
+            end: Date().addingTimeInterval(-2 * 86400 + 4 * 3600), allDay: false, location: "Coldstream VIC", notes: "",
+            url: nil, groupURL: nil, source: "manual", sourceName: "Added by you", lastSeen: Date()) : nil
+        if let pastDemo { store.state.events[pastDemo.id] = pastDemo; store.state.decisions[pastDemo.id] = .attending }
+        ui.selectedRide = store.past().first?.id
+        await snap("1-past", window)
+        if let pastDemo { store.state.events[pastDemo.id] = nil; store.state.decisions[pastDemo.id] = nil }
+        ui.rideFilter = filter
         ui.page = .review
         // Show a sample plan if there's nothing real to review (never saved: it's removed straight after).
         while refreshing { try? await Task.sleep(nanoseconds: 500_000_000) }
