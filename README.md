@@ -67,6 +67,23 @@ Why it stops there: Life360 and Cardo have no way for other apps to connect (no 
 RollCall can't show friends' locations or join an intercom group. Instagram, TikTok and Facebook don't
 let Mac apps post for you, and RollCall only reads chats, never sends, so posting stays your tap.
 
+## Updates
+
+The code lives at https://github.com/MadisonDayerson/rollcall. Friends download RollCall from its
+[latest release](https://github.com/MadisonDayerson/rollcall/releases/latest).
+
+To ship a new version, open Terminal and run (with the version number and a line about what's new):
+
+```bash
+~/Downloads/Personal/MotoRides/release.sh 1.1 "What's new in this version"
+```
+
+It runs the tests, sets the version, builds the .dmg, commits, tags, pushes and publishes a GitHub
+release with the .dmg attached. Everyone's RollCall checks GitHub once a day (and from **Settings →
+Updates → Check now**), offers **Update now**, then downloads the new version, swaps it in and reopens.
+Updates installed this way skip the "Open Anyway" step. Because the app isn't signed with an Apple
+Developer ID, macOS may ask for calendar access again after an update.
+
 ## Sharing RollCall with friends
 
 ```bash
