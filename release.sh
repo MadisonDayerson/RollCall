@@ -23,8 +23,8 @@ git commit -q -m "RollCall $VERSION" || true
 git tag -a "v$VERSION" -m "RollCall $VERSION"
 git push -q origin HEAD --follow-tags
 
-# The GitHub token saved by git (the same one git push uses).
-TOKEN=$(printf 'protocol=https\nhost=github.com\n\n' | git credential fill | sed -n 's/^password=//p')
+# RollCall's own GitHub token, saved by git on the first push (stored per repository: credential.useHttpPath).
+TOKEN=$(printf 'protocol=https\nhost=github.com\npath=MadisonDayerson/rollcall.git\n\n' | git credential fill | sed -n 's/^password=//p')
 BODY=$(python3 -I -c 'import json,sys; print(json.dumps({"tag_name": "v"+sys.argv[1], "name": "RollCall "+sys.argv[1], "body": sys.argv[2]}))' "$VERSION" "$NOTES")
 RELEASE=$(curl -fsS -X POST -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/$REPO/releases" -d "$BODY")
