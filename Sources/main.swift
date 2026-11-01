@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var lastTried: [String: Date] = [:]
 
     func applicationDidFinishLaunching(_ note: Notification) {
+        AppMenu.install(for: self)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "png"), let img = NSImage(contentsOf: url) {
             // The gothic "RC" from the logo, drawn at 2x.
@@ -51,7 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             if store.state.setupDone { _ = await calendar.requestAccess() } else { calendar.checkAccess() }
             await refresh(dueOnly: true)
         }
+        let quiet = CommandLine.arguments.contains("--snapshots") || CommandLine.arguments.contains("--window")
         if !store.state.setupDone && !CommandLine.arguments.contains("--snapshots") { showSetup() }
+        // Opening RollCall opens its window; starting with the Mac (Open at login) stays in the menu bar.
+        else if store.state.setupDone && !quiet && !launchedAtLogin { showWindow(page: .rides) }
         if let i = CommandLine.arguments.firstIndex(of: "--window") {
             // `--window sources` opens straight to a page (handy for checking the window).
             let page = CommandLine.arguments.dropFirst(i + 1).first.flatMap(UIModel.Page.init(rawValue:))
@@ -509,6 +513,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     @objc func openWindowMenu() { showWindow() }
     @objc func openPostsMenu() { showWindow(page: .review) }
     @objc func openAddMenu() { showWindow(page: .sources, add: true) }
+    @objc func showSettingsMenu() { showWindow(page: .settings) }
+    @objc func showPageMenu(_ sender: NSMenuItem) {
+        showWindow(page: (sender.representedObject as? String).flatMap(UIModel.Page.init(rawValue:)))
+    }
+    @objc func addManualMenu() { addManual() }
+    @objc func addFromPostMenu() { addFromPost() }
+    @objc func importMenu() { importICS() }
+    @objc func checkForUpdatesMenu() { Task { await checkForUpdates(manual: true) } }
+    @objc func helpMenu() { open("https://github.com/MadisonDayerson/RollCall#readme") }
 
     func showWindow(page: UIModel.Page? = nil, add: Bool = false) {
         if let page { ui.page = page }
@@ -1191,6 +1204,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         store.state.settings.watchDownloads = on
         if on { store.state.lastDownloadsScan = Date() }
         store.save()
+    }
+
+    var launchedAtLogin: Bool {
+        let e = NSAppleEventManager.shared().currentAppleEvent
+        return e?.eventID == kAEOpenApplication && e?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
     }
 
     var opensAtLogin: Bool { SMAppService.mainApp.status == .enabled }

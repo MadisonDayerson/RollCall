@@ -36,7 +36,8 @@ A setup guide opens the first time (re-open it any time with **Set up RollCall�
 Click **RC** in the menu bar to see upcoming rides and mark them **Attending**, **Maybe** or **Skip**.
 Attending adds the ride to your **RollCall** calendar, with a reminder the evening before.
 
-Choose **Open RollCall…** (⌘O) for the full window:
+The full window opens when you open RollCall (or choose **Open RollCall…** in the menu). While it's open,
+RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch pages:
 
 - **Rides:** every upcoming ride. Click one for details, the event page (to RSVP), the group page
   (to join) and directions. 🔎 means the date was read from a post, so double-check it.
