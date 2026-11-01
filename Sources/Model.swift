@@ -22,8 +22,63 @@ struct Feed: Codable, Equatable {
     var kind: FeedKind? = nil
     /// Only keep items that mention motorcycles or rides (for general listings).
     var keywordFilter: Bool? = nil
+    /// Minutes between automatic checks: nil uses the default for this kind of source, 0 means only when asked.
+    var every: Int? = nil
+    /// The chat app behind a Beeper chat (WhatsApp, Messenger…).
+    var network: String? = nil
 
     var type: FeedKind { kind ?? .calendar }
+    var interval: Int { every ?? Feed.defaultInterval(type) }
+
+    /// Chats move fast and are cheap to read; websites and forums change slowly, so they're checked less.
+    static func defaultInterval(_ kind: FeedKind) -> Int {
+        switch kind {
+        case .chat: return 15
+        case .calendar: return 180
+        case .webpage, .posts, .forum: return 360
+        }
+    }
+    static let intervals = [5, 15, 30, 60, 180, 360, 720, 1440, 0]
+
+    static func describe(_ minutes: Int) -> String {
+        switch minutes {
+        case 0: return "Only when I check"
+        case ..<60: return "Every \(minutes) minutes"
+        case 60: return "Every hour"
+        case 1440: return "Once a day"
+        default: return "Every \(minutes / 60) hours"
+        }
+    }
+
+    /// Time for an automatic check: never read, or the interval has passed since the last try.
+    func due(lastChecked: Date?, lastTried: Date?, now: Date = Date()) -> Bool {
+        guard interval > 0 else { return false }
+        guard let last = [lastChecked, lastTried].compactMap({ $0 }).max() else { return true }
+        // A little slack so a once-a-minute timer doesn't miss a slot by a few seconds.
+        return now.timeIntervalSince(last) >= Double(interval * 60) - 30
+    }
+
+    /// The app or site this source belongs to, for grouping: WhatsApp, Meetup, NetRider…
+    var app: String {
+        if type == .chat {
+            if let n = network, !n.isEmpty { return n }
+            if let r = name.range(of: #"\((.+) via Beeper\)$"#, options: .regularExpression) {
+                return String(name[r].dropFirst().dropLast(" via Beeper)".count))
+            }
+            return "Beeper chats"
+        }
+        let host = (URL(string: url)?.host ?? "").lowercased()
+        let known = ["meetup.com": "Meetup", "netrider.net.au": "NetRider", "eventbrite.": "Eventbrite",
+                     "facebook.com": "Facebook", "calendar.google.com": "Google Calendar", "humanitix.com": "Humanitix"]
+        if let k = known.first(where: { host.contains($0.key) }) { return k.value }
+        switch type {
+        case .calendar: return "Calendars"
+        case .webpage: return "Websites"
+        case .posts: return "News and blogs"
+        case .forum: return "Forums"
+        case .chat: return "Beeper chats"
+        }
+    }
 }
 
 struct InstagramAccount: Codable, Equatable {

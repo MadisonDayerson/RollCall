@@ -65,6 +65,49 @@ final class UIModel: ObservableObject {
         var problem: String?
         var rides: Int
         var status: String
+        /// The app or site it's grouped under, and minutes between automatic checks (feeds only).
+        var group: String
+        var interval: Int? = nil
+    }
+
+    struct SourceGroup: Identifiable {
+        var id: String { name }
+        var name: String
+        var symbol: String
+        var rows: [SourceRow]
+    }
+
+    /// Sources grouped by app: chat apps, then websites and calendars, then the ones you check yourself.
+    func sourceGroups() -> [SourceGroup] {
+        let rows = sourceRows()
+        func rank(_ r: SourceRow) -> Int {
+            if case .feed(let k) = r.kind { return k == .chat ? 0 : 1 }
+            return r.kind == .yours ? 3 : 2
+        }
+        var order: [String] = []
+        for r in rows.sorted(by: { (rank($0), $0.group.lowercased()) < (rank($1), $1.group.lowercased()) })
+            where !order.contains(r.group) { order.append(r.group) }
+        return order.map { g in
+            let members = rows.filter { $0.group == g }
+            return SourceGroup(name: g, symbol: members[0].symbol, rows: members)
+        }
+    }
+
+    @Published var collapsedGroups = Set(UserDefaults.standard.stringArray(forKey: "collapsedSourceGroups") ?? []) {
+        didSet { UserDefaults.standard.set(Array(collapsedGroups).sorted(), forKey: "collapsedSourceGroups") }
+    }
+
+    func expanded(_ group: String) -> Binding<Bool> {
+        Binding(get: { !self.collapsedGroups.contains(group) },
+                set: { open in if open { self.collapsedGroups.remove(group) } else { self.collapsedGroups.insert(group) } })
+    }
+
+    /// Changes how often a source is checked; the default for its kind is stored as nil.
+    func setInterval(_ minutes: Int, for ids: [String]) {
+        for id in ids {
+            setFeed(id) { $0.every = minutes == Feed.defaultInterval($0.type) ? nil : minutes }
+        }
+        objectWillChange.send()
     }
 
     static let yourSources: Set<String> = ["manual", "file", "instagram"]
@@ -92,19 +135,21 @@ final class UIModel: ObservableObject {
                 status = "Checked " + AppDelegate.relative.localizedString(for: min(d, Date().addingTimeInterval(-1)), relativeTo: Date())
             }
             return SourceRow(id: f.id, kind: .feed(f.type), name: f.name, kindName: kindName, symbol: symbol,
-                             automatic: true, problem: s.feedErrors[f.id], rides: rides(fromSource: f.id).count, status: status)
+                             automatic: f.interval > 0, problem: s.feedErrors[f.id], rides: rides(fromSource: f.id).count, status: status,
+                             group: f.app, interval: f.interval)
         }
         rows += s.instagram.map { a in
             SourceRow(id: "instagram:" + a.handle, kind: .instagram, name: "@" + a.handle, kindName: "Instagram account",
                       symbol: "camera", automatic: false, problem: nil, rides: 0,
-                      status: a.lastOpened.map { "Looked " + AppDelegate.relative.localizedString(for: $0, relativeTo: Date()) } ?? "Not looked at yet")
+                      status: a.lastOpened.map { "Looked " + AppDelegate.relative.localizedString(for: $0, relativeTo: Date()) } ?? "Not looked at yet",
+                      group: "Instagram")
         }
         rows.append(SourceRow(id: "facebook", kind: .facebook, name: "Facebook events", kindName: "Events you add",
                               symbol: "person.3", automatic: false, problem: nil, rides: rides(fromSource: "facebook").count,
-                              status: s.settings.watchDownloads ? "Picks up event downloads" : "Add events by hand"))
+                              status: s.settings.watchDownloads ? "Picks up event downloads" : "Add events by hand", group: "Facebook"))
         rows.append(SourceRow(id: "yours", kind: .yours, name: "Added by you", kindName: "Rides you typed, pasted or imported",
                               symbol: "square.and.pencil", automatic: false, problem: nil, rides: rides(fromSource: "yours").count,
-                              status: "Typed in, pasted or imported"))
+                              status: "Typed in, pasted or imported", group: "Added by you"))
         return rows
     }
 
@@ -489,15 +534,17 @@ struct SourcesPage: View {
     @ObservedObject var model: UIModel
 
     var body: some View {
-        let rows = model.sourceRows()
+        let groups = model.sourceGroups()
+        let rows = groups.flatMap(\.rows)
         ListAndDetail(showingDetail: model.selectedSource != nil, back: "Sources", close: { model.selectedSource = nil }) {
             VStack(spacing: 0) {
                 List(selection: $model.selectedSource) {
-                    Section("Checked automatically") {
-                        ForEach(rows.filter(\.automatic)) { SourceRowView(row: $0).tag($0.id) }
-                    }
-                    Section("Check yourself") {
-                        ForEach(rows.filter { !$0.automatic }) { SourceRowView(row: $0).tag($0.id) }
+                    ForEach(groups) { g in
+                        DisclosureGroup(isExpanded: model.expanded(g.name)) {
+                            ForEach(g.rows) { SourceRowView(row: $0).tag($0.id) }
+                        } label: {
+                            SourceGroupHeader(group: g, model: model)
+                        }
                     }
                 }
                 Divider()
@@ -543,7 +590,8 @@ struct SourceRowView: View {
         HStack(spacing: 10) {
             Image(systemName: row.symbol).frame(width: 20).foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.name).lineLimit(1)
+                // Under its app's heading, "(WhatsApp via Beeper)" would just repeat the heading.
+                Text(row.name.replacingOccurrences(of: " (\(row.group) via Beeper)", with: "")).lineLimit(1)
                 Text(row.problem != nil ? "Problem: " + row.problem! : row.status)
                     .font(.caption)
                     .foregroundStyle(row.problem != nil ? Color.orange : Color.secondary)
@@ -561,6 +609,38 @@ struct SourceRowView: View {
     }
 }
 
+struct SourceGroupHeader: View {
+    let group: UIModel.SourceGroup
+    @ObservedObject var model: UIModel
+
+    var body: some View {
+        let feeds = group.rows.filter { $0.interval != nil }
+        let intervals = Set(feeds.compactMap(\.interval))
+        HStack(spacing: 8) {
+            Image(systemName: group.symbol).frame(width: 18).foregroundStyle(.secondary)
+            Text(group.name).fontWeight(.semibold)
+            Text("\(group.rows.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+            Spacer()
+            if group.rows.contains(where: { $0.problem != nil }) {
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).help("A source here has a problem")
+            }
+            if intervals.count == 1, let m = intervals.first {
+                Text(m == 0 ? "Manual" : Feed.describe(m).replacingOccurrences(of: "Every ", with: "every ").replacingOccurrences(of: " minutes", with: " min"))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+        .contextMenu {
+            if !feeds.isEmpty {
+                Menu("Check all \(group.name) sources") {
+                    ForEach(Feed.intervals, id: \.self) { m in
+                        Button(Feed.describe(m)) { model.setInterval(m, for: feeds.map(\.id)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct SourceDetail: View {
     let row: UIModel.SourceRow
     @ObservedObject var model: UIModel
@@ -575,7 +655,8 @@ struct SourceDetail: View {
                         Text(row.kindName).foregroundStyle(.secondary)
                     }
                 }
-                Label(row.automatic ? "Updates automatically every 3 hours" : "You check this one yourself",
+                Label(row.interval.map { $0 > 0 ? "Updates automatically " + Feed.describe($0).lowercased()
+                                                 : "Updates only when you click Check now" } ?? "You check this one yourself",
                       systemImage: row.automatic ? "arrow.triangle.2.circlepath" : "hand.point.up.left")
                     .font(.callout)
                     .padding(.horizontal, 8).padding(.vertical, 4)
@@ -642,6 +723,15 @@ struct FeedOptions: View {
                         }
                     }
                 }
+
+                Picker("Check for new rides", selection: Binding(
+                    get: { feed.interval },
+                    set: { model.setInterval($0, for: [id]) })) {
+                    ForEach(Feed.intervals, id: \.self) { m in
+                        Text(Feed.describe(m) + (m == Feed.defaultInterval(kind) ? " (usual)" : "")).tag(m)
+                    }
+                }
+                .fixedSize()
 
                 switch kind {
                 case .chat:

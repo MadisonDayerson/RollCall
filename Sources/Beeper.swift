@@ -145,7 +145,7 @@ enum Beeper {
         var name = chat.title
         if let n = chat.network, !n.isEmpty { name += " (\(n) via Beeper)" } else { name += " (Beeper)" }
         return Feed(id: "beeper-" + stableHash(chat.id), name: name, url: feedURLPrefix + chat.id,
-                    groupURL: nil, kind: .chat, keywordFilter: true)
+                    groupURL: nil, kind: .chat, keywordFilter: true, network: chat.network)
     }
 
     static func chatID(of feed: Feed) -> String { String(feed.url.dropFirst(feedURLPrefix.count)) }

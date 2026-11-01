@@ -468,5 +468,24 @@ check(chatStore.upcoming(now: now).count == 1, "rides from watched chats shown e
 
 check(Web.readableNotes("[SIZE=5]Shindig in memory of [USER=25280]@fekkinell[/USER][/SIZE]") == "Shindig in memory of @fekkinell", "forum codes taken out of notes")
 
+// How often each source is checked, and which app it's grouped under.
+check(chatFeed.interval == 15 && chatFeed.app == "WhatsApp", "chats checked every 15 minutes, grouped by their app")
+var renamed = chatFeed; renamed.network = nil
+check(renamed.app == "WhatsApp", "older chat sources grouped by the app in their name")
+renamed.name = "Ride crew"
+check(renamed.app == "Beeper chats", "renamed older chats grouped under Beeper")
+let forumFeed = Starter.feeds.first { $0.kind == .forum }!
+check(forumFeed.interval == 360 && forumFeed.app == "NetRider", "forums checked every 6 hours, grouped by site")
+check(Starter.feeds[0].interval == 180 && Starter.feeds[0].app == "Meetup", "calendars every 3 hours")
+check(Feed(id: "x", name: "Club", url: "https://example.org/rides", kind: .webpage).app == "Websites", "unknown sites grouped as Websites")
+let tenAgo = now.addingTimeInterval(-600), twentyAgo = now.addingTimeInterval(-1200)
+check(chatFeed.due(lastChecked: nil, lastTried: nil, now: now), "never-read source is due")
+check(!chatFeed.due(lastChecked: tenAgo, lastTried: nil, now: now), "chat read 10 minutes ago isn't due")
+check(chatFeed.due(lastChecked: twentyAgo, lastTried: nil, now: now), "chat read 20 minutes ago is due")
+check(!chatFeed.due(lastChecked: twentyAgo, lastTried: tenAgo, now: now), "a failed try waits for the next slot too")
+var manual = chatFeed; manual.every = 0
+check(!manual.due(lastChecked: nil, lastTried: nil, now: now), "only-when-I-check sources are never automatic")
+check(Feed.describe(15) == "Every 15 minutes" && Feed.describe(360) == "Every 6 hours" && Feed.describe(1440) == "Once a day", "interval names")
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

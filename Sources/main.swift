@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     /// A newer RollCall on GitHub, once a check has found one.
     var availableUpdate: Updater.Release?
     var timers: [Timer] = []
+    /// Source id -> last automatic or manual read, even a failed one, so failing sources wait their turn.
+    var lastTried: [String: Date] = [:]
 
     func applicationDidFinishLaunching(_ note: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -47,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         Task {
             // Before setup, the calendar step asks for access with an explanation first.
             if store.state.setupDone { _ = await calendar.requestAccess() } else { calendar.checkAccess() }
-            await refresh()
+            await refresh(dueOnly: true)
         }
         if !store.state.setupDone && !CommandLine.arguments.contains("--snapshots") { showSetup() }
         if let i = CommandLine.arguments.firstIndex(of: "--window") {
@@ -58,12 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         if let i = CommandLine.arguments.firstIndex(of: "--snapshots"), i + 1 < CommandLine.arguments.count {
             Task { await saveSnapshots(to: URL(fileURLWithPath: CommandLine.arguments[i + 1])) }
         }
-        // Feeds every 3 hours; Facebook downloads every minute.
-        timers.append(Timer.scheduledTimer(withTimeInterval: 3 * 3600, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.refresh() }
-        })
+        // Every minute: Facebook downloads, and any source whose own interval has passed.
         timers.append(Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.scanDownloads() }
+            Task { @MainActor in self?.scanDownloads(); await self?.refresh(dueOnly: true) }
         })
         // New versions: shortly after opening, then daily.
         if !CommandLine.arguments.contains("--snapshots") {
@@ -76,15 +75,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     // MARK: - Refreshing
 
-    func refresh() async {
+    /// Reads every source, or with `dueOnly` just those whose interval has passed.
+    func refresh(dueOnly: Bool = false) async {
         guard !refreshing else { return }
+        let feeds = dueOnly
+            ? store.state.feeds.filter { !checking.contains($0.id) && $0.due(lastChecked: store.state.lastChecked[$0.id], lastTried: lastTried[$0.id]) }
+            : store.state.feeds
+        if dueOnly && feeds.isEmpty { return }
         refreshing = true
         NotificationCenter.default.post(name: Store.changed, object: nil)
         defer { refreshing = false; updateBadge(); NotificationCenter.default.post(name: Store.changed, object: nil) }
         let started = Date()
         var refreshed: Set<String> = []
         var changed: [String] = []
-        for feed in store.state.feeds {
+        for feed in feeds {
             changed += await readFeed(feed)
             // Only calendar feeds list every event each time, so only they can show a ride was dropped.
             if feed.type == .calendar, store.state.feedErrors[feed.id] == nil { refreshed.insert(feed.id) }
@@ -101,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     /// Reads one source and keeps what it found. Returns the ids of rides that changed.
     func readFeed(_ feed: Feed) async -> [String] {
+        lastTried[feed.id] = Date()
         do {
             let r = try await SourceReader.read(feed, store: store)
             var changed = store.merge(r.events, source: feed.id, sourceName: feed.name, groupURL: feed.groupURL)
@@ -551,6 +556,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         await snap("2-review", window)
         if let demo { store.state.reviews[demo.id] = nil; ui.objectWillChange.send() }
         ui.page = .sources
+        ui.selectedSource = nil
+        await snap("3-sources-list", window)
         ui.selectedSource = store.state.feeds.first(where: { $0.type == .forum })?.id
         await snap("3-sources-forum", window)
         ui.selectedSource = store.state.feeds.first(where: { $0.type == .chat })?.id
@@ -920,7 +927,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 let undated = (store.state.recentPosts[feed.id] ?? []).count
                 var msg = "Found \(r) upcoming ride\(r == 1 ? "" : "s") nearby."
                 if undated > 0 { msg += " \(undated) post\(undated == 1 ? "" : "s") without a date are under Posts to look at." }
-                if feed.type == .forum || feed.type == .posts { msg += "\n\nNew posts are checked every few hours. Rides marked 🔎 had their date read from the post text, so check it before going." }
+                if feed.type == .forum || feed.type == .posts { msg += "\n\nNew posts are checked every \(feed.interval / 60) hours (change it under Sources). Rides marked 🔎 had their date read from the post text, so check it before going." }
                 Dialogs.info("Added \(feed.name)", msg)
             } catch FeedError.privateFeed where raw.contains("meetup.com") {
                 Dialogs.info("This Meetup group's calendar is private",
