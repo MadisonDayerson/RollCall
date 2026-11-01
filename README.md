@@ -72,6 +72,9 @@ the date, time and place for you to check.
 WhatsApp, Messenger and Messages don't let other apps read chats. [Beeper](https://www.beeper.com/download)
 brings them into one app and lets RollCall read only the chats you choose, read-only.
 
+New to Beeper? In setup's **Chats** step, click **Set up Beeper step by step**. RollCall walks you
+through each step below in plain language and checks each one for you.
+
 1. Install Beeper and connect your chat accounts in **Beeper → Settings → Accounts**.
 2. In Beeper, open **Settings → Developers** and switch on **Beeper Desktop API**.
 3. In RollCall, click **+** → **Watch chats**, click **Allow** in Beeper, then tick your ride chats.

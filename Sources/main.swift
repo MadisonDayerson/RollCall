@@ -563,6 +563,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             if step == .messages { await setup.checkBeeper() }
             await snap("9-setup-\(step.rawValue)-\(step)", setupWindow)
         }
+        setup.go(.messages)
+        for g in SetupModel.GuideStep.allCases {
+            setup.guide = g
+            await snap("10-beeper-\(g.rawValue)-\(g)", setupWindow)
+        }
+        setup.guide = nil
         setupWindow?.close()
     }
 
