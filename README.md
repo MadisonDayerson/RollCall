@@ -27,7 +27,7 @@ or Skip, and rides you're attending go into a **RollCall** calendar in Apple Cal
 1. Open Terminal (press ⌘ Space, type **Terminal**, press Return).
 2. Paste this and press Return:
    ```bash
-   ~/Downloads/Personal/MotoRides/build.sh --install
+   ~/Downloads/Personal/RollCall/build.sh --install
    ```
 3. The **Set up RollCall** wizard opens. It goes through:
    - **Your area:** type a suburb or town and press **Find**, then pick how far to look.
@@ -75,7 +75,7 @@ The code lives at https://github.com/MadisonDayerson/rollcall. Friends download 
 To ship a new version, open Terminal and run (with the version number and a line about what's new):
 
 ```bash
-~/Downloads/Personal/MotoRides/release.sh 1.1 "What's new in this version"
+~/Downloads/Personal/RollCall/release.sh 1.1 "What's new in this version"
 ```
 
 It runs the tests, sets the version, builds the .dmg, commits, tags, pushes and publishes a GitHub
@@ -87,7 +87,7 @@ Developer ID, macOS may ask for calendar access again after an update.
 ## Sharing RollCall with friends
 
 ```bash
-~/Downloads/Personal/MotoRides/build.sh --share
+~/Downloads/Personal/RollCall/build.sh --share
 ```
 
 This makes `build/RollCall.dmg` (works on Apple silicon and Intel Macs, macOS 14 or newer) with
