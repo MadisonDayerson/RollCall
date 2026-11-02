@@ -95,7 +95,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let started = Date()
         var refreshed: Set<String> = []
         var changed: [String] = []
+        // Problems from sources that have since been removed shouldn't linger.
+        store.state.feedErrors = store.state.feedErrors.filter { id, _ in store.state.feeds.contains { $0.id == id } }
+        let chatProblem = feeds.contains { $0.type == .chat } ? await Beeper.connectionProblem() : nil
         for feed in feeds {
+            if feed.type == .chat {
+                if let chatProblem {
+                    // Check the connection once, rather than waiting for every chat to fail on its own.
+                    store.state.feedErrors[feed.id] = chatProblem.localizedDescription
+                    lastTried[feed.id] = Date()
+                    continue
+                }
+                // Connected again: the old connection problem goes now, not once this chat has been read.
+                if Beeper.connectionMessages.contains(store.state.feedErrors[feed.id] ?? "") { store.state.feedErrors[feed.id] = nil }
+            }
             changed += await readFeed(feed)
             // Only calendar feeds list every event each time, so only they can show a ride was dropped.
             if feed.type == .calendar, store.state.feedErrors[feed.id] == nil { refreshed.insert(feed.id) }
@@ -1127,6 +1140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         store.save()
         for f in added { await checkFeed(f.id) }
+        // Connected again: chats that couldn't be read get another go straight away.
+        for f in store.state.feeds where f.type == .chat && !added.contains(where: { $0.id == f.id }) && store.state.feedErrors[f.id] != nil {
+            await checkFeed(f.id)
+        }
         if let f = added.first { ui.selectedSource = f.id }
     }
 

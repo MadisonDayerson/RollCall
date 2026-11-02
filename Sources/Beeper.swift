@@ -71,6 +71,18 @@ enum Beeper {
         return ((try? await URLSession.shared.data(for: req))?.1 as? HTTPURLResponse)?.statusCode == 200
     }
 
+    /// Why chats can't be read right now (Beeper closed, or RollCall's permission gone), or nil when they can.
+    /// The problems that mean Beeper wasn't reachable, as shown on the Sources page.
+    static let connectionMessages: Set<String> = Set([BeeperError.notRunning, .notConnected, .cancelled].compactMap(\.errorDescription))
+
+    static func connectionProblem() async -> BeeperError? {
+        guard Keychain.read() != nil else { return .notConnected }
+        guard await isRunning() else { return .notRunning }
+        do { _ = try await send("/v1/chats", query: ["limit": "1"]); return nil }
+        catch let e as BeeperError { return e }
+        catch { return .badReply }
+    }
+
     private static func send(_ path: String, query: [String: String] = [:], method: String = "GET", json: [String: String]? = nil) async throws -> Data {
         guard let token = Keychain.read() else { throw BeeperError.notConnected }
         var comps = URLComponents(string: base + path)
