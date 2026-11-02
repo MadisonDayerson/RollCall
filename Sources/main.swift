@@ -604,6 +604,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         await snap("1-past", window)
         if let pastDemo { store.state.events[pastDemo.id] = nil; store.state.decisions[pastDemo.id] = nil }
         ui.rideFilter = filter
+        // Back from another tab: the list must redraw cleanly, with no rows left over from the last one.
+        ui.selectedRide = nil
+        await snap("1-rides-again", window)
         ui.page = .review
         // Show a sample plan if there's nothing real to review (never saved: it's removed straight after).
         while refreshing { try? await Task.sleep(nanoseconds: 500_000_000) }

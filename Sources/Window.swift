@@ -285,12 +285,16 @@ struct RidesPage: View {
                         if model.rideFilter == .all {
                             ForEach(model.rideSections()) { s in
                                 DisclosureGroup(isExpanded: model.rideSectionOpen(s.name)) {
-                                    if s.rides.isEmpty {
-                                        Text(s.name == "Past" ? "Rides you went on show here once they're over." : "None right now.")
-                                            .font(.callout).foregroundStyle(.secondary)
-                                    }
-                                    ForEach(s.rides, id: \.id) {
-                                        RideRow(ride: $0, model: model).frame(maxWidth: .infinity, alignment: .leading).tag($0.id)
+                                    // The "none" line is a row like any other, so the list's shape doesn't jump when a
+                                    // section empties or fills.
+                                    ForEach(s.rides.isEmpty ? [nil] : s.rides.map(Optional.some), id: \.?.id) { r in
+                                        if let r {
+                                            RideRow(ride: r, model: model).frame(maxWidth: .infinity, alignment: .leading).tag(r.id)
+                                        } else {
+                                            Text(s.name == "Past" ? "Rides you went on show here once they're over." : "None right now.")
+                                                .font(.callout).foregroundStyle(.secondary)
+                                                .selectionDisabled()
+                                        }
                                     }
                                 } label: {
                                     HStack(spacing: 8) {
@@ -303,6 +307,9 @@ struct RidesPage: View {
                             ForEach(rides, id: \.id) { RideRow(ride: $0, model: model).tag($0.id) }
                         }
                     }
+                    // A fresh list for each tab: sections on All and a flat list elsewhere don't mix, and reusing
+                    // one left stray, wrongly indented headings behind.
+                    .id(model.rideFilter)
                 }
             }
         } detail: {
