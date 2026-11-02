@@ -39,7 +39,7 @@ Attending adds the ride to your **RollCall** calendar, with a reminder the eveni
 The full window opens when you open RollCall (or choose **Open RollCall…** in the menu). While it's open,
 RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch pages:
 
-- **Rides:** **All** shows Upcoming, Going, Skipped and Past in sections you can fold away. Click a
+- **Rides:** **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
   ride for details, the event page (to RSVP), the group page (to join) and directions. 🔎 means the date was read from a post, so double-check it.
   Rides you went on move to **Past** once they're over, so you can still share footage and find
   everyone's posts with the ride's tag.

@@ -8,7 +8,7 @@ final class UIModel: ObservableObject {
         case rides, review, sources, settings
     }
     enum RideFilter: String, CaseIterable {
-        case all = "All", upcoming = "Upcoming", going = "Going", skipped = "Skipped", past = "Past"
+        case all = "All", undecided = "Undecided", going = "Going", skipped = "Skipped", past = "Past"
     }
 
     unowned let app: AppDelegate
@@ -41,8 +41,8 @@ final class UIModel: ObservableObject {
         let all = store.upcoming()
         switch rideFilter {
         case .past: return []
-        // Same as the All tab's Upcoming section: not decided yet, or maybe.
-        case .upcoming: return all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }
+        // Same as the All tab's Undecided section: not decided yet, or maybe.
+        case .undecided: return all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }
         case .all: return rideSections().flatMap(\.rides)
         case .going: return all.filter { store.decision($0.id) == .attending }
         case .skipped: return all.filter { store.decision($0.id) == .skip }
@@ -59,7 +59,7 @@ final class UIModel: ObservableObject {
     func rideSections() -> [RideSection] {
         let all = store.upcoming()
         return [
-            RideSection(name: "Upcoming", rides: all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }),
+            RideSection(name: "Undecided", rides: all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }),
             RideSection(name: "Going", rides: all.filter { store.decision($0.id) == .attending }),
             RideSection(name: "Skipped", rides: all.filter { store.decision($0.id) == .skip }),
             RideSection(name: "Past", rides: store.past()),
@@ -69,7 +69,8 @@ final class UIModel: ObservableObject {
     func section(of id: String) -> String? { rideSections().first { $0.rides.contains { $0.id == id } }?.name }
 
     /// Skipped and Past start folded away; whatever the person opens or closes is remembered.
-    @Published var closedRideSections = Set(UserDefaults.standard.stringArray(forKey: "closedRideSections") ?? ["Skipped", "Past"]) {
+    @Published var closedRideSections = Set((UserDefaults.standard.stringArray(forKey: "closedRideSections") ?? ["Skipped", "Past"])
+        .map { $0 == "Upcoming" ? "Undecided" : $0 }) {  // "Upcoming" was the section's old name
         didSet { UserDefaults.standard.set(Array(closedRideSections).sorted(), forKey: "closedRideSections") }
     }
 
