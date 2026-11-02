@@ -98,7 +98,9 @@ Each ride's **Ride with friends** box helps the whole crew end up in the same pl
   Find My and directions.
 - **After:** **Share footage…** or **Copy caption & tags**, and **See posts** to find everyone else's.
 
-Every ride gets a tag like `#RCHalloweenPreMeet31Oct`. Everyone using RollCall gets the same one.
+Every ride gets a code tag of #RC and the date, like `#RC03112026`, the same for everyone using RollCall.
+Tags for the club, brand, place or occasion follow it (`#Hooligoon #TTR #Broadford #Halloween`); change them on the
+ride's page.
 
 Life360, Cardo and the social apps don't let other apps connect, so RollCall shares the details and
 tags rather than showing friends' locations or posting for you.

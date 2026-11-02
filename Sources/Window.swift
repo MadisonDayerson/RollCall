@@ -1098,15 +1098,15 @@ struct RideTogether: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Ride tag").foregroundStyle(.secondary)
+                    Text("Ride tags").foregroundStyle(.secondary)
                     TextField("#RC…", text: $tag.value, onCommit: { app.setRideTag(ride.id, tag.value) })
-                        .textFieldStyle(.roundedBorder).frame(maxWidth: 260)
+                        .textFieldStyle(.roundedBorder).frame(maxWidth: 360)
                     if model.store.state.rideTags[ride.id] != nil {
-                        Button("Reset") { app.setRideTag(ride.id, ""); tag.value = app.rideTag(ride) }
+                        Button("Reset") { app.setRideTag(ride.id, ""); tag.value = app.rideTags(ride) }
                     }
                 }
-                Text(past ? "Everyone using RollCall gets the same tag for this ride. It's in the caption, so your footage ends up with everyone else's."
-                     : "Everyone using RollCall gets the same tag for this ride, so posts end up together. It's in the invite, the calendar event and the caption.")
+                Text(past ? "The first tag is the ride's code (#RC and the date), the same for everyone using RollCall, so your footage ends up with everyone else's. The rest name the club, place or occasion; change them if you like."
+                     : "The first tag is the ride's code (#RC and the date), the same for everyone using RollCall, so posts end up together. The rest name the club, place or occasion; change them if you like. They're in the invite, the calendar event and the caption.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
 
                 if past {
@@ -1139,8 +1139,8 @@ struct RideTogether: View {
         } label: {
             Label("Ride with friends", systemImage: "person.2.wave.2")
         }
-        .onAppear { tag.value = app.rideTag(ride); copied.value = nil }
-        .onChange(of: ride.id) { _, _ in tag.value = app.rideTag(ride); copied.value = nil }
+        .onAppear { tag.value = app.rideTags(ride); copied.value = nil }
+        .onChange(of: ride.id) { _, _ in tag.value = app.rideTags(ride); copied.value = nil }
     }
 
     var past: Bool { model.isPast(ride) }

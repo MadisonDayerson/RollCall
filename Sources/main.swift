@@ -674,6 +674,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func links(_ ride: RideEvent) -> CrewLinks? { store.state.crew[Crew.key(forSource: ride.source)] }
     func rideTag(_ ride: RideEvent) -> String { Crew.rideTag(ride, override: store.state.rideTags[ride.id]) }
+    func rideTags(_ ride: RideEvent) -> String { Crew.rideTags(ride, override: store.state.rideTags[ride.id]).joined(separator: " ") }
     func crewCard(_ ride: RideEvent) -> [String] {
         Crew.card(ride, together: store.state.settings.crew, links: links(ride), override: store.state.rideTags[ride.id])
     }
@@ -703,7 +704,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func setRideTag(_ id: String, _ tag: String) {
         let t = tag.trimmingCharacters(in: .whitespaces)
-        store.state.rideTags[id] = t.isEmpty ? nil : t
+        let automatic = store.state.events[id].map { Crew.rideTags($0).joined(separator: " ") }
+        store.state.rideTags[id] = t.isEmpty || t == automatic ? nil : t
         syncCalendar(id)
         store.save()
     }
