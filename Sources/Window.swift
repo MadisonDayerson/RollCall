@@ -1096,7 +1096,7 @@ struct SettingsPage: View {
                         }
                     }
                 }
-                Text("Rides further away are hidden, except rides you add yourself and rides from your chats.")
+                Text("Rides further away are hidden, except rides you add yourself, rides from your chats and your Facebook events.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Chats") {

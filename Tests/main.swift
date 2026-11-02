@@ -527,5 +527,16 @@ check(FeedLinks.normalise("https://www.facebook.com/events/ical/upcoming/?uid=1&
 check(FeedLinks.facebookCalendar("https://www.facebook.com/events/1234567890/") == nil && FeedLinks.normalise("https://www.facebook.com/groups/example") == nil, "event and group links aren't calendars")
 check(fbCal.map { SourceReader.wanted($0, "Torque & Terror bike night") && !SourceReader.wanted($0, "Sam's 30th birthday drinks") } == true, "only bike events come in from Facebook")
 check(fbCal?.app == "Facebook", "listed under Facebook on the Sources page")
+do {
+    let st = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-far-\(UUID().uuidString).json"))
+    st.state.settings.radiusKm = 50
+    let far = RideEvent(id: "facebook:1", title: "Geelong bike night", start: Date().addingTimeInterval(86400), end: nil, allDay: false,
+                        location: "Example Waterfront", notes: "", url: nil, groupURL: nil, source: FeedLinks.facebookCalendarID,
+                        sourceName: "Your Facebook events", distanceKm: 62, lastSeen: Date())
+    var club = far; club.id = "club:1"; club.source = "ics-abc"
+    st.state.events = [far.id: far, club.id: club]
+    let ids = st.upcoming().map(\.id)
+    check(ids == ["facebook:1"], "Facebook events you responded to show however far away; other far rides stay hidden")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

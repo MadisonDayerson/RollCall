@@ -306,6 +306,8 @@ final class Store {
                 if Store.userAdded.contains(e.source) { return true }
                 // Chats the user picked: their rides count wherever they go.
                 if e.source.hasPrefix("beeper-") { return true }
+                // Facebook events you said Going or Interested to: you chose them, however far away.
+                if e.source == FeedLinks.facebookCalendarID { return true }
                 guard let d = e.distanceKm else { return true }
                 return d <= state.settings.radiusKm
             }
