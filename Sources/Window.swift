@@ -9,6 +9,17 @@ final class UIModel: ObservableObject {
     }
     enum RideFilter: String, CaseIterable {
         case all = "All", undecided = "Undecided", going = "Going", skipped = "Skipped", past = "Past"
+
+        /// What an empty tab says: what belongs here and how rides get here.
+        var emptyText: String {
+            switch self {
+            case .all: return "No rides yet. RollCall checks your sources by itself; add more with +."
+            case .undecided: return "Nothing to decide on. New rides from your sources show up here."
+            case .going: return "Rides you mark Going show here, and go in your RollCall calendar."
+            case .skipped: return "Rides you skip show here, in case you change your mind."
+            case .past: return "Rides you mark Going move here once they're over, so you can still share footage and find everyone's posts."
+            }
+        }
     }
 
     unowned let app: AppDelegate
@@ -295,8 +306,7 @@ struct RidesPage: View {
                 })
                 if rides.isEmpty {
                     Spacer()
-                    Text(model.rideFilter == .past ? "Rides you mark Attending move here once they're over, so you can still share footage and find everyone's posts."
-                         : model.app.refreshing ? "Checking sources…" : "No rides here.")
+                    Text(model.app.refreshing && model.rideFilter != .past ? "Checking sources…" : model.rideFilter.emptyText)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
@@ -386,6 +396,16 @@ struct RideSectionView: View {
     }
 }
 
+/// The decision marks in words, for VoiceOver.
+@MainActor func decisionName(_ d: Decision, needsCheck: Bool) -> String {
+    switch d {
+    case .attending: return "Going"
+    case .maybe: return "Maybe"
+    case .skip: return "Skipped"
+    case .undecided: return needsCheck ? "New, check the date" : "New"
+    }
+}
+
 @MainActor func rideWhen(_ r: RideEvent, long: Bool = false) -> String {
     if long {
         var s = r.allDay ? AppDelegate.longDayFmt.string(from: r.start) : AppDelegate.longFmt.string(from: r.start)
@@ -402,6 +422,7 @@ struct RideRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Text(decisionMark(model.store.decision(ride.id), needsCheck: ride.needsCheck == true))
+                .accessibilityLabel(decisionName(model.store.decision(ride.id), needsCheck: ride.needsCheck == true))
             VStack(alignment: .leading, spacing: 2) {
                 Text(ride.title).fontWeight(.medium).lineLimit(2)
                 Text(rideWhen(ride)).font(.callout)
@@ -455,14 +476,14 @@ struct RideDetail: View {
                         .background(Color.secondary.opacity(0.14), in: Capsule())
                 } else {
                     Picker("Going?", selection: model.decision(ride.id)) {
-                        Text("Attending").tag(Decision.attending)
+                        Text("Going").tag(Decision.attending)
                         Text("Maybe").tag(Decision.maybe)
                         Text("Skip").tag(Decision.skip)
                         Text("Undecided").tag(Decision.undecided)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    Text("Attending adds it to the RollCall calendar, with a reminder the evening before.")
+                    Text("Going adds it to the RollCall calendar, with a reminder the evening before.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
 

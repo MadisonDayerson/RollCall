@@ -3,7 +3,7 @@
 ![RollCall logo](Design/RollCall.png)
 
 RollCall is a Mac menu bar app that finds motorbike group rides and events near you, from clubs,
-forums, event sites, Meetup and your group chats. Pick **Attending** and the ride goes into your calendar.
+forums, event sites, Meetup and your group chats. Pick **Going** and the ride goes into your calendar.
 
 Everything stays on your Mac. RollCall never posts, sends messages or RSVPs for you.
 
@@ -33,8 +33,8 @@ A setup guide opens the first time (re-open it any time with **Set up RollCall�
 
 ## Everyday use
 
-Click **RC** in the menu bar to see upcoming rides and mark them **Attending**, **Maybe** or **Skip**.
-Attending adds the ride to your **RollCall** calendar, with a reminder the evening before.
+Click **RC** in the menu bar to see upcoming rides and mark them **Going**, **Maybe** or **Skip**.
+Going adds the ride to your **RollCall** calendar, with a reminder the evening before.
 
 The full window opens when you open RollCall (or choose **Open RollCall…** in the menu). While it's open,
 RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch pages:

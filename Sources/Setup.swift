@@ -231,6 +231,17 @@ final class SetupModel: ObservableObject {
 
     var calendarAllowed: Bool { calendarStatus == .fullAccess }
 
+    /// The current step has been filled in, so there's nothing to skip.
+    var stepDone: Bool {
+        switch step {
+        case .messages: if case .connected(let n) = beeper { return n > 0 } else { return false }
+        case .accounts: return !followed.isEmpty
+        case .calendar: return calendarAllowed && chosenAccount != nil
+        case .together: return settings.crew != Together()
+        default: return false
+        }
+    }
+
     var accounts: [EKSource] { calendarAllowed ? app.calendar.accounts() : [] }
 
     var hasGoogle: Bool { accounts.contains { Self.isGoogle($0) } }
@@ -276,6 +287,13 @@ final class SetupModel: ObservableObject {
         guard Bundle.main.bundleIdentifier != nil else { return }
         let s = await UNUserNotificationCenter.current().notificationSettings()
         notificationsAllowed = s.authorizationStatus == .notDetermined ? nil : s.authorizationStatus == .authorized
+    }
+
+    func openNotificationSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     func allowNotifications() {
@@ -330,7 +348,8 @@ struct SetupView: View {
                     Button("Start using RollCall") { model.app.finishSetup(openWindow: true) }
                         .keyboardShortcut(.defaultAction)
                 } else {
-                    if ![.welcome, .home].contains(model.step) {
+                    // Once a step is done, Continue is the only choice (no "Skip" for something already done).
+                    if ![.welcome, .home].contains(model.step) && !model.stepDone {
                         Button("Skip this step") { model.next() }
                     }
                     Button(model.step == .welcome ? "Get started" : "Continue") { model.next() }
@@ -400,7 +419,7 @@ struct WelcomeStep: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Set your home area so you only see rides nearby", systemImage: "mappin.and.ellipse")
                 Label("Connect group chats (WhatsApp, Messenger, Messages and more) through Beeper", systemImage: "bubble.left.and.bubble.right")
-                Label("Follow clubs, Meetup groups, forums and Instagram accounts", systemImage: "person.3")
+                Label("Follow clubs, Meetup groups, forums, Instagram accounts and your Facebook events", systemImage: "person.3")
                 Label("Choose Apple Calendar or Google Calendar for your rides", systemImage: "calendar")
             }
             .padding(.top, 8)
@@ -542,8 +561,10 @@ struct BeeperSteps: View {
                       systemImage: "checkmark.circle.fill").foregroundStyle(.primary)
                 Button(n == 0 ? "Choose chats…" : "Change chats…") { model.chooseChats() }
             }
-            Text("Don't use Beeper? Skip this step. You can still paste a message into RollCall with Add whenever someone posts a ride.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if case .connected = model.beeper {} else {
+                Text("Don't use Beeper? Skip this step. You can still paste a message into RollCall with Add whenever someone posts a ride.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
@@ -693,8 +714,13 @@ struct FinishStep: View {
                       systemImage: "mappin.and.ellipse")
                 Label("\(count(s.feeds.filter { $0.type == .chat }.count, "chat")), \(count(s.feeds.filter { $0.type != .chat }.count, "group or website", "groups and websites")), \(count(s.instagram.count, "Instagram account"))",
                       systemImage: "person.3")
-                Label(model.calendarAllowed ? "Rides you're going to go in your RollCall calendar" : "Calendar not connected yet",
-                      systemImage: "calendar")
+                HStack {
+                    Label(model.calendarAllowed ? "Rides you're going to go in your RollCall calendar" : "Calendar not connected yet",
+                          systemImage: "calendar")
+                    if !model.calendarAllowed {
+                        Button("Connect calendar…") { model.go(.calendar) }
+                    }
+                }
             }
             Toggle("Open RollCall when you log in", isOn: Binding(
                 get: { model.app.opensAtLogin }, set: { model.app.setOpensAtLogin($0); model.objectWillChange.send() }))
@@ -703,8 +729,9 @@ struct FinishStep: View {
                 case .some(true):
                     Label("Notifications are on: RollCall tells you when a chat plans a ride", systemImage: "bell.fill").foregroundStyle(.primary)
                 case .some(false):
-                    Text("Notifications are off. Switch them on in System Settings → Notifications → RollCall to hear about plans in your chats.")
+                    Text("Notifications are off, so RollCall can't tell you about plans in your chats.")
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button("Turn on in System Settings…") { model.openNotificationSettings() }
                 case .none:
                     Button("Allow notifications") { model.allowNotifications() }
                     Text("so RollCall can tell you when a chat plans a ride").foregroundStyle(.secondary)

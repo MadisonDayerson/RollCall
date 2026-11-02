@@ -348,7 +348,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         if attending, let ride = store.state.events[id] {
             guard calendar.authorised else {
                 Dialogs.info("Calendar access needed",
-                             "RollCall isn't allowed to add events to Calendar yet.\n\nOpen System Settings → Privacy & Security → Calendars, and switch on RollCall (choose Full Access). Then mark the ride Attending again.")
+                             "RollCall isn't allowed to add events to Calendar yet.\n\nOpen System Settings → Privacy & Security → Calendars, and switch on RollCall (choose Full Access). Then mark the ride Going again.")
                 return
             }
             do {
@@ -440,7 +440,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         sub.addItem(.separator())
 
-        for (label, choice) in [("Attending (add to calendar)", Decision.attending), ("Maybe", .maybe), ("Skip", .skip)] {
+        for (label, choice) in [("Going (add to calendar)", Decision.attending), ("Maybe", .maybe), ("Skip", .skip)] {
             let it = action(label, #selector(choose(_:)))
             it.representedObject = [ride.id, choice.rawValue]
             it.state = d == choice ? .on : .off
@@ -1019,7 +1019,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let n = importFiles(files, source: isFB ? "facebook" : "file", sourceName: isFB ? "Facebook" : "Imported file")
         store.save()
         updateBadge()
-        Dialogs.info("Imported \(n) event\(n == 1 ? "" : "s")", "They're on the Rides page, where you can choose Attending, Maybe or Skip.")
+        Dialogs.info("Imported \(n) event\(n == 1 ? "" : "s")", "They're on the Rides page, where you can choose Going, Maybe or Skip.")
     }
 
     func addFeed(link raw: String) {
@@ -1188,7 +1188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             store.state.instagram.removeAll { $0.handle == h }
         } else if let feed = store.state.feeds.first(where: { $0.id == id }) {
             guard Dialogs.confirm("Remove \(feed.name)?",
-                                  "Its rides will disappear from the list. Rides you marked Attending stay in your calendar.",
+                                  "Its rides will disappear from the list. Rides you marked Going stay in your calendar.",
                                   ok: "Remove") else { return }
             forgetFeed(id)
         } else {
