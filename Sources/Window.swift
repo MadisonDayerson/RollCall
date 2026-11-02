@@ -832,28 +832,35 @@ struct FeedOptions: View {
     @ObservedObject var model: UIModel
     @StateObject private var name = Box("")
 
+    @ViewBuilder func buttons(_ feed: Feed) -> some View {
+        let app = model.app
+        Button {
+            Task { await app.checkFeed(id) }
+        } label: {
+            if app.checking.contains(id) { ProgressView().controlSize(.small) } else { Text("Check now") }
+        }
+        .disabled(app.checking.contains(id) || app.refreshing)
+        if kind == .chat {
+            Button("Open chat in Beeper") { app.open(Beeper.chatLink(chatID: Beeper.chatID(of: feed))) }
+            Button("Change which chats…") { model.later { Task { await app.setUpBeeper() } } }
+        } else {
+            if let g = feed.groupURL {
+                Button(g.contains("meetup.com") ? "Open group page (to join)" : "Open website") { app.open(g) }
+            } else if kind != .calendar {
+                Button("Open website") { app.open(feed.url) }
+            }
+        }
+    }
+
     var body: some View {
         let app = model.app
         if let feed = model.feed(id) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(status).foregroundStyle(.secondary)
-                HStack {
-                    Button {
-                        Task { await app.checkFeed(id) }
-                    } label: {
-                        if app.checking.contains(id) { ProgressView().controlSize(.small) } else { Text("Check now") }
-                    }
-                    .disabled(app.checking.contains(id) || app.refreshing)
-                    if kind == .chat {
-                        Button("Open chat in Beeper") { app.open(Beeper.chatLink(chatID: Beeper.chatID(of: feed))) }
-                        Button("Change which chats…") { model.later { Task { await app.setUpBeeper() } } }
-                    } else {
-                        if let g = feed.groupURL {
-                            Button(g.contains("meetup.com") ? "Open group page (to join)" : "Open website") { app.open(g) }
-                        } else if kind != .calendar {
-                            Button("Open website") { app.open(feed.url) }
-                        }
-                    }
+                // In a row when there's room, otherwise one under another (never cut off).
+                ViewThatFits(in: .horizontal) {
+                    HStack { buttons(feed) }
+                    VStack(alignment: .leading, spacing: 8) { buttons(feed) }
                 }
 
                 Picker("Check for new rides", selection: Binding(
@@ -1380,8 +1387,10 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
     var body: some View {
         GeometryReader { g in
             if g.size.width >= Self.sideBySide {
+                // The details get the larger share: the list starts at about 40% and can't be dragged past
+                // half, so the details always have room for their buttons.
                 HSplitView {
-                    list.frame(minWidth: 250, idealWidth: 360)
+                    list.frame(minWidth: 250, idealWidth: max(250, g.size.width * 0.4), maxWidth: max(250, g.size.width * 0.5))
                     detail.frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else if showingDetail {
