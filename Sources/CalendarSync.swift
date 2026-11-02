@@ -85,7 +85,8 @@ final class CalendarSync {
         ev.url = ride.url.flatMap(URL.init(string:))
         var notes = "From \(ride.sourceName) via RollCall."
         if !crewCard.isEmpty { notes += "\n\n" + crewCard.joined(separator: "\n") }
-        if !ride.notes.isEmpty { notes += "\n\n" + ride.notes }
+        // A ride read straight from a chat message keeps that message in RollCall, not in the calendar.
+        if !ride.notes.isEmpty && !ride.source.hasPrefix("beeper-") { notes += "\n\n" + ride.notes }
         ev.notes = notes
         if ev.alarms?.isEmpty ?? true, !ride.allDay {
             ev.addAlarm(EKAlarm(relativeOffset: -12 * 3600))  // the evening before: check the bike

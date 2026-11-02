@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         Task {
             // Before setup, the calendar step asks for access with an explanation first.
             if store.state.setupDone { _ = await calendar.requestAccess() } else { calendar.checkAccess() }
+            tidyChatNotes()
             await refresh(dueOnly: true)
         }
         let quiet = CommandLine.arguments.contains("--snapshots") || CommandLine.arguments.contains("--window")
@@ -196,7 +197,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         guard let ride = Dialogs.manualRide(
             prefill: .init(title: s.title, start: start, hours: 3, location: s.place ?? "", link: link),
             note: "From the conversation in \(chatName). Check the time and meeting place." + (s.hasTime ? "" : " No time was agreed, so 9am is filled in.")) else { return }
-        let notes = ([s.summary] + r.lines.map { "\($0.sender.isEmpty ? "Someone" : $0.sender): \($0.text)" }).joined(separator: "\n")
+        // Only the summary goes in the ride (and so the calendar): the chat's messages stay in the chat.
+        let notes = s.calendarNote
         let item = ICSEvent(uid: "plan-" + stableHash(r.id), title: ride.title, start: ride.start,
                             end: ride.start.addingTimeInterval(ride.hours * 3600), allDay: false, location: ride.location,
                             notes: notes.count > 1500 ? String(notes.prefix(1500)) + "…" : notes,
@@ -707,6 +709,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     }
 
     /// Rewrites the crew details on calendar events for rides you're going to.
+    /// Rides added from chats used to carry the conversation in their notes, and that went into the calendar.
+    /// Swaps it for the plan's summary, and updates calendar events from chats so they leave the messages out.
+    func tidyChatNotes() {
+        var changed: [String] = []
+        for (id, var e) in store.state.events where id.hasPrefix("manual:plan-") && e.notes.contains("\n") {
+            let review = store.state.reviews.values.first { $0.rideID == id }
+            let first = e.notes.components(separatedBy: "\n")[0]
+            e.notes = review?.summary.calendarNote ?? (first.contains(" wrote: “") ? "" : first)
+            store.state.events[id] = e
+            changed.append(id)
+        }
+        changed += store.state.events.keys.filter { $0.hasPrefix("beeper-") }
+        if !changed.isEmpty { store.save() }
+        for id in changed where store.decision(id) == .attending && store.state.calendarItems[id] != nil { syncCalendar(id) }
+    }
+
     func resyncCalendar() {
         guard calendar.authorised else { return }
         for (id, d) in store.state.decisions where d == .attending && store.state.calendarItems[id] != nil { syncCalendar(id) }

@@ -505,5 +505,15 @@ check(Store.facebookShareLink("https://fb.me/e/3xYzAbC") != nil, "fb.me event li
 check(Store.facebookShareLink("https://www.facebook.com/share/p/1513oBi2LqL/") == nil, "shared post isn't an event")
 check(Store.facebookShareLink("https://www.facebook.com/groups/123") == nil, "group isn't an event")
 
+// Calendar notes describe the plan without quoting the chat.
+let ruleNote = PlanSummary(title: "Sunday ride", when: "Sunday 8 November, 8:30 am", start: nil, hasTime: true, place: "Shell Coldstream",
+                           who: ["Alex", "Jordan"], undecided: nil, summary: "Alex wrote: “Sunday ride 8:30 at Shell Coldstream?”",
+                           isPlan: true, byAI: false).calendarNote
+check(ruleNote == "Ride plan: Sunday ride, Sunday 8 November, 8:30 am. Meeting at Shell Coldstream. Going: Alex, Jordan.", "rule-based plan described (\(ruleNote))")
+check(!ruleNote.contains("wrote") && !ruleNote.contains("“"), "no chat message quoted in calendar notes")
+let aiNote = PlanSummary(title: "x", when: "y", start: nil, hasTime: false, place: nil, who: [], undecided: nil,
+                         summary: "A group ride to Marysville on Sunday morning.", isPlan: true, byAI: true).calendarNote
+check(aiNote == "A group ride to Marysville on Sunday morning.", "Apple Intelligence summary used as it is")
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

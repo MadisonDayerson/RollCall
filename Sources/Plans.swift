@@ -27,6 +27,19 @@ struct PlanSummary: Codable, Equatable {
     var byAI: Bool
 }
 
+extension PlanSummary {
+    /// What goes in the calendar event: a plain description of the plan, never the chat messages themselves.
+    /// Apple Intelligence's summary is already that; RollCall's own guess quotes a message, so it's described instead.
+    var calendarNote: String {
+        if byAI && !summary.isEmpty { return summary }
+        var parts = ["Ride plan: \(title), \(when)."]
+        if let place, !place.isEmpty { parts.append("Meeting at \(place).") }
+        if !who.isEmpty { parts.append("Going: \(who.joined(separator: ", ")).") }
+        if let undecided { parts.append("Still to agree: \(undecided.lowercased()).") }
+        return parts.joined(separator: " ")
+    }
+}
+
 /// A conversation in a watched chat that mentions times or days, for the user to look over.
 struct PlanReview: Codable, Equatable {
     enum Status: String, Codable { case open, added, dismissed }
