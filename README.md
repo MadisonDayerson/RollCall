@@ -48,7 +48,7 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
   any of them with **Check for new rides** (right-click a heading to change a whole group).
   Instagram and Facebook you check yourself.
-- **Settings:** home area, chats, calendar, riding together and updates.
+- **Settings:** home area, chats, your Facebook events link, calendar, riding together and updates.
 
 ## Adding rides and sources
 
@@ -64,7 +64,8 @@ Click **+** and paste a link. RollCall works out what it is:
 You can also **Type a ride in** or **Import a calendar file**.
 
 **Your Facebook events.** Facebook can share a private calendar of the events you're Going or Interested
-in. Connect it in setup's **Groups & accounts** step, or under **Sources → Facebook events**:
+in. Connect it in setup's **Groups & accounts** step, in **Settings → Facebook** (where you can also replace
+or disconnect it), or under **Sources → Facebook events**:
 1. Click **Open Facebook Events**, find **Add to calendar**, right-click it and choose **Copy Link**.
 2. Paste the link into RollCall and click **Connect**. Bike events you respond to then come in by themselves.
 

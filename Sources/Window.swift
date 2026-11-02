@@ -900,7 +900,15 @@ struct FacebookCalendarBox: View {
                 Label("Connected. Bike events you're Going or Interested in on Facebook come in by themselves.",
                       systemImage: "checkmark.circle.fill")
                     .fixedSize(horizontal: false, vertical: true)
-                Text("It's listed under Facebook on the Sources page, where you can check it or remove it.")
+                HStack {
+                    TextField("Facebook calendar link", text: $link.value, prompt: Text("Paste a new link to replace it"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(connect)
+                    Button("Replace", action: connect).disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("Disconnect") { later { app.removeSource(FeedLinks.facebookCalendarID) } }
+                }
+                Text("It's also listed under Facebook on the Sources page.")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 Text("Facebook can share a private calendar of the events you're Going or Interested in, so they come in by themselves:")
@@ -909,7 +917,8 @@ struct FacebookCalendarBox: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Button("Open Facebook Events") { app.open("https://www.facebook.com/events/") }
                 HStack {
-                    TextField("https://www.facebook.com/events/ical/upcoming/…", text: $link.value)
+                    TextField("Facebook calendar link", text: $link.value, prompt: Text("https://www.facebook.com/events/ical/upcoming/…"))
+                        .labelsHidden()
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(connect)
                     Button("Connect", action: connect).disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -923,6 +932,7 @@ struct FacebookCalendarBox: View {
     func connect() {
         let s = link.value
         later { app.connectFacebookCalendar(link: s) }
+        if connected { link.value = "" }
     }
 }
 
@@ -1094,6 +1104,9 @@ struct SettingsPage: View {
                 Button(Keychain.read() == nil ? "Connect and choose chats…" : "Choose which chats to watch…") {
                     model.later { Task { await app.setUpBeeper() } }
                 }
+            }
+            Section("Facebook") {
+                FacebookCalendarBox(app: app, connected: app.facebookCalendarConnected, later: model.later)
             }
             Section("Riding together") {
                 TogetherForm(app: app)
