@@ -262,17 +262,36 @@ struct MainView: View {
 
 struct RidesPage: View {
     @ObservedObject var model: UIModel
+    @StateObject private var width = Box(CGFloat(0))  // starts as the menu, which never widens the window
 
     var body: some View {
         let rides = model.rides()
         ListAndDetail(showingDetail: model.selectedRide != nil, back: "Rides", close: { model.selectedRide = nil }) {
             VStack(spacing: 0) {
-                Picker("Show", selection: $model.rideFilter) {
-                    ForEach(UIModel.RideFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                // Tabs when there's room; a menu when the list is narrow (beside a ride's details). Measured
+                // rather than left to the tabs, whose full width would otherwise push the window wider.
+                Group {
+                    if width.value >= 440 {
+                        Picker("Show", selection: $model.rideFilter) {
+                            ForEach(UIModel.RideFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                    } else {
+                        Picker("Show", selection: $model.rideFilter) {
+                            ForEach(UIModel.RideFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                    }
                 }
-                .pickerStyle(.segmented)
                 .labelsHidden()
+                .frame(maxWidth: .infinity)
                 .padding(10)
+                .background(GeometryReader { g in
+                    Color.clear
+                        .onAppear { width.value = g.size.width }
+                        .onChange(of: g.size.width) { _, w in width.value = w }
+                })
                 if rides.isEmpty {
                     Spacer()
                     Text(model.rideFilter == .past ? "Rides you mark Attending move here once they're over, so you can still share footage and find everyone's posts."
@@ -281,36 +300,22 @@ struct RidesPage: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
                     Spacer()
+                } else if model.rideFilter == .all {
+                    // Drawn by hand rather than as an outline list: macOS's outline list left stray, wrongly placed
+                    // section headings behind when sections opened and closed.
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(model.rideSections()) { s in
+                                RideSectionView(section: s, model: model)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 12)
+                    }
                 } else {
                     List(selection: $model.selectedRide) {
-                        if model.rideFilter == .all {
-                            ForEach(model.rideSections()) { s in
-                                DisclosureGroup(isExpanded: model.rideSectionOpen(s.name)) {
-                                    // The "none" line is a row like any other, so the list's shape doesn't jump when a
-                                    // section empties or fills.
-                                    ForEach(s.rides.isEmpty ? [nil] : s.rides.map(Optional.some), id: \.?.id) { r in
-                                        if let r {
-                                            RideRow(ride: r, model: model).frame(maxWidth: .infinity, alignment: .leading).tag(r.id)
-                                        } else {
-                                            Text(s.name == "Past" ? "Rides you went on show here once they're over." : "None right now.")
-                                                .font(.callout).foregroundStyle(.secondary)
-                                                .selectionDisabled()
-                                        }
-                                    }
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Text(s.name).fontWeight(.semibold)
-                                        Text("\(s.rides.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        } else {
-                            ForEach(rides, id: \.id) { RideRow(ride: $0, model: model).tag($0.id) }
-                        }
+                        ForEach(rides, id: \.id) { RideRow(ride: $0, model: model).tag($0.id) }
                     }
-                    // A fresh list for each tab: sections on All and a flat list elsewhere don't mix, and reusing
-                    // one left stray, wrongly indented headings behind.
-                    .id(model.rideFilter)
                 }
             }
         } detail: {
@@ -325,6 +330,49 @@ struct RidesPage: View {
             }
         }
         .navigationTitle("Rides")
+    }
+}
+
+/// One section of the All tab: a heading that opens and closes, and its rides.
+struct RideSectionView: View {
+    let section: UIModel.RideSection
+    @ObservedObject var model: UIModel
+
+    var body: some View {
+        let open = model.rideSectionOpen(section.name)
+        VStack(alignment: .leading, spacing: 0) {
+            Button { open.wrappedValue.toggle() } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: open.wrappedValue ? "chevron.down" : "chevron.right")
+                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(width: 12)
+                    Text(section.name).fontWeight(.semibold)
+                    Text("\(section.rides.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.vertical, 7)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Divider()
+            if open.wrappedValue {
+                if section.rides.isEmpty {
+                    Text(section.name == "Past" ? "Rides you went on show here once they're over." : "None right now.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .padding(.leading, 28).padding(.vertical, 8)
+                }
+                ForEach(section.rides, id: \.id) { r in
+                    let selected = model.selectedRide == r.id
+                    RideRow(ride: r, model: model)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 6).padding(.horizontal, 8)
+                        .background(selected ? Color.accentColor.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                        .contentShape(Rectangle())
+                        .onTapGesture { model.selectedRide = r.id }
+                        .padding(.leading, 20)
+                    Divider().padding(.leading, 28)
+                }
+            }
+        }
     }
 }
 
