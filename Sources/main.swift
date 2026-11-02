@@ -21,6 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var timers: [Timer] = []
     /// Source id -> last automatic or manual read, even a failed one, so failing sources wait their turn.
     var lastTried: [String: Date] = [:]
+    /// A group link given with a Facebook share link, waiting for that event's download.
+    var pendingFacebookGroup: (String, Date)?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         AppMenu.install(for: self)
@@ -272,6 +274,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         for f in files {
             guard let text = try? String(contentsOf: f, encoding: .utf8) else { continue }
             let items = ICSParser.parse(text)
+            if source == "facebook", let (group, at) = pendingFacebookGroup, Date().timeIntervalSince(at) < 3600,
+               let fbID = items.first.flatMap({ Store.facebookEventID($0.uid) ?? Store.facebookEventID($0.url ?? "") }) {
+                if store.state.facebookGroups[fbID] == nil { store.state.facebookGroups[fbID] = group }
+                pendingFacebookGroup = nil
+            }
             count += items.count
             changed += store.merge(items, source: source, sourceName: sourceName, groupURL: nil)
         }
@@ -854,7 +861,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return }
         let lower = s.lowercased()
-        if Store.facebookEventID(s) != nil || lower.contains("fb.me/e/") {
+        if Store.facebookEventID(s) != nil || Store.facebookShareLink(s) != nil {
             addFacebookEvent(link: s)
         } else if lower.contains("facebook.com") {
             Dialogs.info("Facebook groups and pages can't be added",
@@ -876,15 +883,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                      ("Group link (optional)", "https://www.facebook.com/groups/…")],
             values: [link]),
               !vals[0].isEmpty else { return }
-        guard let fbID = Store.facebookEventID(vals[0]) else {
+        let fbID = Store.facebookEventID(vals[0])
+        guard let eventURL = fbID.map({ "https://www.facebook.com/events/\($0)/" }) ?? Store.facebookShareLink(vals[0]) else {
             Dialogs.info("That doesn't look like a Facebook event link",
-                         "It should look like https://www.facebook.com/events/1234567890. On the event page, use Share → Copy link.")
+                         "On the event page, click Share → Copy link, and paste that. It looks like https://www.facebook.com/events/1234567890 or https://www.facebook.com/share/…")
             return
         }
-        let eventURL = "https://www.facebook.com/events/\(fbID)/"
         if !vals[1].isEmpty {
-            store.state.facebookGroups[fbID] = vals[1]
-            if var e = store.state.events["facebook:\(fbID)"] { e.groupURL = vals[1]; store.state.events[e.id] = e }
+            if let fbID {
+                store.state.facebookGroups[fbID] = vals[1]
+                if var e = store.state.events["facebook:\(fbID)"] { e.groupURL = vals[1]; store.state.events[e.id] = e }
+            } else {
+                // A share link has no event number: the group goes with the next event downloaded from Facebook.
+                pendingFacebookGroup = (vals[1], Date())
+            }
         }
         store.save()
 

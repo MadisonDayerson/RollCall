@@ -497,5 +497,13 @@ var manual = chatFeed; manual.every = 0
 check(!manual.due(lastChecked: nil, lastTried: nil, now: now), "only-when-I-check sources are never automatic")
 check(Feed.describe(15) == "Every 15 minutes" && Feed.describe(360) == "Every 6 hours" && Feed.describe(1440) == "Once a day", "interval names")
 
+// Facebook share links (Share → Copy link) have no event number but open the event.
+check(Store.facebookShareLink("https://www.facebook.com/share/1513oBi2LqL/") == "https://www.facebook.com/share/1513oBi2LqL/", "facebook share link accepted")
+check(Store.facebookShareLink("facebook.com/share/e/1AbC9xYz") == "https://facebook.com/share/e/1AbC9xYz", "share link without https")
+check(Store.facebookShareLink("https://m.facebook.com/share/1513oBi2LqL/?mibextid=abc") != nil, "mobile share link with tracking")
+check(Store.facebookShareLink("https://fb.me/e/3xYzAbC") != nil, "fb.me event link")
+check(Store.facebookShareLink("https://www.facebook.com/share/p/1513oBi2LqL/") == nil, "shared post isn't an event")
+check(Store.facebookShareLink("https://www.facebook.com/groups/123") == nil, "group isn't an event")
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

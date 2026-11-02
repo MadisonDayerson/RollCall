@@ -377,6 +377,16 @@ final class Store {
         return nil
     }
 
+    /// Facebook's Share → Copy link gives a short link without the event number
+    /// (facebook.com/share/1513oBi2LqL/ or fb.me/e/…). It opens the event in a browser, so it's kept as it is.
+    /// Share links for posts, reels, videos and groups (/share/p/, /r/, /v/, /g/) aren't events.
+    static func facebookShareLink(_ s: String) -> String? {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern = #"^(?:https?://)?(?:(?:www|m|web)\.)?(?:facebook\.com/share/(?:e/)?[A-Za-z0-9_-]+|fb\.me/e/[A-Za-z0-9_-]+)/?(?:[?#].*)?$"#
+        guard t.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil else { return nil }
+        return t.lowercased().hasPrefix("http") ? t : "https://" + t
+    }
+
     func distance(_ e: RideEvent) -> Double? {
         guard let lat = e.latitude, let lon = e.longitude else { return nil }
         return Store.haversineKm(lat, lon, state.settings.homeLatitude, state.settings.homeLongitude)
