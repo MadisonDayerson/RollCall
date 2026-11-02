@@ -521,5 +521,11 @@ let aiNote = PlanSummary(title: "x", when: "y", start: nil, hasTime: false, plac
                          summary: "A group ride to Marysville on Sunday morning.", isPlan: true, byAI: true).calendarNote
 check(aiNote == "A group ride to Marysville on Sunday morning.", "Apple Intelligence summary used as it is")
 
+let fbCal = FeedLinks.facebookCalendar("webcal://www.facebook.com/events/ical/upcoming/?uid=100000000000001&key=EXAMPLEKEY")
+check(fbCal?.id == FeedLinks.facebookCalendarID && fbCal?.url.hasPrefix("https://www.facebook.com/events/ical/upcoming/") == true && fbCal?.type == .calendar, "Facebook's events calendar link becomes a calendar source")
+check(FeedLinks.normalise("https://www.facebook.com/events/ical/upcoming/?uid=1&key=K")?.id == FeedLinks.facebookCalendarID, "pasting it anywhere works")
+check(FeedLinks.facebookCalendar("https://www.facebook.com/events/1234567890/") == nil && FeedLinks.normalise("https://www.facebook.com/groups/example") == nil, "event and group links aren't calendars")
+check(fbCal.map { SourceReader.wanted($0, "Torque & Terror bike night") && !SourceReader.wanted($0, "Sam's 30th birthday drinks") } == true, "only bike events come in from Facebook")
+check(fbCal?.app == "Facebook", "listed under Facebook on the Sources page")
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

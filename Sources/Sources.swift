@@ -23,9 +23,26 @@ enum FeedLinks {
                         url: feedURL,
                         groupURL: "https://www.meetup.com/\(group)/")
         }
-        if host.hasSuffix("facebook.com") { return nil }  // handled as a single event, not a feed
+        if host.hasSuffix("facebook.com") { return facebookCalendar(s) }  // otherwise a single event, not a feed
         let name = host.replacingOccurrences(of: "www.", with: "")
         return Feed(id: "ics-\(stableHash(s))-\(name)", name: name, url: s, groupURL: nil)
+    }
+}
+
+extension FeedLinks {
+    static let facebookCalendarID = "facebook-calendar"
+
+    /// Facebook's private calendar of the events you're Going or Interested in (Events → Add to calendar →
+    /// Copy Link), like facebook.com/events/ical/upcoming/?uid=…&key=…. It's Facebook's own export, read like any
+    /// calendar link; the key makes it private, so it stays on this Mac.
+    static func facebookCalendar(_ raw: String) -> Feed? {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.lowercased().hasPrefix("webcal://") { s = "https://" + s.dropFirst("webcal://".count) }
+        if !s.lowercased().hasPrefix("http") { s = "https://" + s }
+        guard let url = URL(string: s), let host = url.host?.lowercased(), host.hasSuffix("facebook.com"),
+              url.path.lowercased().hasPrefix("/events/ical/"), !(url.query ?? "").isEmpty else { return nil }
+        return Feed(id: facebookCalendarID, name: "Your Facebook events", url: s,
+                    groupURL: "https://www.facebook.com/events/", kind: .calendar, keywordFilter: true)
     }
 }
 

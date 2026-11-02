@@ -22,7 +22,9 @@ enum SourceReader {
     static func read(_ feed: Feed, store: Store, now: Date = Date()) async throws -> SourceResult {
         switch feed.type {
         case .calendar:
-            return SourceResult(events: ICSParser.parse(try await Fetcher.download(feed.url)))
+            // Your Facebook events include birthdays and gigs too, so that calendar keeps only the bike ones.
+            return SourceResult(events: ICSParser.parse(try await Fetcher.download(feed.url))
+                .filter { wanted(feed, "\($0.title) \($0.notes) \($0.location)") })
         case .webpage:
             return try await readWebpage(feed, store: store)
         case .posts:

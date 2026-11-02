@@ -622,6 +622,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         await snap("5-sources-instagram", window)
         ui.selectedSource = "yours"
         await snap("6-sources-yours", window)
+        ui.selectedSource = "facebook"
+        await snap("6-sources-facebook", window)
         ui.page = .settings
         await snap("7-settings", window)
         ui.showAdd = true
@@ -894,7 +896,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return }
         let lower = s.lowercased()
-        if Store.facebookEventID(s) != nil || Store.facebookShareLink(s) != nil {
+        if FeedLinks.facebookCalendar(s) != nil {
+            connectFacebookCalendar(link: s)
+        } else if Store.facebookEventID(s) != nil || Store.facebookShareLink(s) != nil {
             addFacebookEvent(link: s)
         } else if lower.contains("facebook.com") {
             Dialogs.info("Facebook groups and pages can't be added",
@@ -905,6 +909,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             if let handle = Self.instagramHandle(s) { addInstagramHandle(handle) }
         } else {
             addFeed(link: s)
+        }
+    }
+
+    var facebookCalendarConnected: Bool { store.state.feeds.contains { $0.id == FeedLinks.facebookCalendarID } }
+
+    /// Adds Facebook's calendar of your events, after checking Facebook sends it.
+    func connectFacebookCalendar(link: String) {
+        guard let feed = FeedLinks.facebookCalendar(link) else {
+            Dialogs.info("That isn't your Facebook events calendar link",
+                         "On Facebook's Events page, right-click “Add to calendar” and choose “Copy Link”. The link starts with https://www.facebook.com/events/ical/")
+            return
+        }
+        Task {
+            do {
+                _ = try await Fetcher.download(feed.url)
+            } catch {
+                Dialogs.info("Facebook didn't send your events",
+                             "\(error.localizedDescription)\n\nCopy the link from Facebook again and paste it. Until then, you can still add Facebook events one at a time with +.")
+                return
+            }
+            store.state.feeds.removeAll { $0.id == feed.id }
+            store.state.feeds.append(feed)
+            store.save()
+            await checkFeed(feed.id)
         }
     }
 

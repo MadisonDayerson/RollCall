@@ -571,8 +571,13 @@ struct AccountsStep: View {
                     .onSubmit(add)
                 Button("Add", action: add).disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            Text("Works with a club or event website, a forum section, a Meetup group, a calendar link, a news feed, or an Instagram account. Facebook doesn't let apps read groups, so add Facebook events one at a time later with Add.")
+            Text("Works with a club or event website, a forum section, a Meetup group, a calendar link, a news feed, or an Instagram account. Facebook doesn't let apps read groups, but it can share the events you've responded to:")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Card {
+                FacebookCalendarBox(app: model.app, connected: model.app.facebookCalendarConnected, later: model.later)
+                Text("You can skip this and add Facebook events one at a time later with +.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if !model.followed.isEmpty {
                 Text("Following").font(.headline).padding(.top, 4)
                 ForEach(model.followed, id: \.id) { f in

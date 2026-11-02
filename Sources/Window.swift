@@ -820,7 +820,7 @@ struct FeedOptions: View {
                     EmptyView()
                 }
 
-                if kind == .webpage || kind == .posts || kind == .forum {
+                if kind == .webpage || kind == .posts || kind == .forum || id == FeedLinks.facebookCalendarID {
                     Toggle("Only keep motorbike rides and events", isOn: Binding(
                         get: { feed.keywordFilter ?? false },
                         set: { on in model.setFeed(id) { $0.keywordFilter = on } }))
@@ -866,13 +866,56 @@ struct FacebookOptions: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Facebook doesn't let apps find or read events, so you add each one. Paste the event's link with +, then download the event from Facebook and RollCall fills in the details.")
-                .font(.callout).foregroundStyle(.secondary)
+            FacebookCalendarBox(app: model.app, connected: model.app.facebookCalendarConnected, later: model.later)
+            Divider()
+            Text("Or add one event at a time").font(.headline)
+            Text("For events you haven't responded to, or if the calendar link stops working: paste the event's link with +, then download the event from Facebook and RollCall fills in the details.")
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button("Add a Facebook event…") { model.later { model.app.addFacebookEvent() } }
             Toggle("Pick up Facebook event downloads from the Downloads folder", isOn: Binding(
                 get: { model.store.state.settings.watchDownloads },
                 set: { model.app.setWatchDownloads($0) }))
         }
+    }
+}
+
+/// Connecting Facebook's calendar of the events you've responded to, in setup and on the Sources page.
+struct FacebookCalendarBox: View {
+    let app: AppDelegate
+    let connected: Bool
+    let later: (@escaping @MainActor () -> Void) -> Void
+    @StateObject private var link = Box("")
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Your Facebook events").font(.headline)
+            if connected {
+                Label("Connected. Bike events you're Going or Interested in on Facebook come in by themselves.",
+                      systemImage: "checkmark.circle.fill")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("It's listed under Facebook on the Sources page, where you can check it or remove it.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("Facebook can share a private calendar of the events you're Going or Interested in, so they come in by themselves:")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("1. Click Open Facebook Events (sign in if asked).\n2. Find “Add to calendar” on the Events page.\n3. Right-click it and choose “Copy Link”.\n4. Paste the link below and click Connect.")
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Open Facebook Events") { app.open("https://www.facebook.com/events/") }
+                HStack {
+                    TextField("https://www.facebook.com/events/ical/upcoming/…", text: $link.value)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(connect)
+                    Button("Connect", action: connect).disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                Text("Keep this link to yourself: anyone who has it can see your events. Only bike events are kept.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    func connect() {
+        let s = link.value
+        later { app.connectFacebookCalendar(link: s) }
     }
 }
 

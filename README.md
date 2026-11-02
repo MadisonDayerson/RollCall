@@ -57,13 +57,20 @@ Click **+** and paste a link. RollCall works out what it is:
 | Paste | Result |
 |---|---|
 | Club or event website, forum section, Meetup group, calendar link (`.ics`, `webcal://`) or news feed | Checked automatically |
-| Facebook event | Follow the steps below |
+| Facebook event, or your Facebook events calendar link | Follow the steps below |
 | Instagram account (`@name`) | Added to the accounts you check |
 | Instagram post, or any post or message | Opens **Paste a post** to make a ride from it |
 
 You can also **Type a ride in** or **Import a calendar file**.
 
-**Facebook events.** Facebook doesn't let apps read events, so:
+**Your Facebook events.** Facebook can share a private calendar of the events you're Going or Interested
+in. Connect it in setup's **Groups & accounts** step, or under **Sources → Facebook events**:
+1. Click **Open Facebook Events**, find **Add to calendar**, right-click it and choose **Copy Link**.
+2. Paste the link into RollCall and click **Connect**. Bike events you respond to then come in by themselves.
+
+Keep that link to yourself: anyone who has it can see your events.
+
+**One Facebook event at a time** (events you haven't responded to, or if the calendar link stops working):
 1. Click **+** and paste the event link, then click **Open event page**.
 2. On Facebook, click **⋯** → **Add to calendar** → **Download**.
 3. The ride appears in RollCall within a minute. (Allow access to Downloads if asked.)
