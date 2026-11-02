@@ -285,7 +285,8 @@ struct RidesPage: View {
                     }
                 }
                 .labelsHidden()
-                .frame(maxWidth: .infinity)
+                // The menu sits at the left, in line with the section headings; the tabs stay centred.
+                .frame(maxWidth: .infinity, alignment: width.value >= 440 ? .center : .leading)
                 .padding(10)
                 .background(GeometryReader { g in
                     Color.clear
