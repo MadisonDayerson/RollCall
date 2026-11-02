@@ -1157,25 +1157,28 @@ struct SettingsPage: View {
     var body: some View {
         let app = model.app
         Form {
+            // Saves by itself, like the rest of Settings: numbers as you type, the place when you press Return
+            // or leave the page (it's looked up on a map, so not on every keystroke).
             Section("Home area") {
                 TextField("Suburb or town", text: $place.value)
+                    .onSubmit(savePlace)
                 TextField("Show rides within (km)", text: $km.value)
+                    .onChange(of: km.value) { _, _ in saveNumbers() }
                 TextField("Days ahead to show", text: $days.value)
-                HStack {
-                    if let m = message.value { Text(m).foregroundStyle(.orange).font(.callout) }
-                    Spacer()
-                    if saving.value { ProgressView().controlSize(.small) }
-                    Button("Save") {
-                        saving.value = true
-                        Task {
-                            message.value = await app.setHomeArea(place: place.value, km: Double(km.value) ?? 0, days: Int(days.value) ?? 0)
-                            saving.value = false
-                            load()
-                        }
+                    .onChange(of: days.value) { _, _ in saveNumbers() }
+                HStack(spacing: 6) {
+                    if saving.value {
+                        ProgressView().controlSize(.small)
+                        Text("Looking up “\(place.value)”…").foregroundStyle(.secondary)
+                    } else if let m = message.value {
+                        Label(m, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    } else if let found = foundPlace {
+                        Label("Found: " + found, systemImage: "checkmark.circle.fill")
                     }
                 }
-                Text("Rides further away are hidden, except rides you add yourself, rides from your chats and your Facebook events.")
-                    .font(.caption).foregroundStyle(.secondary)
+                .font(.callout)
+                Text("Press Return after changing the suburb. Rides further away are hidden, except rides you add yourself, rides from your chats and your Facebook events.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Section("Chats") {
                 LabeledContent("Beeper", value: Keychain.read() == nil ? "Not connected" : "Connected (read only)")
@@ -1213,6 +1216,32 @@ struct SettingsPage: View {
         .formStyle(.grouped)
         .navigationTitle("Settings")
         .onAppear(perform: load)
+        .onDisappear(perform: savePlace)
+    }
+
+    /// "Footscray, VIC, Australia" once the home area has been found on the map.
+    var foundPlace: String? {
+        let st = model.store.state.settings
+        let parts = [st.homeCity, st.homeRegion, st.homeCountry].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+
+    func saveNumbers() {
+        let st = model.store.state.settings
+        guard let k = Double(km.value), k > 0, let d = Int(days.value), d > 0,
+              k != st.radiusKm || d != st.daysAhead else { return }
+        Task { _ = await model.app.setHomeArea(place: st.homeName, km: k, days: d) }
+    }
+
+    func savePlace() {
+        let p = place.value.trimmingCharacters(in: .whitespaces)
+        guard !p.isEmpty, !saving.value, p != model.store.state.settings.homeName || model.store.state.settings.homeRegion == nil else { return }
+        saving.value = true
+        message.value = nil
+        Task {
+            message.value = await model.app.setHomeArea(place: p, km: 0, days: 0)
+            saving.value = false
+        }
     }
 
     func load() {
@@ -1318,11 +1347,12 @@ struct RideTogether: View {
     }
 }
 
-/// Location sharing, intercom, Discord and tags, used in setup and Settings. Saves when you leave it or press Save.
+/// Location sharing, intercom, Discord and tags, used in setup and Settings. Saves by itself.
 struct TogetherForm: View {
     let app: AppDelegate
     @StateObject private var t = Box(Together())
     @StateObject private var loaded = Box(false)
+    @StateObject private var pending = Box<Task<Void, Never>?>(nil)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1338,15 +1368,19 @@ struct TogetherForm: View {
             TextField("Discord invite link", text: $t.value.discord, prompt: Text("https://discord.gg/…"))
             TextField("Tags you post under", text: $t.value.tags, prompt: Text("#hooligoon #melbourneriders"))
             TextField("Your handle (for captions)", text: $t.value.handle, prompt: Text("@yourname"))
-            HStack {
-                Text("Invites, calendar events and captions include these. Groups can have their own Discord and tags on the Sources page.")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Spacer()
-                Button("Save") { app.setTogether(t.value) }
-            }
+            Text("Invites, calendar events and captions include these. Groups can have their own Discord and tags on the Sources page.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .onAppear { if !loaded.value { t.value = app.store.state.settings.crew; loaded.value = true } }
-        .onDisappear { app.setTogether(t.value) }
+        // Saves by itself a moment after you stop typing (the calendar is updated too, so not on every key).
+        .onChange(of: t.value) { _, v in
+            pending.value?.cancel()
+            pending.value = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                if !Task.isCancelled { app.setTogether(v) }
+            }
+        }
+        .onDisappear { pending.value?.cancel(); app.setTogether(t.value) }
     }
 }
 
@@ -1356,6 +1390,7 @@ struct CrewLinksEditor: View {
     @ObservedObject var model: UIModel
     @StateObject private var discord = Box("")
     @StateObject private var tags = Box("")
+    @StateObject private var pending = Box<Task<Void, Never>?>(nil)
 
     var body: some View {
         GroupBox {
@@ -1364,12 +1399,8 @@ struct CrewLinksEditor: View {
                     .textFieldStyle(.roundedBorder)
                 TextField("Tags", text: $tags.value, prompt: Text("e.g. #hooligoon"))
                     .textFieldStyle(.roundedBorder)
-                HStack {
-                    Text("Added to invites, calendar events and captions for this group's rides.")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Save", action: save)
-                }
+                Text("Added to invites, calendar events and captions for this group's rides.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         } label: {
             Label("Riding with this group", systemImage: "person.2.wave.2")
@@ -1377,10 +1408,14 @@ struct CrewLinksEditor: View {
         .onAppear(perform: load)
         .onChange(of: key) { old, _ in
             // Picking another source reuses this view, so keep what was typed for the last one.
+            pending.value?.cancel()
             model.app.setCrewLinks(old, CrewLinks(discord: discord.value, tags: tags.value))
             load()
         }
-        .onDisappear(perform: save)
+        // Saves by itself a moment after you stop typing.
+        .onChange(of: discord.value) { _, _ in saveSoon() }
+        .onChange(of: tags.value) { _, _ in saveSoon() }
+        .onDisappear { pending.value?.cancel(); save() }
     }
 
     func load() {
@@ -1390,6 +1425,15 @@ struct CrewLinksEditor: View {
     }
 
     func save() { model.app.setCrewLinks(key, CrewLinks(discord: discord.value, tags: tags.value)) }
+
+    func saveSoon() {
+        pending.value?.cancel()
+        let k = key, l = CrewLinks(discord: discord.value, tags: tags.value)
+        pending.value = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            if !Task.isCancelled { model.app.setCrewLinks(k, l) }
+        }
+    }
 }
 
 // MARK: - Layout
