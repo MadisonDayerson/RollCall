@@ -8,7 +8,7 @@ final class UIModel: ObservableObject {
         case rides, review, sources, settings
     }
     enum RideFilter: String, CaseIterable {
-        case toDecide = "To decide", all = "All", going = "Going", skipped = "Skipped", past = "Past"
+        case all = "All", upcoming = "Upcoming", going = "Going", skipped = "Skipped", past = "Past"
     }
 
     unowned let app: AppDelegate
@@ -41,7 +41,8 @@ final class UIModel: ObservableObject {
         let all = store.upcoming()
         switch rideFilter {
         case .past: return []
-        case .toDecide: return all.filter { store.decision($0.id) == .undecided }
+        // Same as the All tab's Upcoming section: not decided yet, or maybe.
+        case .upcoming: return all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }
         case .all: return rideSections().flatMap(\.rides)
         case .going: return all.filter { store.decision($0.id) == .attending }
         case .skipped: return all.filter { store.decision($0.id) == .skip }
