@@ -30,6 +30,7 @@ iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 cp Design/MenuIcon.png "$APP/Contents/Resources/MenuIcon.png"
 # The "Roll Call" wordmark at the foot of the sidebar (Design/make_wordmark.swift draws it).
 cp Design/Wordmark.png "$APP/Contents/Resources/Wordmark.png"
+cp Design/Monogram.png "$APP/Contents/Resources/Monogram.png"
 
 codesign --force --sign - "$APP"
 

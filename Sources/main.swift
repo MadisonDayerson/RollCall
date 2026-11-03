@@ -417,15 +417,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func rideItem(_ ride: RideEvent) -> NSMenuItem {
         let d = store.decision(ride.id)
-        let mark: String
+        // Black-and-white marks to match the window's date patches: filled for going, dashed for maybe.
+        let symbol: String
         switch d {
-        case .attending: mark = "✅"
-        case .maybe: mark = "🤔"
-        case .skip: mark = "✖︎"
-        case .undecided: mark = ride.needsCheck == true ? "🔎" : "🆕"
+        case .attending: symbol = "checkmark.circle.fill"
+        case .maybe: symbol = "circle.dashed"
+        case .skip: symbol = "xmark.circle"
+        case .undecided: symbol = ride.needsCheck == true ? "questionmark.circle" : "circle"
         }
         let when = ride.allDay ? Self.dayFmt.string(from: ride.start) : Self.dayTimeFmt.string(from: ride.start)
-        let item = NSMenuItem(title: "\(mark)  \(when)  ·  \(ride.title)", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: "\(when)  ·  \(ride.title)", action: nil, keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: decisionName(d, needsCheck: ride.needsCheck == true))
         let sub = NSMenu()
         sub.autoenablesItems = false
 
@@ -1044,7 +1046,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 let undated = (store.state.recentPosts[feed.id] ?? []).count
                 var msg = "Found \(r) upcoming ride\(r == 1 ? "" : "s") nearby."
                 if undated > 0 { msg += " \(undated) post\(undated == 1 ? "" : "s") without a date are under Posts to look at." }
-                if feed.type == .forum || feed.type == .posts { msg += "\n\nNew posts are checked every \(feed.interval / 60) hours (change it under Sources). Rides marked 🔎 had their date read from the post text, so check it before going." }
+                if feed.type == .forum || feed.type == .posts { msg += "\n\nNew posts are checked every \(feed.interval / 60) hours (change it under Sources). Rides marked ? had their date read from the post text, so check it before going." }
                 Dialogs.info("Added \(feed.name)", msg)
             } catch FeedError.privateFeed where raw.contains("meetup.com") {
                 Dialogs.info("This Meetup group's calendar is private",

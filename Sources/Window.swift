@@ -270,17 +270,115 @@ struct MainView: View {
     }
 }
 
-/// "Roll Call" in the logo's gothic lettering, at the foot of the sidebar. It's a picture of the letters (the
-/// font itself isn't shipped), drawn black and tinted like the sidebar's text, so it follows light and dark mode.
-struct Wordmark: View {
-    static let image: NSImage? = {
-        guard let url = Bundle.main.url(forResource: "Wordmark", withExtension: "png"), let img = NSImage(contentsOf: url) else { return nil }
+/// RollCall's look, taken from its icon: black and white, a thin double frame like a club patch, spaced
+/// capitals like the "ROLLCALL" under the logo, and the gothic lettering saved for a few brand moments.
+/// Colour is left for meaning (warnings, problems), so the monochrome reads as the brand.
+enum Brand {
+    /// Gothic lettering drawn by Design/make_wordmark.swift. It's a picture of the letters (the font itself
+    /// isn't shipped), drawn black and tinted like the text around it, so it follows light and dark mode.
+    static func gothic(_ name: String) -> NSImage? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png"), let img = NSImage(contentsOf: url) else { return nil }
         img.isTemplate = true
         return img
-    }()
+    }
+    static let wordmark = gothic("Wordmark")
+    static let monogram = gothic("Monogram")
+    /// What the window's text sits on, for lettering cut out of a filled patch.
+    static let paper = Color(nsColor: .windowBackgroundColor)
+}
+
+/// A heading in spaced capitals, like the "ROLLCALL" under the logo.
+struct PatchLabel: View {
+    let text: String
+    var count: Int? = nil
 
     var body: some View {
-        if let img = Self.image {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            Text(text.uppercased()).font(.caption.weight(.heavy)).tracking(1.8)
+            if let count { Text("\(count)").font(.caption.weight(.semibold)).monospacedDigit().foregroundStyle(.tertiary) }
+        }
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A ride's date as a small patch with the logo's double frame: month, day and weekday. Filled (like the icon)
+/// for rides you're going to, dashed for maybe, outlined while undecided, faded once skipped or past.
+struct DateBadge: View {
+    let date: Date
+    let decision: Decision
+    var needsCheck = false
+    var past = false
+    var scale: CGFloat = 1
+
+    var body: some View {
+        let filled = decision == .attending
+        let ink: Color = filled ? Brand.paper : .primary
+        let outer = RoundedRectangle(cornerRadius: 9 * scale, style: .continuous)
+        VStack(spacing: -1 * scale) {
+            Text(Self.month.string(from: date).uppercased())
+                .font(.system(size: 7.5 * scale, weight: .heavy)).tracking(1 * scale)
+            Text(Self.day.string(from: date))
+                .font(.system(size: 19 * scale, weight: .black).width(.condensed)).monospacedDigit()
+            Text(Self.weekday.string(from: date).uppercased())
+                .font(.system(size: 7.5 * scale, weight: .heavy)).tracking(1 * scale)
+        }
+        .foregroundStyle(ink)
+        .frame(width: 40 * scale, height: 46 * scale)
+        .background { if filled { outer.fill(Color.primary) } }
+        .overlay {
+            outer.strokeBorder(Color.primary, style: StrokeStyle(lineWidth: 1.25 * scale,
+                                                                 dash: decision == .maybe ? [3 * scale, 2 * scale] : []))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 6.5 * scale, style: .continuous)
+                .strokeBorder(ink.opacity(0.5), lineWidth: 0.6 * scale)
+                .padding(2.75 * scale)
+        }
+        .overlay(alignment: .topTrailing) {
+            if needsCheck {
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.system(size: 12 * scale, weight: .bold))
+                    .background(Circle().fill(Brand.paper))
+                    .offset(x: 5 * scale, y: -5 * scale)
+            }
+        }
+        .opacity(decision == .skip ? 0.4 : past ? 0.65 : 1)
+        .accessibilityHidden(true)
+    }
+
+    private static func fmt(_ f: String) -> DateFormatter {
+        let d = DateFormatter(); d.locale = Locale(identifier: "en_AU"); d.dateFormat = f; return d
+    }
+    static let month = fmt("MMM"), day = fmt("d"), weekday = fmt("EEE")
+}
+
+/// An empty page: the gothic "RC" with a line of help underneath.
+struct EmptyState: View {
+    let text: String
+    var detail: String? = nil
+
+    var body: some View {
+        VStack(spacing: 14) {
+            if let img = Brand.monogram {
+                Image(nsImage: img).renderingMode(.template).resizable().scaledToFit()
+                    .frame(height: 46).foregroundStyle(.quaternary).accessibilityHidden(true)
+            }
+            VStack(spacing: 6) {
+                Text(text)
+                if let detail { Text(detail).font(.callout) }
+            }
+            .foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// "Roll Call" in the logo's gothic lettering, at the foot of the sidebar.
+struct Wordmark: View {
+    var body: some View {
+        if let img = Brand.wordmark {
             Image(nsImage: img)
                 .renderingMode(.template)
                 .resizable()
@@ -329,12 +427,7 @@ struct RidesPage: View {
                         .onChange(of: g.size.width) { _, w in width.value = w }
                 })
                 if rides.isEmpty {
-                    Spacer()
-                    Text(model.app.refreshing && model.rideFilter != .past ? "Checking sources…" : model.rideFilter.emptyText)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                    Spacer()
+                    EmptyState(text: model.app.refreshing && model.rideFilter != .past ? "Checking sources…" : model.rideFilter.emptyText)
                 } else if model.rideFilter == .all {
                     // Drawn by hand rather than as an outline list: macOS's outline list left stray, wrongly placed
                     // section headings behind when sections opened and closed.
@@ -358,9 +451,7 @@ struct RidesPage: View {
                 if let id = model.selectedRide, let ride = model.store.state.events[id] {
                     RideDetail(ride: ride, model: model)
                 } else {
-                    Text("Choose a ride to see its details.")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    EmptyState(text: "Choose a ride to see its details.")
                 }
             }
         }
@@ -380,11 +471,10 @@ struct RideSectionView: View {
                 HStack(spacing: 8) {
                     Image(systemName: open.wrappedValue ? "chevron.down" : "chevron.right")
                         .font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(width: 12)
-                    Text(section.name).fontWeight(.semibold)
-                    Text("\(section.rides.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    PatchLabel(text: section.name, count: section.rides.count)
                     Spacer()
                 }
-                .padding(.vertical, 7)
+                .padding(.top, 14).padding(.bottom, 7)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -411,16 +501,7 @@ struct RideSectionView: View {
     }
 }
 
-@MainActor func decisionMark(_ d: Decision, needsCheck: Bool) -> String {
-    switch d {
-    case .attending: return "✅"
-    case .maybe: return "🤔"
-    case .skip: return "✖︎"
-    case .undecided: return needsCheck ? "🔎" : "🆕"
-    }
-}
-
-/// The decision marks in words, for VoiceOver.
+/// A ride's decision in words, for VoiceOver.
 @MainActor func decisionName(_ d: Decision, needsCheck: Bool) -> String {
     switch d {
     case .attending: return "Going"
@@ -444,12 +525,12 @@ struct RideRow: View {
     @ObservedObject var model: UIModel
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text(decisionMark(model.store.decision(ride.id), needsCheck: ride.needsCheck == true))
-                .accessibilityLabel(decisionName(model.store.decision(ride.id), needsCheck: ride.needsCheck == true))
+        let decision = model.store.decision(ride.id)
+        HStack(alignment: .top, spacing: 12) {
+            DateBadge(date: ride.start, decision: decision, needsCheck: ride.needsCheck == true, past: model.isPast(ride))
             VStack(alignment: .leading, spacing: 2) {
-                Text(ride.title).fontWeight(.medium).lineLimit(2)
-                Text(rideWhen(ride)).font(.callout)
+                Text(ride.title).fontWeight(.semibold).lineLimit(2)
+                Text(ride.allDay ? "All day" : AppDelegate.timeFmt.string(from: ride.start)).font(.callout)
                 Text([ride.location.isEmpty ? nil : ride.location,
                       ride.distanceKm.map { String(format: "%.0f km", $0) },
                       ride.sourceName].compactMap { $0 }.joined(separator: " · "))
@@ -457,6 +538,8 @@ struct RideRow: View {
             }
         }
         .padding(.vertical, 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(decisionName(decision, needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
     }
 }
 
@@ -468,7 +551,11 @@ struct RideDetail: View {
         let app = model.app
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(ride.title).font(.title2).fontWeight(.semibold).textSelection(.enabled)
+                HStack(alignment: .center, spacing: 16) {
+                    DateBadge(date: ride.start, decision: model.store.decision(ride.id), needsCheck: ride.needsCheck == true,
+                              past: model.isPast(ride), scale: 1.5)
+                    Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
+                }
                 if ride.needsCheck == true {
                     Label("The date and place were read from a post or message. Check them before going.",
                           systemImage: "exclamationmark.triangle")
@@ -745,15 +832,8 @@ struct SourcesPage: View {
                 if let id = model.selectedSource, let row = rows.first(where: { $0.id == id }) {
                     SourceDetail(row: row, model: model)
                 } else {
-                    VStack(spacing: 8) {
-                        Text("Choose a source to see its options.")
-                        Text("Use + to add a website, forum, calendar, Meetup group, Facebook event, Instagram account or chat.")
-                            .font(.callout)
-                    }
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    EmptyState(text: "Choose a source to see its options.",
+                               detail: "Use + to add a website, forum, calendar, Meetup group, Facebook event, Instagram account or chat.")
                 }
             }
         }
@@ -796,8 +876,7 @@ struct SourceGroupHeader: View {
         let intervals = Set(feeds.compactMap(\.interval))
         HStack(spacing: 8) {
             Image(systemName: group.symbol).frame(width: 18).foregroundStyle(.secondary)
-            Text(group.name).fontWeight(.semibold)
-            Text("\(group.rows.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+            PatchLabel(text: group.name, count: group.rows.count)
             Spacer()
             if group.rows.contains(where: { $0.problem != nil }) {
                 Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).help("A source here has a problem")
@@ -923,7 +1002,7 @@ struct FeedOptions: View {
                     Text("RollCall reads new messages in this chat while Beeper is open. Only messages that plan a ride count: they say when, and where or who's coming. Ride talk without a day goes to Posts to look at.")
                         .font(.callout).foregroundStyle(.secondary)
                 case .forum:
-                    Text("New threads are read once each. Threads made from the forum's calendar have exact times; for other threads the date is read from the post (marked 🔎).")
+                    Text("New threads are read once each. Threads made from the forum's calendar have exact times; for other threads the date is read from the post (marked with a ? on the date).")
                         .font(.callout).foregroundStyle(.secondary)
                 default:
                     EmptyView()
@@ -1060,17 +1139,17 @@ struct SourceRides: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(rides.isEmpty ? "No upcoming rides from here" : "Upcoming rides from here")
-                .font(.headline)
+            PatchLabel(text: rides.isEmpty ? "No upcoming rides from here" : "Upcoming rides", count: rides.isEmpty ? nil : rides.count)
             ForEach(rides.prefix(12), id: \.id) { r in
                 Button {
                     model.reveal(ride: r.id)
                 } label: {
-                    HStack {
-                        Text(decisionMark(model.store.decision(r.id), needsCheck: r.needsCheck == true))
-                        Text(rideWhen(r)).foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        DateBadge(date: r.start, decision: model.store.decision(r.id), needsCheck: r.needsCheck == true, scale: 0.75)
                         Text(r.title).lineLimit(1)
+                        Spacer()
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -1317,13 +1396,13 @@ struct RideTogether: View {
                         HStack { Button("Open Discord") { app.open(d) } }
                     }
                 } else {
-                Text("Before").font(.headline)
+                PatchLabel(text: "Before").padding(.top, 4)
                 HStack {
                     Button("Invite friends…") { app.shareInvite(ride) }
                         .help("Send the details and a calendar file with Messages, AirDrop, Mail and more")
                     Button("Copy invite") { app.copy(app.invite(ride)); copied.value = "Invite copied: paste it into Discord, WhatsApp or any group chat." }
                 }
-                Text("During").font(.headline)
+                PatchLabel(text: "During").padding(.top, 4)
                 HStack {
                     if let d = discord { Button("Open Discord") { app.open(d) } }
                     if crew.locationApp == .findMy { Button("Open Find My") { app.openFindMy() } }
@@ -1331,7 +1410,7 @@ struct RideTogether: View {
                 }
                 Text(duringNote(crew, discord: discord)).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("After").font(.headline)
+                PatchLabel(text: "After").padding(.top, 4)
                 after
                 }
                 if let c = copied.value { Label(c, systemImage: "doc.on.clipboard").font(.callout) }
