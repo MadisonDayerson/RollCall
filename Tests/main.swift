@@ -583,5 +583,32 @@ do {
     check(Route.waze(to: "Example Servo") == "https://waze.com/ul?q=Example%20Servo&navigate=yes", "Waze link")
     check(Route.appleMaps(from: "Sunshine", to: "Example Servo") == "maps://?saddr=Sunshine&daddr=Example%20Servo&dirflg=d", "Apple Maps link")
 }
+
+// Ride summaries
+do {
+    let long = """
+    ROUTE MAP: https://www.google.com/maps/dir/1+Example+St/Some+Lookout/@-37.8,145.0,12z/data=!3m1!4m2!1m0!1m0!3e0?entry=ttu&g_ep=abcdefghijklmnop
+    MEET POINT: 1 Example St, Sunshine VIC 3020
+    STANDS UP: @ 7PM (we will NOT be waiting around after this time)
+    DINNER: 12 Pretend Rd, Hilltown VIC 3999
+    AFTER RIDE:
+    CHILL SPOT: NO AFTER RIDE THIS TIME
+    OUR SOCIALS BELOW:
+    FACEBOOK: https://www.facebook.com/groups/example
+    BY JOINING THIS EVENT YOU ACKNOWLEDGE THE FOLLOWING:
+    Ride safe. Times: approximate.
+    """
+    check(Brief.items(in: long) == [
+        Brief.Item(label: "Meet", value: "1 Example St, Sunshine VIC 3020"),
+        Brief.Item(label: "Leave", value: "7pm (we will NOT be waiting around after this time)"),
+        Brief.Item(label: "Dinner", value: "12 Pretend Rd, Hilltown VIC 3999"),
+        Brief.Item(label: "Chill spot", value: "No after ride this time"),
+    ], "labelled lines become a short summary, without links, socials, fine print or sentences")
+    check(Brief.needsSummary(long), "a description with a huge link gets a summary")
+    check(!Brief.needsSummary("Coffee and a short loop. Back by noon."), "a short description is shown as it is")
+    check(Brief.items(in: "Note: bring a jacket") == [], "one colon in a sentence isn't a summary")
+    check(Brief.plainValue("MEET AT THE SERVO, 8 AM SHARP") == "Meet at the servo, 8am sharp", "capitals calmed down, times tidied")
+    check(Brief.opening(String(repeating: "Lovely ride through the hills. ", count: 20), limit: 40) == "Lovely ride through the hills. Lovely…", "long text is cut at a word")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

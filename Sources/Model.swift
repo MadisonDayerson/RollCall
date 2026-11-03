@@ -179,6 +179,12 @@ struct Settings: Codable {
     var crew: Together { together ?? Together() }
 }
 
+/// A post being put together on a ride's page. A nil caption means RollCall's own, so tag changes still show.
+struct PostDraft: Codable, Equatable {
+    var caption: String?
+    var files: [String] = []
+}
+
 struct AppState: Codable {
     var settings = Settings()
     /// New installs start empty; setup suggests sources for the person's area.
@@ -211,6 +217,8 @@ struct AppState: Codable {
     var crew: [String: CrewLinks] = [:]
     /// Ride id -> a tag typed in by hand, replacing the one RollCall makes.
     var rideTags: [String: String] = [:]
+    /// Ride id -> the post you're putting together: footage you dropped in and the caption as you left it.
+    var postDrafts: [String: PostDraft] = [:]
 
     init() {}
 
@@ -238,6 +246,7 @@ struct AppState: Codable {
         setupDone = get(.setupDone, false)
         crew = get(.crew, [:])
         rideTags = get(.rideTags, [:])
+        postDrafts = get(.postDrafts, [:])
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion
@@ -438,6 +447,7 @@ final class Store {
                 if past { state.decisions[id] = nil; state.calendarItems[id] = nil }
             }
         }
+        state.postDrafts = state.postDrafts.filter { state.events[$0.key] != nil }
         let cutoff = now.addingTimeInterval(-120 * 86400)
         state.seenPosts = state.seenPosts.filter { $0.value > cutoff }
         // Reviews go once the conversation is two weeks old or the plan is well past.

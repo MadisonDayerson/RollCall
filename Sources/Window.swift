@@ -1,5 +1,7 @@
 import SwiftUI
 import AppKit
+import QuickLookThumbnailing
+import UniformTypeIdentifiers
 
 /// What the window shows, kept in step with the saved state.
 @MainActor
@@ -622,16 +624,11 @@ struct RideDetail: View {
                     }
                 }
 
+                if !ride.notes.isEmpty { RideAbout(notes: ride.notes).id(ride.id) }
+
                 RideTogether(ride: ride, model: model)
 
-                if !ride.notes.isEmpty {
-                    GroupBox {
-                        Text(Web.readableNotes(ride.notes))
-                            .font(.callout)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
+                PostBox(ride: ride, model: model).id(ride.id)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1375,7 +1372,6 @@ struct RideTogether: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
     @StateObject private var tag = Box("")
-    @StateObject private var copied = Box<String?>(nil)
 
     var body: some View {
         let app = model.app
@@ -1397,9 +1393,8 @@ struct RideTogether: View {
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
 
                 Flow {
-                    Button("Invite…") { app.shareInvite(ride) }
-                        .help("Send the details and a calendar file with Messages, AirDrop, Mail and more")
-                    Button("Copy invite") { app.copy(app.invite(ride)); copied.value = "Invite copied: paste it into Discord, WhatsApp or any group chat." }
+                    Button("Share") { app.shareInvite(ride) }
+                        .help("Send the invite (time, meeting point, map, voice chat and tags) and a calendar file with Messages, Mail, AirDrop and more")
                     if let d = discord { Button("Discord") { app.open(d) } }
                     if voice == .discord, discord == nil {
                         Button("Voice chat") { model.page = .settings }
@@ -1409,9 +1404,6 @@ struct RideTogether: View {
                             .help("\(voice.name)\(voiceGroup.isEmpty ? "" : ": " + voiceGroup). Pair it with your phone and join the group in the \(voice.name) app; this opens \(voice.name)'s help.")
                     }
                     if crew.locationApp == .findMy { Button("Find My") { app.openFindMy() } }
-                    Button("Share footage…") { app.shareFootage(ride) }
-                        .help("Pick photos or videos and send them with the caption and tags")
-                    Button("Copy caption") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
                     Menu("See posts") {
                         ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
                     }
@@ -1421,14 +1413,201 @@ struct RideTogether: View {
                     Label("\(voice.name)\(voiceGroup.isEmpty ? "" : ": " + voiceGroup)", systemImage: "headphones")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                if let c = copied.value { Label(c, systemImage: "doc.on.clipboard").font(.callout) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
             Label("Ride with friends", systemImage: "person.2.wave.2")
         }
-        .onAppear { tag.value = app.rideTags(ride); copied.value = nil }
-        .onChange(of: ride.id) { _, _ in tag.value = app.rideTags(ride); copied.value = nil }
+        .onAppear { tag.value = app.rideTags(ride) }
+        .onChange(of: ride.id) { _, _ in tag.value = app.rideTags(ride) }
+    }
+}
+
+/// The event description: the few lines that matter in plain words, with the whole thing under See more.
+struct RideAbout: View {
+    let notes: String
+    @StateObject private var more = Box(false)
+
+    var body: some View {
+        let full = Web.readableNotes(notes)
+        let items = Brief.items(in: notes)
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                if !Brief.needsSummary(notes) {
+                    Text(full).textSelection(.enabled)
+                } else {
+                    if items.isEmpty {
+                        Text(Brief.opening(notes)).textSelection(.enabled)
+                    } else {
+                        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
+                            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                                GridRow {
+                                    Text(item.label).foregroundStyle(.secondary)
+                                    Text(item.value).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                    Button(more.value ? "See less" : "See more") { more.value.toggle() }
+                        .buttonStyle(.link)
+                    if more.value {
+                        Divider()
+                        Text(full).font(.callout).textSelection(.enabled)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label("About", systemImage: "text.alignleft")
+        }
+    }
+}
+
+/// Put a post together: drop in footage, edit the caption and tags, then send it to the app of your choice.
+struct PostBox: View {
+    let ride: RideEvent
+    @ObservedObject var model: UIModel
+    @StateObject private var text = Box("")
+    @StateObject private var files = Box<[URL]>([])
+    @StateObject private var over = Box(false)
+    @StateObject private var note = Box<String?>(nil)
+
+    static let sites: [(name: String, url: String)] = [
+        ("Instagram", "https://www.instagram.com/"),
+        ("TikTok", "https://www.tiktok.com/upload"),
+        ("YouTube", "https://www.youtube.com/upload"),
+        ("Facebook", "https://www.facebook.com/"),
+    ]
+
+    var body: some View {
+        let app = model.app
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                dropZone
+                Text("Caption").font(.caption).foregroundStyle(.secondary)
+                TextEditor(text: $text.value)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 80, maxHeight: 160)
+                    .padding(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.35)))
+                Flow {
+                    Button("Share…") {
+                        save()
+                        app.sharePost(caption: text.value, files: files.value)
+                        note.value = "The caption is copied too, in case the app leaves it out."
+                    }
+                    .help("Send the footage and caption with Messages, AirDrop, Photos, Mail and more")
+                    Menu("Post on") {
+                        ForEach(Self.sites, id: \.name) { site in
+                            Button(site.name) {
+                                save()
+                                app.postOn(site.url, caption: text.value, files: files.value)
+                                note.value = files.value.isEmpty
+                                    ? "Caption copied: paste it into \(site.name)."
+                                    : "Caption copied. Drag your footage from the Finder window into \(site.name), then paste the caption."
+                            }
+                        }
+                    }
+                    .fixedSize()
+                    .help("Opens the site with the caption copied, ready to finish your post there")
+                    if text.value != app.caption(ride) {
+                        Button("Reset caption") { text.value = app.caption(ride); save() }
+                            .help("Go back to RollCall's caption with the ride's tags")
+                    }
+                }
+                if let n = note.value { Label(n, systemImage: "doc.on.clipboard").font(.callout) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label("Post", systemImage: "photo.on.rectangle.angled")
+        }
+        .onAppear {
+            let d = app.postDraft(ride)
+            text.value = d.caption
+            files.value = d.files
+        }
+        .onDisappear { save() }
+    }
+
+    private var dropZone: some View {
+        let shape = RoundedRectangle(cornerRadius: 8)
+        return Group {
+            if files.value.isEmpty {
+                VStack(spacing: 6) {
+                    Image(systemName: "square.and.arrow.down").font(.title2).foregroundStyle(.secondary)
+                    Text("Drop photos or videos from the ride here").foregroundStyle(.secondary)
+                    Button("Choose…") { add(model.app.chooseFootage()) }
+                }
+                .frame(maxWidth: .infinity, minHeight: 110)
+            } else {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(files.value, id: \.self) { url in
+                            Thumb(url: url)
+                                .overlay(alignment: .topTrailing) {
+                                    Button { files.value.removeAll { $0 == url }; save() } label: {
+                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette)
+                                            .foregroundStyle(.white, .black.opacity(0.6))
+                                    }
+                                    .buttonStyle(.plain).padding(4).help("Take this out of the post")
+                                }
+                        }
+                        Button { add(model.app.chooseFootage()) } label: {
+                            Image(systemName: "plus").font(.title2).frame(width: 96, height: 96)
+                                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.35)))
+                        }
+                        .buttonStyle(.plain).help("Add more photos or videos")
+                    }
+                    .padding(8)
+                }
+            }
+        }
+        .background(over.value ? Color.secondary.opacity(0.12) : .clear, in: shape)
+        .overlay(shape.strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])).foregroundStyle(over.value ? .primary : .secondary))
+        .dropDestination(for: URL.self) { urls, _ in
+            add(urls)
+            return true
+        } isTargeted: { over.value = $0 }
+    }
+
+    private func add(_ urls: [URL]) {
+        let footage = urls.filter { url in
+            guard url.isFileURL, let type = UTType(filenameExtension: url.pathExtension) else { return false }
+            return type.conforms(to: .image) || type.conforms(to: .movie)
+        }
+        for u in footage where !files.value.contains(u) { files.value.append(u) }
+        save()
+    }
+
+    private func save() { model.app.savePostDraft(ride, caption: text.value, files: files.value) }
+}
+
+/// A photo or video's thumbnail, from Quick Look.
+struct Thumb: View {
+    let url: URL
+    @StateObject private var image = Box<NSImage?>(nil)
+
+    var body: some View {
+        Group {
+            if let i = image.value {
+                Image(nsImage: i).resizable().scaledToFill()
+            } else {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().scaledToFit().padding(16)
+            }
+        }
+        .frame(width: 96, height: 96)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(alignment: .bottomLeading) {
+            if UTType(filenameExtension: url.pathExtension)?.conforms(to: .movie) == true {
+                Image(systemName: "play.fill").font(.caption).foregroundStyle(.white).shadow(radius: 2).padding(6)
+            }
+        }
+        .help(url.lastPathComponent)
+        .task(id: url) {
+            let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 96, height: 96), scale: 2, representationTypes: .thumbnail)
+            if let t = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { image.value = t.nsImage }
+        }
     }
 }
 

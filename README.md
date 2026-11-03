@@ -40,7 +40,8 @@ The full window opens when you open RollCall (or choose **Open RollCall…** in 
 RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch pages:
 
 - **Rides:** **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
-  ride for details, the event page (to RSVP), the group page (to join) and directions. A ? on the date means it was read from a post, so double-check it.
+  ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP), the
+  group page (to join) and the route. A ? on the date means it was read from a post, so double-check it.
   Rides you went on move to **Past** once they're over, so you can still share footage and find
   everyone's posts with the ride's tag.
 - **To review:** possible ride plans from your chats, plus ride posts that didn't say when.
@@ -100,12 +101,17 @@ Apple Intelligence on your Mac where available. Beeper needs to be open for chat
 
 Each ride's **Ride with friends** box helps the whole crew end up in the same places:
 
-- **Invite…** or **Copy invite** for Discord or a group chat. Invites include the time, meeting point, map
-  link, Discord, voice chat group and a location-sharing reminder. The same details are in the calendar event.
+- **Share** sends an invite with Messages, Mail, AirDrop and more, with a calendar file friends can add in one
+  tap. Invites include the time, meeting point, map link, Discord, voice chat group and a location-sharing
+  reminder. The same details are in the calendar event.
 - **Route** opens the organiser's route if the description has one, otherwise directions from your suburb
   through the meeting place and stops.
-- **Discord**, **Voice chat** and **Find My** for the day, and **Share footage…**, **Copy caption** and
-  **See posts** for afterwards.
+- **Discord**, **Voice chat**, **Find My** and **See posts** (everyone's posts with the ride's tag).
+
+Under it, the **Post** box puts your post together: drop in photos or videos from the ride, and edit the
+caption and tags RollCall wrote. **Share…** sends it all with the share menu; **Post on** copies the caption,
+shows your footage in the Finder and opens Instagram, TikTok, YouTube or Facebook so you can finish the post
+there. Your draft is kept until the ride is removed.
 
 **Voice chat** (Settings → Riding together) is your helmet intercom (Cardo, Sena, Interphone, UClear, Midland,
 FreedConn, LEXIN) or a call (Discord voice, WhatsApp). Intercoms pair with your phone, not your Mac, so set up
@@ -138,7 +144,7 @@ tags rather than showing friends' locations or posting for you.
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps or Waze) to plan the route.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
-  choose. Text from chat messages isn't added. The invites and captions you copy only go where you paste them.
+  choose. Text from chat messages isn't added. The invites and posts you share only go where you send them.
 
 RollCall is made to follow the Australian Privacy Principles: it only collects what it needs, keeps it
 secure, and deletes it when it's no longer needed. To report a security problem, see [SECURITY.md](SECURITY.md).

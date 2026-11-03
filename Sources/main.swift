@@ -802,18 +802,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         share([text, file])
     }
 
-    /// Picks photos or videos from the ride and shares them with the caption (also copied, for apps that drop text).
-    func shareFootage(_ ride: RideEvent) {
+    /// Asks for photos or videos from the ride, for the Post box.
+    func chooseFootage() -> [URL] {
         Dialogs.bringForward()
         let panel = NSOpenPanel()
         panel.title = "Choose photos or videos from the ride"
         panel.allowedContentTypes = [.image, .movie]
         panel.allowsMultipleSelection = true
         panel.directoryURL = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
-        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
-        let text = caption(ride)
+        return panel.runModal() == .OK ? panel.urls : []
+    }
+
+    func postDraft(_ ride: RideEvent) -> (caption: String, files: [URL]) {
+        let d = store.state.postDrafts[ride.id]
+        let files = (d?.files ?? []).map { URL(fileURLWithPath: $0) }.filter { FileManager.default.fileExists(atPath: $0.path) }
+        return (d?.caption ?? caption(ride), files)
+    }
+
+    func savePostDraft(_ ride: RideEvent, caption text: String, files: [URL]) {
+        let d = PostDraft(caption: text == caption(ride) ? nil : text, files: files.map(\.path))
+        let new: PostDraft? = d == PostDraft() ? nil : d
+        guard store.state.postDrafts[ride.id] != new else { return }
+        store.state.postDrafts[ride.id] = new
+        store.save()
+    }
+
+    /// Shares the footage and caption with the share menu. The caption is copied too, for apps that drop text.
+    func sharePost(caption text: String, files: [URL]) {
         copy(text)
-        share([text] + panel.urls)
+        share([text] + files)
+    }
+
+    /// For sites without a share option on the Mac: copies the caption, shows the footage in the Finder to drag in,
+    /// and opens the site's upload page.
+    func postOn(_ site: String, caption text: String, files: [URL]) {
+        copy(text)
+        if !files.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(files) }
+        open(site)
     }
 
     func openFindMy() {
