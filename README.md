@@ -90,7 +90,7 @@ through each step below in plain language and checks each one for you.
 
 1. Install Beeper and connect your chat accounts in **Beeper → Settings → Accounts**.
 2. In Beeper, open **Settings → Developers** and switch on **Beeper Desktop API**.
-3. In RollCall, click **+** → **Watch chats**, click **Allow** in Beeper, then tick your ride chats.
+3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
 where, who's in) and asks you to review it. **Add as a ride…** fills in the details. Summaries use

@@ -167,9 +167,9 @@ enum Dialogs {
     static func pickChats(_ chats: [Beeper.Chat], watched: Set<String>) -> Set<String>? {
         bringForward()
         let a = NSAlert()
-        a.messageText = "Which chats should RollCall watch?"
+        a.messageText = "Which chats should RollCall check for rides?"
         a.informativeText = "Tick the chats where people post rides. RollCall only reads new messages in these chats, on your Mac, and never sends anything. Group chats are listed first, most recently active at the top."
-        a.addButton(withTitle: "Watch these chats")
+        a.addButton(withTitle: "Check these chats")
         a.addButton(withTitle: "Cancel")
         let width: CGFloat = 440
         let rowHeight: CGFloat = 24

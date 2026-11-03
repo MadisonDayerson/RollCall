@@ -40,7 +40,7 @@ extension PlanSummary {
     }
 }
 
-/// A conversation in a watched chat that mentions times or days, for the user to look over.
+/// A conversation in a chosen chat that mentions times or days, for the user to look over.
 struct PlanReview: Codable, Equatable {
     enum Status: String, Codable { case open, added, dismissed }
 

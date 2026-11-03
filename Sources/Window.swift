@@ -1109,7 +1109,7 @@ struct AddSheet: View {
             Text("Or").font(.headline)
             Grid(horizontalSpacing: 10, verticalSpacing: 10) {
                 GridRow {
-                    choice("bubble.left.and.bubble.right", "Watch chats", "WhatsApp, Messenger and more, through Beeper") {
+                    choice("bubble.left.and.bubble.right", "Check chats", "WhatsApp, Messenger and more, through Beeper") {
                         Task { await model.app.setUpBeeper() }
                     }
                     choice("doc.on.clipboard", "Paste a post or message", "Reads the date and place from the text") {
@@ -1206,7 +1206,7 @@ struct SettingsPage: View {
             }
             Section("Chats") {
                 LabeledContent("Beeper", value: Keychain.read() == nil ? "Not connected" : "Connected (read only)")
-                Button(Keychain.read() == nil ? "Connect and choose chats…" : "Choose which chats to watch…") {
+                Button(Keychain.read() == nil ? "Connect and choose chats…" : "Choose which chats to check…") {
                     model.later { Task { await app.setUpBeeper() } }
                 }
             }

@@ -491,7 +491,7 @@ struct MessagesStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             StepHeader(title: "Connect your group chats",
-                       text: "Lots of rides are planned in group chats. RollCall reads the chats you choose, spots messages about a ride with a day or time, and sums up the plan for you to check.")
+                       text: "Lots of rides are planned in group chats. RollCall checks the chats you choose for messages about a ride with a day or time, and sums up the plan for you to look over.")
             Card {
                 Label("We recommend Beeper", systemImage: "star.fill").font(.headline)
                 Text("WhatsApp, Messenger and Messages don't let other apps read your chats. Beeper is a free app that brings them all into one place, and lets RollCall read just the chats you tick, with a read-only permission you approve. RollCall can never send, edit or delete messages, and nothing leaves your Mac.")
@@ -557,7 +557,7 @@ struct BeeperSteps: View {
                 Button("Connect to Beeper…") { model.chooseChats() }
             case .connected(let n):
                 Label(n == 0 ? "Connected to Beeper. Choose the chats where people post rides."
-                             : "Connected to Beeper, watching \(n) chat\(n == 1 ? "" : "s").",
+                             : "Connected to Beeper, checking \(n) chat\(n == 1 ? "" : "s").",
                       systemImage: "checkmark.circle.fill").foregroundStyle(.primary)
                 Button(n == 0 ? "Choose chats…" : "Change chats…") { model.chooseChats() }
             }
@@ -855,7 +855,7 @@ struct BeeperGuide: View {
                   intro: "RollCall asks Beeper for permission to read. It can never send, change or delete messages, and nothing leaves your Mac.",
                   steps: ["Click **Connect RollCall** below.",
                           "A Beeper page opens in your browser. Then switch to Beeper and click **Allow**.",
-                          "Back in RollCall, tick the group chats where people post rides, and click **Watch these chats**."]) {
+                          "Back in RollCall, tick the group chats where people post rides, and click **Check these chats**."]) {
             Button("Connect RollCall") { model.connectFromGuide() }.buttonStyle(.borderedProminent)
             Status(done: Keychain.read() != nil && model.watchingChats > 0,
                    waiting: "Waiting for you to connect and choose chats…", finished: "Connected")
@@ -866,7 +866,7 @@ struct BeeperGuide: View {
         VStack(alignment: .leading, spacing: 14) {
             Image(systemName: "checkmark.circle.fill").font(.system(size: 54))
             Text("Beeper is set up").font(.title.bold())
-            Text("RollCall is watching \(model.watchingChats) chat\(model.watchingChats == 1 ? "" : "s"). When someone plans a ride, RollCall sums it up and asks you to check it.")
+            Text("RollCall is checking \(model.watchingChats) chat\(model.watchingChats == 1 ? "" : "s"). When someone plans a ride, RollCall sums it up and asks you to check it.")
                 .fixedSize(horizontal: false, vertical: true)
             Text("Keep Beeper open (it can sit in the background) so RollCall can check your chats.")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

@@ -1388,7 +1388,7 @@ enum CLGeocoderShim {
     }
 }
 
-// For tuning: `RollCall --check-chats` prints the conversations in the watched chats that would be
+// For tuning: `RollCall --check-chats` prints the conversations in the chosen chats that would be
 // raised for review, with their summaries, without changing anything. Add `--all` to treat every
 // message as new and include plans that are already over.
 if CommandLine.arguments.contains("--check-chats") {
