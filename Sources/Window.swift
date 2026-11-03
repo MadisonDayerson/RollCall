@@ -577,7 +577,7 @@ struct RideDetail: View {
                 }
 
                 if model.isPast(ride) {
-                    Label("You went on this ride", systemImage: "checkmark.seal")
+                    Label("You went", systemImage: "checkmark.seal")
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Color.secondary.opacity(0.14), in: Capsule())
                 } else {
@@ -595,28 +595,28 @@ struct RideDetail: View {
 
                 HStack {
                     if let url = ride.url {
-                        Button(ride.linkLabel) { app.open(url) }
+                        // A finished ride has nothing left to RSVP to.
+                        Button(model.isPast(ride) && ride.linkLabel == "RSVP" ? "Open event" : ride.linkLabel) { app.open(url) }
+                            .help(ride.linkHelp)
                     }
                     if !ride.location.isEmpty {
-                        Button("Show in Maps") { app.openMaps(place: ride.location) }
+                        Button("Map") { app.openMaps(place: ride.location) }.help("Show the meeting place in Maps")
                     }
-                    if model.isPast(ride) {
-                        Button("Remove from past rides") {
-                            model.selectedRide = nil
-                            model.later { model.app.forgetPastRide(ride.id) }
-                        }
-                    }
-                }
-                HStack {
                     if let g = ride.groupURL {
-                        Button("Open group page (to join)") { app.open(g) }
+                        Button("Join group") { app.open(g) }.help("Open the group's page to join it")
                     } else if ride.isFacebook {
-                        Button("Add the Facebook group link…") { model.later { app.setGroupLink(rideID: ride.id) } }
+                        Button("Add group…") { model.later { app.setGroupLink(rideID: ride.id) } }
                     }
                     if !model.isPast(ride), Store.userAdded.contains(ride.source) || ride.needsCheck == true {
-                        Button("Remove this ride", role: .destructive) {
+                        Button("Remove", role: .destructive) {
                             model.selectedRide = nil
                             app.removeRide(id: ride.id)
+                        }
+                    }
+                    if model.isPast(ride) {
+                        Button("Remove") {  // from past rides
+                            model.selectedRide = nil
+                            model.later { model.app.forgetPastRide(ride.id) }
                         }
                     }
                 }
@@ -743,9 +743,9 @@ struct PlanCard: View {
             .font(.callout)
 
             HStack {
-                Button("Add as a ride…") { model.later { app.addRide(fromReview: review.id) } }
+                Button("Add ride…") { model.later { app.addRide(fromReview: review.id) } }
                     .buttonStyle(.borderedProminent)
-                Button("Open in Beeper") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
+                Button("Open chat") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
                 Spacer()
                 Button("Not a ride") { app.dismissReview(review.id) }
             }
@@ -774,7 +774,7 @@ struct PostRow: View {
             Spacer()
             VStack(alignment: .trailing) {
                 Button("Open") { model.app.open(post.link) }
-                Button("Make a ride…") {
+                Button("Add ride…") {
                     // The post dialog starts with the clipboard, so put the post there.
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(post.text, forType: .string)
@@ -936,7 +936,7 @@ struct SourceDetail: View {
 
                 if model.removable(row.id) {
                     Divider()
-                    Button("Remove this source…", role: .destructive) { model.later { model.app.removeSource(row.id) } }
+                    Button("Remove…", role: .destructive) { model.later { model.app.removeSource(row.id) } }
                 }
             }
             .padding(20)
@@ -961,11 +961,11 @@ struct FeedOptions: View {
         }
         .disabled(app.checking.contains(id) || app.refreshing)
         if kind == .chat {
-            Button("Open chat in Beeper") { app.open(Beeper.chatLink(chatID: Beeper.chatID(of: feed))) }
-            Button("Change which chats…") { model.later { Task { await app.setUpBeeper() } } }
+            Button("Open chat") { app.open(Beeper.chatLink(chatID: Beeper.chatID(of: feed))) }
+            Button("Change chats…") { model.later { Task { await app.setUpBeeper() } } }
         } else {
             if let g = feed.groupURL {
-                Button(g.contains("meetup.com") ? "Open group page (to join)" : "Open website") { app.open(g) }
+                Button(g.contains("meetup.com") ? "Join group" : "Open website") { app.open(g) }
             } else if kind != .calendar {
                 Button("Open website") { app.open(feed.url) }
             }
@@ -1034,11 +1034,11 @@ struct InstagramOptions: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Instagram doesn't let apps read posts, so RollCall opens the account in your browser and remembers when you last looked. Spot a ride? Copy the caption and use Paste a post.")
+            Text("Instagram doesn't let apps read posts, so RollCall opens the account in your browser and remembers when you last looked. Spot a ride? Copy the caption and use Paste post.")
                 .font(.callout).foregroundStyle(.secondary)
             HStack {
-                Button("Open @\(handle) on Instagram") { model.app.openInstagram(handle) }
-                Button("Paste a post…") { model.later { model.app.addFromPost() } }
+                Button("Open Instagram") { model.app.openInstagram(handle) }
+                Button("Paste post…") { model.later { model.app.addFromPost() } }
             }
         }
     }
@@ -1054,7 +1054,7 @@ struct FacebookOptions: View {
             Text("Or add one event at a time").font(.headline)
             Text("For events you haven't responded to, or if the calendar link stops working: paste the event's link with +, then download the event from Facebook and RollCall fills in the details.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Button("Add a Facebook event…") { model.later { model.app.addFacebookEvent() } }
+            Button("Add event…") { model.later { model.app.addFacebookEvent() } }
             Toggle("Pick up Facebook event downloads from the Downloads folder", isOn: Binding(
                 get: { model.store.state.settings.watchDownloads },
                 set: { model.app.setWatchDownloads($0) }))
@@ -1120,9 +1120,9 @@ struct YourOptions: View {
             Text("Rides you typed in, pasted from a post or message, or imported from a calendar file. These always show, however far away they are.")
                 .font(.callout).foregroundStyle(.secondary)
             HStack {
-                Button("Type a ride in…") { model.later { model.app.addManual() } }
-                Button("Paste a post or message…") { model.later { model.app.addFromPost() } }
-                Button("Import a calendar file…") { model.later { model.app.importICS() } }
+                Button("Type ride…") { model.later { model.app.addManual() } }
+                Button("Paste post…") { model.later { model.app.addFromPost() } }
+                Button("Import file…") { model.later { model.app.importICS() } }
             }
         }
     }
@@ -1280,7 +1280,7 @@ struct SettingsPage: View {
             }
             Section("Chats") {
                 LabeledContent("Beeper", value: Keychain.read() == nil ? "Not connected" : "Connected (read only)")
-                Button(Keychain.read() == nil ? "Connect and choose chats…" : "Choose which chats to check…") {
+                Button(Keychain.read() == nil ? "Connect Beeper…" : "Choose chats…") {
                     model.later { Task { await app.setUpBeeper() } }
                 }
             }
@@ -1295,15 +1295,15 @@ struct SettingsPage: View {
             Section("General") {
                 Toggle("Open RollCall when you log in", isOn: Binding(
                     get: { app.opensAtLogin }, set: { app.setOpensAtLogin($0) }))
-                Button("Open the RollCall calendar in Calendar") { app.openCalendarApp() }
-                Button("Run setup again…") { model.later { app.showSetup() } }
+                Button("Open calendar") { app.openCalendarApp() }
+                Button("Run setup…") { model.later { app.showSetup() } }
             }
             Section("Privacy") {
                 Text("Your rides, chats and settings stay on this Mac, readable only by you. RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
-                    Button("How RollCall handles your data") { app.open("https://github.com/MadisonDayerson/RollCall#your-privacy") }
-                    Button("Delete all RollCall data…", role: .destructive) { model.later { app.deleteAllData() } }
+                    Button("Privacy details") { app.open("https://github.com/MadisonDayerson/RollCall#your-privacy") }
+                    Button("Delete all data…", role: .destructive) { model.later { app.deleteAllData() } }
                 }
             }
             Section("Updates") {
@@ -1313,7 +1313,7 @@ struct SettingsPage: View {
                     set: { model.store.state.settings.checkForUpdates = $0; model.store.save() }))
                 HStack {
                     Button("Check now") { model.later { Task { await app.checkForUpdates(manual: true) } } }
-                    Button("Release notes on GitHub") { app.open(Updater.releasesPage) }
+                    Button("Release notes") { app.open(Updater.releasesPage) }
                 }
             }
         }
@@ -1385,7 +1385,7 @@ struct RideTogether: View {
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
 
                 if past {
-                    Text("After the ride").font(.headline)
+                    PatchLabel(text: "After").padding(.top, 4)
                     after
                     if let d = discord {
                         HStack { Button("Open Discord") { app.open(d) } }
@@ -1393,7 +1393,7 @@ struct RideTogether: View {
                 } else {
                 PatchLabel(text: "Before").padding(.top, 4)
                 HStack {
-                    Button("Invite friends…") { app.shareInvite(ride) }
+                    Button("Invite…") { app.shareInvite(ride) }
                         .help("Send the details and a calendar file with Messages, AirDrop, Mail and more")
                     Button("Copy invite") { app.copy(app.invite(ride)); copied.value = "Invite copied: paste it into Discord, WhatsApp or any group chat." }
                 }
@@ -1425,7 +1425,7 @@ struct RideTogether: View {
         let buttons = Group {
             Button("Share footage…") { app.shareFootage(ride) }
                 .help("Pick photos or videos and send them with the caption and tags")
-            Button("Copy caption & tags") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
+            Button("Copy caption") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
             Menu("See posts") {
                 ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
             }

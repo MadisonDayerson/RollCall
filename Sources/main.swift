@@ -446,7 +446,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         sub.addItem(.separator())
 
-        for (label, choice) in [("Going (add to calendar)", Decision.attending), ("Maybe", .maybe), ("Skip", .skip)] {
+        for (label, choice) in [("Going", Decision.attending), ("Maybe", .maybe), ("Skip", .skip)] {
             let it = action(label, #selector(choose(_:)))
             it.representedObject = [ride.id, choice.rawValue]
             it.state = d == choice ? .on : .off
@@ -464,21 +464,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             sub.addItem(it)
         }
         if let g = ride.groupURL {
-            let it = action("Open group page (to join)", #selector(openLink(_:)))
+            let it = action("Join group", #selector(openLink(_:)))
             it.representedObject = g
             sub.addItem(it)
         } else if ride.isFacebook {
-            let it = action("Add the Facebook group link…", #selector(setGroupLink(_:)))
+            let it = action("Add group…", #selector(setGroupLink(_:)))
             it.representedObject = ride.id
             sub.addItem(it)
         }
         if !ride.location.isEmpty {
-            let it = action("Show meeting place in Maps", #selector(openMaps(_:)))
+            let it = action("Show in Maps", #selector(openMaps(_:)))
             it.representedObject = ride.location
             sub.addItem(it)
         }
         if Store.userAdded.contains(ride.source) || ride.needsCheck == true {
-            let it = action("Remove this ride", #selector(removeRide(_:)))
+            let it = action("Remove", #selector(removeRide(_:)))
             it.representedObject = ride.id
             sub.addItem(it)
         }
@@ -1060,7 +1060,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 open(FeedLinks.normalise(raw)?.groupURL)
             } catch {
                 Dialogs.info("Couldn't use that link", error.localizedDescription
-                             + "\n\nIf the site only posts rides as news or photos, use “Paste a post or message” for each one.")
+                             + "\n\nIf the site only posts rides as news or photos, use Paste a post or message (under +) for each one.")
             }
         }
     }
@@ -1355,14 +1355,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 }
 
 extension RideEvent {
-    /// What the "open" button for this ride's link should say.
+    /// What the "open" button for this ride's link should say: a word or two, with `linkHelp` as its tooltip.
     var linkLabel: String {
         guard let url else { return "" }
-        return isFacebook ? "Open on Facebook (to RSVP)"
-            : url.contains("meetup.com") ? "Open on Meetup (to RSVP)"
+        return isFacebook || url.contains("meetup.com") ? "RSVP"
+            : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open chat"
+            : url.contains("instagram.com") || needsCheck == true ? "Open post" : "Open event"
+    }
+
+    var linkHelp: String {
+        guard let url else { return "" }
+        return isFacebook ? "Open the event on Facebook to RSVP"
+            : url.contains("meetup.com") ? "Open the event on Meetup to RSVP"
             : url.contains("instagram.com") ? "Open the Instagram post"
             : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open the message in Beeper"
-            : needsCheck == true ? "Open the post" : "Open event page"
+            : needsCheck == true ? "Open the post the ride came from" : "Open the event page"
     }
 }
 

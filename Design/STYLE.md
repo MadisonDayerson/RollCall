@@ -8,6 +8,8 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
 - **The patch.** A rounded rectangle with a single line (`DateBadge`), kept simple so a list of rides stays clean. Each ride's
   date is one: filled for Going (like the icon), dashed for Maybe, outlined while undecided, faded when
   skipped or past, with a small ? when the date was read from a post.
+- **Short buttons.** One or two words, a verb where it helps ("RSVP", "Join group", "Copy invite", "Map"). The
+  heading or page already says what it's about, and anything more goes in the tooltip (`.help`).
 - **Spaced capitals** (`PatchLabel`) for section headings, like "ROLLCALL" under the logo. Titles stay in
   bold sentence case, and everything else is the system font.
 - **Gothic lettering, sparingly.** Only "Roll Call" at the foot of the sidebar and "RC" on empty pages

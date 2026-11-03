@@ -59,7 +59,7 @@ Click **+** and paste a link. RollCall works out what it is:
 | Club or event website, forum section, Meetup group, calendar link (`.ics`, `webcal://`) or news feed | Checked automatically |
 | Facebook event, or your Facebook events calendar link | Follow the steps below |
 | Instagram account (`@name`) | Added to the accounts you check |
-| Instagram post, or any post or message | Opens **Paste a post** to make a ride from it |
+| Instagram post, or any post or message | Opens **Paste post** to make a ride from it |
 
 You can also **Type a ride in** or **Import a calendar file**.
 
@@ -85,7 +85,7 @@ the date, time and place for you to check.
 WhatsApp, Messenger and Messages don't let other apps read chats. [Beeper](https://www.beeper.com/download)
 brings them into one app and lets RollCall read only the chats you choose, read-only.
 
-New to Beeper? In setup's **Chats** step, click **Set up Beeper step by step**. RollCall walks you
+New to Beeper? In setup's **Chats** step, click **Set up Beeper**. RollCall walks you
 through each step below in plain language and checks each one for you.
 
 1. Install Beeper and connect your chat accounts in **Beeper → Settings → Accounts**.
@@ -93,18 +93,18 @@ through each step below in plain language and checks each one for you.
 3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
-where, who's in) and asks you to review it. **Add as a ride…** fills in the details. Summaries use
+where, who's in) and asks you to review it. **Add ride…** fills in the details. Summaries use
 Apple Intelligence on your Mac where available. Beeper needs to be open for chats to be checked.
 
 ## Riding with friends
 
 Each ride's **Ride with friends** box helps the whole crew end up in the same places:
 
-- **Before:** **Invite friends…** or **Copy invite** for Discord or a group chat. Invites include
+- **Before:** **Invite…** or **Copy invite** for Discord or a group chat. Invites include
   the time, meeting point, map link, Discord, intercom group and a location-sharing reminder.
 - **During:** the same details are in the calendar event on your phone, plus buttons for Discord,
   Find My and directions.
-- **After:** **Share footage…** or **Copy caption & tags**, and **See posts** to find everyone else's.
+- **After:** **Share footage…** or **Copy caption**, and **See posts** to find everyone else's.
 
 Every ride gets a code tag of #RC and the date, like `#RC03112026`, the same for everyone using RollCall.
 Tags for the club, brand, place or occasion follow it (`#Hooligoon #TTR #Broadford #Halloween`); change them on the
@@ -125,7 +125,7 @@ tags rather than showing friends' locations or posting for you.
 - **Only what's needed is kept.** Your home area is saved as just the suburb and a rough spot (about 1 km).
   Messages from conversations you dismiss aren't kept, removing a chat removes what was kept from it, and
   past rides you didn't go to are removed after a week.
-- **You're in control.** Settings → Privacy → **Delete all RollCall data** removes everything RollCall kept
+- **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
   on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance. And

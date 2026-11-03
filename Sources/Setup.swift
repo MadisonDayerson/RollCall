@@ -345,12 +345,12 @@ struct SetupView: View {
                 }
                 Spacer()
                 if model.step == .finish {
-                    Button("Start using RollCall") { model.app.finishSetup(openWindow: true) }
+                    Button("Start") { model.app.finishSetup(openWindow: true) }
                         .keyboardShortcut(.defaultAction)
                 } else {
                     // Once a step is done, Continue is the only choice (no "Skip" for something already done).
                     if ![.welcome, .home].contains(model.step) && !model.stepDone {
-                        Button("Skip this step") { model.next() }
+                        Button("Skip") { model.next() }
                     }
                     Button(model.step == .welcome ? "Get started" : "Continue") { model.next() }
                         .keyboardShortcut(.defaultAction)
@@ -514,7 +514,7 @@ struct MessagesStep: View {
                     Label("New to Beeper?", systemImage: "hand.wave").font(.headline)
                     Text("RollCall walks you through it one step at a time: downloading Beeper, adding your chats, and switching on the connection RollCall needs. It takes about 10 minutes, and RollCall checks each step for you.")
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Set up Beeper step by step") { model.startGuide() }
+                    Button("Set up Beeper") { model.startGuide() }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                 }
@@ -731,7 +731,7 @@ struct FinishStep: View {
                 case .some(false):
                     Text("Notifications are off, so RollCall can't tell you about plans in your chats.")
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    Button("Turn on in System Settings…") { model.openNotificationSettings() }
+                    Button("Open Settings…") { model.openNotificationSettings() }
                 case .none:
                     Button("Allow notifications") { model.allowNotifications() }
                     Text("so RollCall can tell you when a chat plans a ride").foregroundStyle(.secondary)
@@ -780,7 +780,7 @@ struct BeeperGuide: View {
                           "If a window shows Beeper and an Applications folder, drag Beeper onto Applications."]) {
             HStack {
                 Button("Download Beeper") { model.app.open(SetupModel.beeperDownload) }.buttonStyle(.borderedProminent)
-                Button("Open Downloads folder") { model.openDownloads() }
+                Button("Open Downloads") { model.openDownloads() }
             }
             Status(done: model.beeperInstalled, waiting: "Waiting for Beeper to be installed…", finished: "Beeper is installed")
         }
@@ -807,12 +807,12 @@ struct BeeperGuide: View {
                 Card {
                     Label("Open Beeper's settings", systemImage: "gearshape").font(.headline)
                     HStack(spacing: 6) {
-                        Text("Click **Bring Beeper forward**, then press")
+                        Text("Click **Show Beeper**, then press")
                         KeyCap("⌘"); Text("and"); KeyCap(","); Text("together.")
                     }
                     Text("Click **Accounts** in the list on the left, then the **+** button to add one.")
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Bring Beeper forward") { model.bringBeeperForward() }
+                    Button("Show Beeper") { model.bringBeeperForward() }
                 }
                 Card {
                     Label("WhatsApp", systemImage: "phone.bubble").font(.headline)
@@ -835,11 +835,11 @@ struct BeeperGuide: View {
                   intro: "Beeper keeps other apps out until you switch this on. It only works on this Mac.",
                   steps: []) {
             Card {
-                NumberedSteps(["Click **Bring Beeper forward** below.",
+                NumberedSteps(["Click **Show Beeper** below.",
                                "Press **⌘** and **,** together to open Beeper's settings.",
                                "In the list on the left, click **Developers**. You may need to scroll down to see it.",
                                "Switch on **Beeper Desktop API**."])
-                Button("Bring Beeper forward") { model.bringBeeperForward() }.buttonStyle(.borderedProminent)
+                Button("Show Beeper") { model.bringBeeperForward() }.buttonStyle(.borderedProminent)
             }
             Status(done: model.apiOn, waiting: "Waiting for the switch to be turned on…", finished: "It's on")
             DisclosureGroup("Can't find Developers?") {
@@ -952,7 +952,7 @@ struct GuideFooter: View {
             Spacer()
             if step != .done, step != .download { Button("Back") { model.guideBack() } }
             if step == .done {
-                Button("Continue RollCall setup") { model.leaveGuide(); model.next() }
+                Button("Continue") { model.leaveGuide(); model.next() }
                     .keyboardShortcut(.defaultAction)
             } else {
                 Button("Next") { model.guideNext() }

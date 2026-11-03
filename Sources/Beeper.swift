@@ -51,7 +51,7 @@ enum Beeper {
             case .notRunning:
                 return "Beeper isn't open, or its Desktop API is off. Open Beeper Desktop → Settings → Developers and switch on Beeper Desktop API."
             case .notConnected:
-                return "RollCall isn't connected to Beeper. Choose Settings → Chats → “Connect and choose chats…” to connect again."
+                return "RollCall isn't connected to Beeper. Choose Settings → Chats → “Connect Beeper…” to connect again."
             case .http(let code):
                 return "Beeper answered with error \(code)."
             case .cancelled:
