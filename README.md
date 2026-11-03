@@ -122,12 +122,20 @@ tags rather than showing friends' locations or posting for you.
   Intelligence is on), so messages never go to an online AI.
 - **Saved rides are private.** They're in `~/Library/Application Support/RollCall`, which only your Mac
   account can open. RollCall keeps no web cache or cookies.
+- **Only what's needed is kept.** Your home area is saved as just the suburb and a rough spot (about 1 km).
+  Messages from conversations you dismiss aren't kept, removing a chat removes what was kept from it, and
+  past rides you didn't go to are removed after a week.
+- **You're in control.** Settings → Privacy → **Delete all RollCall data** removes everything RollCall kept
+  on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
   choose. Text from chat messages isn't added. The invites and captions you copy only go where you paste them.
+
+RollCall is made to follow the Australian Privacy Principles: it only collects what it needs, keeps it
+secure, and deletes it when it's no longer needed. To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## For developers
 

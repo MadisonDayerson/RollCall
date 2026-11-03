@@ -1212,19 +1212,25 @@ struct SettingsPage: View {
             }
             Section("Facebook") {
                 FacebookCalendarBox(app: app, connected: app.facebookCalendarConnected, later: model.later)
+                Toggle("Pick up Facebook event downloads automatically", isOn: Binding(
+                    get: { model.store.state.settings.watchDownloads }, set: { app.setWatchDownloads($0) }))
             }
             Section("Riding together") {
                 TogetherForm(app: app)
-            }
-            Section("Facebook") {
-                Toggle("Pick up Facebook event downloads automatically", isOn: Binding(
-                    get: { model.store.state.settings.watchDownloads }, set: { app.setWatchDownloads($0) }))
             }
             Section("General") {
                 Toggle("Open RollCall when you log in", isOn: Binding(
                     get: { app.opensAtLogin }, set: { app.setOpensAtLogin($0) }))
                 Button("Open the RollCall calendar in Calendar") { app.openCalendarApp() }
                 Button("Run setup again…") { model.later { app.showSetup() } }
+            }
+            Section("Privacy") {
+                Text("Your rides, chats and settings stay on this Mac, readable only by you. RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button("How RollCall handles your data") { app.open("https://github.com/MadisonDayerson/RollCall#your-privacy") }
+                    Button("Delete all RollCall data…", role: .destructive) { model.later { app.deleteAllData() } }
+                }
             }
             Section("Updates") {
                 LabeledContent("Version", value: Updater.currentVersion)
@@ -1264,6 +1270,7 @@ struct SettingsPage: View {
         message.value = nil
         Task {
             message.value = await model.app.setHomeArea(place: p, km: 0, days: 0)
+            if message.value == nil { place.value = model.store.state.settings.homeName }  // just the suburb
             saving.value = false
         }
     }

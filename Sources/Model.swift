@@ -285,6 +285,21 @@ final class Store {
         NotificationCenter.default.post(name: Store.changed, object: nil)
     }
 
+    /// Rides are shown within tens of kilometres, so home only needs to be known to about 1 km.
+    static func rough(_ degrees: Double) -> Double { (degrees * 100).rounded() / 100 }
+
+    /// Older versions kept whatever was typed as the home area, sometimes a street address, and the exact spot.
+    func minimiseHome() {
+        var s = state.settings
+        if let city = s.homeCity, !city.isEmpty { s.homeName = city }
+        s.homeLatitude = Store.rough(s.homeLatitude)
+        s.homeLongitude = Store.rough(s.homeLongitude)
+        guard s.homeName != state.settings.homeName || s.homeLatitude != state.settings.homeLatitude
+                || s.homeLongitude != state.settings.homeLongitude else { return }
+        state.settings = s
+        save()
+    }
+
     /// Posted after every save, so the window can redraw.
     static let changed = Notification.Name("RollCallStoreChanged")
 
@@ -427,5 +442,7 @@ final class Store {
         state.reviews = state.reviews.filter { _, r in
             r.updated > now.addingTimeInterval(-14 * 86400) && (r.summary.start.map { $0 > now.addingTimeInterval(-86400) } ?? true)
         }
+        // A dismissed conversation only needs its summary; people's messages aren't kept.
+        for (id, r) in state.reviews where r.status == .dismissed && !r.lines.isEmpty { state.reviews[id]?.lines = [] }
     }
 }

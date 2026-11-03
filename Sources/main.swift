@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func applicationDidFinishLaunching(_ note: Notification) {
         Net.removeOldCache()
+        store.minimiseHome()
         AppMenu.install(for: self)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "png"), let img = NSImage(contentsOf: url) {
@@ -157,6 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             r.summary = await PlanSummariser.summarise(r, chatName: feed.name)
             // The on-device model read it and found no plan: keep it out of the way.
             if !r.summary.isPlan { r.status = .dismissed }
+            if r.status == .dismissed { r.lines = [] }  // keep no more of people's messages than needed
             let wasShowing = old?.status == .open && old?.summary.isPlan == true
             store.state.reviews[r.id] = r
             if r.status == .open, !wasShowing || old?.summary.start != r.summary.start || old?.summary.place != r.summary.place {
@@ -232,6 +234,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func dismissReview(_ id: String) {
         store.state.reviews[id]?.status = .dismissed
+        store.state.reviews[id]?.lines = []
         store.save()
         updateBadge()
     }
@@ -1208,6 +1211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         store.state.feedErrors[id] = nil
         store.state.recentPosts[id] = nil
         store.state.lastChecked[id] = nil
+        store.state.reviews = store.state.reviews.filter { $0.value.feedID != id }
         for (eid, e) in store.state.events where e.source == id && store.decision(eid) != .attending {
             store.state.events[eid] = nil
         }
@@ -1268,9 +1272,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 store.save()
                 return "Couldn't find “\(place)”. Try a suburb or town with its state, like Ringwood VIC or Newtown NSW."
             }
-            store.state.settings.homeName = place
-            store.state.settings.homeLatitude = found.latitude
-            store.state.settings.homeLongitude = found.longitude
+            // Only the suburb and a rough spot (about 1 km) are kept, never a street address.
+            store.state.settings.homeName = found.city ?? place
+            store.state.settings.homeLatitude = Store.rough(found.latitude)
+            store.state.settings.homeLongitude = Store.rough(found.longitude)
             store.state.settings.homeCity = found.city
             store.state.settings.homeRegion = found.region
             store.state.settings.homeCountry = found.country
@@ -1308,6 +1313,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     }
 
     @objc func quit() { NSApp.terminate(nil) }
+
+    /// Removes everything RollCall keeps on this Mac (rides, chat excerpts, sources, settings, the Beeper key
+    /// and the login item), then quits. The RollCall calendar is the user's own and stays in Calendar.
+    func deleteAllData() {
+        guard Dialogs.confirm("Delete all RollCall data?",
+                              "This removes your saved rides, chat excerpts, sources and settings from this Mac, disconnects Beeper, and quits RollCall. It can't be undone.\n\nThe RollCall calendar stays in Calendar. You can delete it there if you like.",
+                              ok: "Delete and Quit") else { return }
+        setOpensAtLogin(false)
+        Keychain.delete()
+        try? FileManager.default.removeItem(at: Store.folder)
+        if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: id) }
+        Net.removeOldCache()
+        exit(0)  // straight out, so nothing is saved again on the way
+    }
 
     // MARK: - Formatting
 

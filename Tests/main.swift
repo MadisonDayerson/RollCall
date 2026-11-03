@@ -544,5 +544,25 @@ do {
     let ids = st.upcoming().map(\.id)
     check(ids == ["facebook:1"], "Facebook events you responded to show however far away; other far rides stay hidden")
 }
+do {
+    // Made-up chat lines: a dismissed conversation keeps its summary but not people's messages.
+    let st = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-privacy-\(UUID().uuidString).json"))
+    let lines = [ChatLine(id: "1", sender: "Sam", sent: Date(), text: "ride sat 9am?", mentionsWhen: true)]
+    for (id, status) in [("a", PlanReview.Status.dismissed), ("b", .open)] {
+        st.state.reviews[id] = PlanReview(id: id, feedID: "beeper-x", chatID: "x", lines: lines, summary: PlanFinder.guess(lines, now: Date()),
+                                          status: status, created: Date(), updated: Date(), rideID: nil)
+    }
+    st.prune(refreshedSources: [], refreshStarted: Date())
+    check(st.state.reviews["a"]?.lines.isEmpty == true && st.state.reviews["b"]?.lines.count == 1,
+          "dismissed conversations don't keep people's messages")
+}
+do {
+    let st = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-home-\(UUID().uuidString).json"))
+    st.state.settings.homeName = "12 Example St, Sunshine"; st.state.settings.homeCity = "Sunshine"
+    st.state.settings.homeLatitude = -37.788123; st.state.settings.homeLongitude = 144.832987
+    st.minimiseHome()
+    check(st.state.settings.homeName == "Sunshine" && st.state.settings.homeLatitude == -37.79 && st.state.settings.homeLongitude == 144.83,
+          "home keeps only the suburb and a rough spot")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

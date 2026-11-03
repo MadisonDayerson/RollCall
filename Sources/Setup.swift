@@ -423,7 +423,7 @@ struct WelcomeStep: View {
                 Label("Choose Apple Calendar or Google Calendar for your rides", systemImage: "calendar")
             }
             .padding(.top, 8)
-            Text("Everything stays on your Mac. RollCall never posts, sends messages or RSVPs for you.")
+            Text("Your rides and chats stay on your Mac: no accounts, no tracking, no online AI. RollCall never posts, sends messages or RSVPs for you.")
                 .font(.callout).foregroundStyle(.secondary).padding(.top, 8)
                 .multilineTextAlignment(.center)
         }
