@@ -599,8 +599,9 @@ struct RideDetail: View {
                         Button(model.isPast(ride) && ride.linkLabel == "RSVP" ? "Open event" : ride.linkLabel) { app.open(url) }
                             .help(ride.linkHelp)
                     }
-                    if !ride.location.isEmpty {
-                        Button("Map") { app.openMaps(place: ride.location) }.help("Show the meeting place in Maps")
+                    if ride.hasRoute {
+                        Button("Map") { app.openRoute(ride) }
+                            .help(Route.link(in: ride.notes) != nil ? "Open the organiser's route" : "Directions from your suburb to the meeting place and any stops")
                     }
                     if let g = ride.groupURL {
                         Button("Join group") { app.open(g) }.help("Open the group's page to join it")
@@ -1401,7 +1402,7 @@ struct RideTogether: View {
                 HStack {
                     if let d = discord { Button("Open Discord") { app.open(d) } }
                     if crew.locationApp == .findMy { Button("Open Find My") { app.openFindMy() } }
-                    if !ride.location.isEmpty { Button("Directions") { app.openMaps(place: ride.location) } }
+                    if ride.hasRoute { Button("Directions") { app.openRoute(ride) } }
                 }
                 Text(duringNote(crew, discord: discord)).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

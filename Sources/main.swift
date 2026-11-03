@@ -472,9 +472,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             it.representedObject = ride.id
             sub.addItem(it)
         }
-        if !ride.location.isEmpty {
-            let it = action("Show in Maps", #selector(openMaps(_:)))
-            it.representedObject = ride.location
+        if ride.hasRoute {
+            let it = action("Directions", #selector(openMaps(_:)))
+            it.representedObject = ride.id
             sub.addItem(it)
         }
         if Store.userAdded.contains(ride.source) || ride.needsCheck == true {
@@ -530,11 +530,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         NSWorkspace.shared.open(url)
     }
 
-    @objc func openMaps(_ sender: NSMenuItem) { openMaps(place: sender.representedObject as? String) }
+    @objc func openMaps(_ sender: NSMenuItem) {
+        if let id = sender.representedObject as? String, let ride = store.state.events[id] { openRoute(ride) }
+    }
 
-    func openMaps(place: String?) {
-        guard let place, let q = place.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return }
-        open("maps://?q=\(q)")
+    /// Directions for a ride: the organiser's own route if the description has one, otherwise from your
+    /// suburb to the meeting place, any stops and the destination. Apple Maps when it's on this Mac and the
+    /// route has no stops in between; Google Maps in the browser otherwise.
+    func openRoute(_ ride: RideEvent) {
+        if let link = Route.link(in: ride.notes) {
+            open(link.replacingOccurrences(of: "http://", with: "https://"))
+            return
+        }
+        let places = Route.places(meetingPlace: ride.location, notes: ride.notes)
+        guard let last = places.last else { return }
+        let home = store.state.settings.homeCity?.nilIfEmpty
+        let appleMaps = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps")
+        if places.count == 1, appleMaps != nil, let url = URL(string: Route.appleMaps(from: home, to: last)) {
+            NSWorkspace.shared.open(url)
+        } else {
+            open(Route.googleMaps(from: home, through: places))
+        }
     }
 
     // MARK: - Window
@@ -1362,6 +1378,8 @@ extension RideEvent {
             : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open chat"
             : url.contains("instagram.com") || needsCheck == true ? "Open post" : "Open event"
     }
+
+    var hasRoute: Bool { !location.isEmpty || Route.link(in: notes) != nil }
 
     var linkHelp: String {
         guard let url else { return "" }

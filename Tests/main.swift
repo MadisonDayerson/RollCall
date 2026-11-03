@@ -564,5 +564,23 @@ do {
     check(st.state.settings.homeName == "Sunshine" && st.state.settings.homeLatitude == -37.79 && st.state.settings.homeLongitude == 144.83,
           "home keeps only the suburb and a rough spot")
 }
+do {
+    // Made-up ride descriptions.
+    let shared = "Big run this week!\nGOOGLE MAPS ROUTE: https://www.google.com/maps/dir/1+Example+St,+Sunshine/Some+Lookout/@-37.8,145.0,12z/data=!3m1\nMEET POINT: 1 Example St, Sunshine"
+    check(Route.link(in: shared) == "https://www.google.com/maps/dir/1+Example+St,+Sunshine/Some+Lookout/@-37.8,145.0,12z/data=!3m1",
+          "a route in the description is used as is")
+    check(Route.link(in: "Pin for the cafe: https://maps.app.goo.gl/abc123") == nil, "a short map link on its own is a place, not a route")
+    check(Route.link(in: "Route: https://maps.app.goo.gl/abc123.") == "https://maps.app.goo.gl/abc123", "a short link labelled as the route counts")
+    let notes = "🏍 Meet point: 7:30am at Example Servo, Sunshine\n• Stop 1: Pretend Bakery, Hilltown\nCoffee stop - Make Believe Cafe → Lookout Rd, Fernvale\nDestination: Imaginary Falls\nEnd: 3pm"
+    check(Route.stops(in: notes) == Route.Stops(meet: "Example Servo, Sunshine",
+                                                via: ["Pretend Bakery, Hilltown", "Make Believe Cafe", "Lookout Rd, Fernvale"],
+                                                destination: "Imaginary Falls"),
+          "meeting place, stops and destination are read from labelled lines")
+    check(Route.places(meetingPlace: "Example Servo", notes: "Bring snacks") == ["Example Servo"], "with nothing labelled, it's just the meeting place")
+    let g = Route.googleMaps(from: "Sunshine", through: ["Example Servo", "Pretend Bakery", "Imaginary Falls"]) ?? ""
+    check(g.hasPrefix("https://www.google.com/maps/dir/?api=1&origin=Sunshine&destination=Imaginary%20Falls&waypoints=Example%20Servo%7CPretend%20Bakery"),
+          "Google Maps link goes from home through the stops")
+    check(Route.appleMaps(from: "Sunshine", to: "Example Servo") == "maps://?saddr=Sunshine&daddr=Example%20Servo&dirflg=d", "Apple Maps link")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

@@ -130,7 +130,8 @@ tags rather than showing friends' locations or posting for you.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
-  releases and its seal shows it hasn't been changed.
+  releases and its seal shows it hasn't been changed. When you click **Map** or **Directions**, your suburb
+  (never your street) and the ride's stops go to Apple Maps or Google Maps to plan the route.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
   choose. Text from chat messages isn't added. The invites and captions you copy only go where you paste them.
 
