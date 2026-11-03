@@ -7,7 +7,7 @@ import AppKit
 /// "from the internet", so updates skip the Open Anyway step the first install needed.
 @MainActor
 enum Updater {
-    static let repo = "MadisonDayerson/rollcall"
+    nonisolated static let repo = "MadisonDayerson/rollcall"
     static var releasesPage: String { "https://github.com/\(repo)/releases/latest" }
 
     struct Release {
@@ -40,25 +40,33 @@ enum Updater {
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         req.setValue(Web.userAgent, forHTTPHeaderField: "User-Agent")
         req.timeoutInterval = 20
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await Net.session.data(for: req)
         guard (resp as? HTTPURLResponse)?.statusCode == 200,
               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let tag = json["tag_name"] as? String else { return nil }
         let assets = json["assets"] as? [[String: Any]] ?? []
-        let dmg = assets.compactMap { $0["browser_download_url"] as? String }.first { $0.hasSuffix(".dmg") }
+        let dmg = assets.compactMap { $0["browser_download_url"] as? String }.first { isOurDownload($0) }
         return Release(version: tag.trimmingCharacters(in: CharacterSet(charactersIn: "vV")),
                        notes: json["body"] as? String ?? "",
                        page: json["html_url"] as? String ?? releasesPage,
                        dmg: dmg.flatMap(URL.init(string:)))
     }
 
+    /// Only a .dmg attached to RollCall's own releases on GitHub is ever downloaded.
+    nonisolated static func isOurDownload(_ link: String) -> Bool {
+        let l = link.lowercased()
+        return l.hasPrefix("https://github.com/\(repo.lowercased())/releases/download/") && l.hasSuffix(".dmg")
+            && !l.contains("..")
+    }
+
     enum UpdateError: LocalizedError {
-        case noDownload, notMounted, noApp, cantReplace(String)
+        case noDownload, notMounted, noApp, notRollCall, cantReplace(String)
         var errorDescription: String? {
             switch self {
             case .noDownload: return "The release doesn't have a RollCall download."
             case .notMounted: return "The download couldn't be opened."
             case .noApp: return "The download doesn't contain RollCall."
+            case .notRollCall: return "The download didn't pass RollCall's safety check, so it wasn't installed."
             case .cantReplace(let why): return "RollCall couldn't replace itself (\(why))."
             }
         }
@@ -66,8 +74,8 @@ enum Updater {
 
     /// Downloads the release, puts the new app where this one is, and reopens it.
     static func install(_ r: Release) async throws {
-        guard let dmgURL = r.dmg else { throw UpdateError.noDownload }
-        let (tmp, _) = try await URLSession.shared.download(from: dmgURL)
+        guard let dmgURL = r.dmg, isOurDownload(dmgURL.absoluteString) else { throw UpdateError.noDownload }
+        let (tmp, _) = try await Net.session.download(from: dmgURL)
         let work = FileManager.default.temporaryDirectory.appendingPathComponent("RollCall-update-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         let dmg = work.appendingPathComponent("RollCall.dmg")
@@ -79,6 +87,9 @@ enum Updater {
         defer { _ = run("/usr/bin/hdiutil", ["detach", mount.path, "-force"]) }
         let newApp = mount.appendingPathComponent("RollCall.app")
         guard FileManager.default.fileExists(atPath: newApp.path) else { throw UpdateError.noApp }
+        // It must be RollCall, with its code seal intact (nothing changed since it was built).
+        guard Bundle(url: newApp)?.bundleIdentifier == Bundle.main.bundleIdentifier,
+              run("/usr/bin/codesign", ["--verify", "--deep", "--strict", newApp.path]) else { throw UpdateError.notRollCall }
 
         // Copy next to this app first, then swap, so a failed copy leaves the working app alone.
         let here = Bundle.main.bundleURL

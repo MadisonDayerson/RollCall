@@ -125,7 +125,7 @@ enum Web {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
         var req = URLRequest(url: url, timeoutInterval: 30)
         req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await Net.session.data(for: req)
         let http = response as? HTTPURLResponse
         if let code = http?.statusCode, !(200..<300).contains(code) {
             throw code == 401 || code == 403 ? FeedError.privateFeed : FeedError.http(code)

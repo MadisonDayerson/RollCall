@@ -113,6 +113,22 @@ ride's page.
 Life360, Cardo and the social apps don't let other apps connect, so RollCall shares the details and
 tags rather than showing friends' locations or posting for you.
 
+## Your privacy
+
+- **No accounts, no tracking, no AI services.** RollCall has no server of its own. It doesn't collect or
+  send anything about you, and nobody else using RollCall can see your rides, chats or settings.
+- **Chats stay on your Mac.** They're read through Beeper Desktop on your own Mac, with read-only permission.
+  The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
+  Intelligence is on), so messages never go to an online AI.
+- **Saved rides are private.** They're in `~/Library/Application Support/RollCall`, which only your Mac
+  account can open. RollCall keeps no web cache or cookies.
+- **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
+  or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance. And
+  it checks this project's GitHub page for updates. An update is only installed if it comes from those
+  releases and its seal shows it hasn't been changed.
+- **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
+  choose. Text from chat messages isn't added. The invites and captions you copy only go where you paste them.
+
 ## For developers
 
 ```bash

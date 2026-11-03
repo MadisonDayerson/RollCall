@@ -465,6 +465,12 @@ check(inv.contains("Cardo: DMC SUNDAY CREW") && inv.contains("Find My") && inv.c
 check(Crew.ics(ride("Halloween, Pre-Meet"), description: inv).contains("SUMMARY:Halloween\\, Pre-Meet"), "calendar file escapes commas")
 check(Crew.key(forSource: "file") == "yours" && Crew.key(forSource: "facebook") == "facebook", "hand-added rides share crew settings")
 check(Updater.isNewer("1.10", than: "1.9") && Updater.isNewer("v1.1", than: "1.0") && !Updater.isNewer("1.0", than: "1.0.0"), "version comparison")
+check(Updater.isOurDownload("https://github.com/MadisonDayerson/RollCall/releases/download/v1.2.3/RollCall.dmg")
+      && !Updater.isOurDownload("https://github.com/someone-else/rollcall/releases/download/v1/RollCall.dmg")
+      && !Updater.isOurDownload("https://example.com/MadisonDayerson/rollcall/releases/download/v1/RollCall.dmg")
+      && !Updater.isOurDownload("http://github.com/MadisonDayerson/rollcall/releases/download/v1/RollCall.dmg")
+      && !Updater.isOurDownload("https://github.com/MadisonDayerson/rollcall/releases/download/v1/RollCall.zip"),
+      "updates only download from RollCall's own GitHub releases")
 check(RidePlan.place(in: "this is going to hurt me more then it will you") == nil, "lower-case words aren't a destination")
 
 check(PlanSummariser.prompt(Array(thread.prefix(2)), chatName: "Sunday Crew").contains("Alex: Thinking about going for a ride"), "conversation goes into the prompt")

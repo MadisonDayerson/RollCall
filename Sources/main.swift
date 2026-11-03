@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var pendingFacebookGroup: (String, Date)?
 
     func applicationDidFinishLaunching(_ note: Notification) {
+        Net.removeOldCache()
         AppMenu.install(for: self)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let url = Bundle.main.url(forResource: "MenuIcon", withExtension: "png"), let img = NSImage(contentsOf: url) {
@@ -519,7 +520,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             }
             return
         }
-        guard let link, let url = URL(string: link) else { return }
+        // Links come from feeds and chats, so only web links open (never a file or an app on this Mac).
+        guard let link, let url = URL(string: link), ["https", "http"].contains(url.scheme?.lowercased() ?? "") else { return }
         NSWorkspace.shared.open(url)
     }
 

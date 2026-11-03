@@ -258,6 +258,11 @@ final class Store {
             try? FileManager.default.moveItem(at: old, to: dir)
         }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        // Rides, chat excerpts and private calendar links: only this Mac user can read them.
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [] {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: dir.appendingPathComponent(name).path)
+        }
         return dir
     }()
     let file: URL
@@ -276,6 +281,7 @@ final class Store {
     func save() {
         guard let data = try? Store.encoder.encode(state) else { return }
         try? data.write(to: file, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         NotificationCenter.default.post(name: Store.changed, object: nil)
     }
 

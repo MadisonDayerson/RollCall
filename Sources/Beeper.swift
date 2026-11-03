@@ -68,7 +68,7 @@ enum Beeper {
         guard let url = URL(string: base + "/v1/info") else { return false }
         var req = URLRequest(url: url, timeoutInterval: 4)
         req.httpMethod = "GET"
-        return ((try? await URLSession.shared.data(for: req))?.1 as? HTTPURLResponse)?.statusCode == 200
+        return ((try? await Net.session.data(for: req))?.1 as? HTTPURLResponse)?.statusCode == 200
     }
 
     /// Why chats can't be read right now (Beeper closed, or RollCall's permission gone), or nil when they can.
@@ -97,7 +97,7 @@ enum Beeper {
         }
         let data: Data, response: URLResponse
         do {
-            (data, response) = try await URLSession.shared.data(for: req)
+            (data, response) = try await Net.session.data(for: req)
         } catch {
             throw BeeperError.notRunning
         }
@@ -181,7 +181,7 @@ enum Beeper {
             "grant_types": ["authorization_code"], "response_types": ["code"], "token_endpoint_auth_method": "none",
         ] as [String: Any])
         let regData: Data
-        do { regData = try await URLSession.shared.data(for: reg).0 } catch { throw BeeperError.notRunning }
+        do { regData = try await Net.session.data(for: reg).0 } catch { throw BeeperError.notRunning }
         guard let clientID = (try? JSONSerialization.jsonObject(with: regData) as? [String: Any])?["client_id"] as? String else {
             throw BeeperError.badReply
         }
@@ -207,7 +207,7 @@ enum Beeper {
         let form = ["grant_type": "authorization_code", "code": code, "code_verifier": verifier,
                     "client_id": clientID, "redirect_uri": redirect]
         tok.httpBody = form.map { "\($0.key)=\(pathPart($0.value))" }.joined(separator: "&").data(using: .utf8)
-        let (data, response) = try await URLSession.shared.data(for: tok)
+        let (data, response) = try await Net.session.data(for: tok)
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               let token = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["access_token"] as? String else {
             throw BeeperError.badReply

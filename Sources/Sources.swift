@@ -53,13 +53,37 @@ func stableHash(_ s: String) -> String {
     return String(h % 0xFFFFFF, radix: 16)
 }
 
+/// Every request RollCall makes goes through this session. It keeps nothing on disk (no web cache, no
+/// cookies), so chat messages read from Beeper and private calendar links never land in ~/Library/Caches,
+/// and sites can't follow RollCall from one request to the next.
+enum Net {
+    static let session: URLSession = {
+        let c = URLSessionConfiguration.ephemeral
+        c.urlCache = nil
+        c.requestCachePolicy = .reloadIgnoringLocalCacheData
+        c.httpCookieStorage = nil
+        c.httpShouldSetCookies = false
+        c.urlCredentialStorage = nil
+        return URLSession(configuration: c)
+    }()
+
+    /// Older versions used the standard session, which kept a copy of every reply (chat messages too) in
+    /// ~/Library/Caches. This removes it.
+    static func removeOldCache() {
+        URLCache.shared.removeAllCachedResponses()
+        guard let id = Bundle.main.bundleIdentifier,
+              let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+        try? FileManager.default.removeItem(at: caches.appendingPathComponent(id, isDirectory: true))
+    }
+}
+
 enum Fetcher {
     static func download(_ urlString: String) async throws -> String {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
         var req = URLRequest(url: url, timeoutInterval: 30)
         req.setValue("RollCall/1.0 (personal calendar reader)", forHTTPHeaderField: "User-Agent")
         req.setValue("text/calendar, */*", forHTTPHeaderField: "Accept")
-        let (data, response) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await Net.session.data(for: req)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             if http.statusCode == 403 || http.statusCode == 401 {
                 throw FeedError.privateFeed
