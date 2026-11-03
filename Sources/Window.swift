@@ -302,7 +302,7 @@ struct PatchLabel: View {
     }
 }
 
-/// A ride's date as a small patch with the logo's double frame: month, day and weekday. Filled (like the icon)
+/// A ride's date as a small patch with a single frame: month, day and weekday. Filled (like the icon)
 /// for rides you're going to, dashed for maybe, outlined while undecided, faded once skipped or past.
 struct DateBadge: View {
     let date: Date
@@ -329,11 +329,6 @@ struct DateBadge: View {
         .overlay {
             outer.strokeBorder(Color.primary, style: StrokeStyle(lineWidth: 1.25 * scale,
                                                                  dash: decision == .maybe ? [3 * scale, 2 * scale] : []))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 6.5 * scale, style: .continuous)
-                .strokeBorder(ink.opacity(0.5), lineWidth: 0.6 * scale)
-                .padding(2.75 * scale)
         }
         .overlay(alignment: .topTrailing) {
             if needsCheck {

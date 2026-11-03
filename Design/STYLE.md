@@ -5,7 +5,7 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
 
 - **Black and white.** Text and marks use the system's text colours, so they invert for dark mode. Colour is
   kept for meaning only: warnings, problems, and the person's own accent colour on standard controls.
-- **The patch.** A rounded rectangle with a thick outer line and a thin inner one (`DateBadge`). Each ride's
+- **The patch.** A rounded rectangle with a single line (`DateBadge`), kept simple so a list of rides stays clean. Each ride's
   date is one: filled for Going (like the icon), dashed for Maybe, outlined while undecided, faded when
   skipped or past, with a small ? when the date was read from a post.
 - **Spaced capitals** (`PatchLabel`) for section headings, like "ROLLCALL" under the logo. Titles stay in
