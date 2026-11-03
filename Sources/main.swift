@@ -473,7 +473,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             sub.addItem(it)
         }
         if ride.hasRoute {
-            let it = action("Directions", #selector(openMaps(_:)))
+            let it = action("Route", #selector(openMaps(_:)))
             it.representedObject = ride.id
             sub.addItem(it)
         }
@@ -535,20 +535,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     }
 
     /// Directions for a ride: the organiser's own route if the description has one, otherwise from your
-    /// suburb to the meeting place, any stops and the destination. Apple Maps when it's on this Mac and the
-    /// route has no stops in between; Google Maps in the browser otherwise.
+    /// suburb to the meeting place, any stops and the destination, in the maps app chosen in Settings.
+    /// Automatic uses Apple Maps for a simple trip when it's on this Mac, and Google Maps for stops.
     func openRoute(_ ride: RideEvent) {
         if let link = Route.link(in: ride.notes) {
             open(link.replacingOccurrences(of: "http://", with: "https://"))
             return
         }
         let places = Route.places(meetingPlace: ride.location, notes: ride.notes)
-        guard let last = places.last else { return }
+        guard let first = places.first else { return }
         let home = store.state.settings.homeCity?.nilIfEmpty
-        let appleMaps = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps")
-        if places.count == 1, appleMaps != nil, let url = URL(string: Route.appleMaps(from: home, to: last)) {
-            NSWorkspace.shared.open(url)
-        } else {
+        let hasAppleMaps = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps") != nil
+        var app = store.state.settings.mapsApp ?? .automatic
+        if app == .automatic { app = places.count == 1 && hasAppleMaps ? .apple : .google }
+        if app == .apple, !hasAppleMaps { app = .google }
+        switch app {
+        case .apple:
+            if let url = URL(string: Route.appleMaps(from: home, to: first)) { NSWorkspace.shared.open(url) }
+        case .waze:
+            open(Route.waze(to: first))
+        default:
             open(Route.googleMaps(from: home, through: places))
         }
     }

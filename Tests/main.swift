@@ -580,6 +580,7 @@ do {
     let g = Route.googleMaps(from: "Sunshine", through: ["Example Servo", "Pretend Bakery", "Imaginary Falls"]) ?? ""
     check(g.hasPrefix("https://www.google.com/maps/dir/?api=1&origin=Sunshine&destination=Imaginary%20Falls&waypoints=Example%20Servo%7CPretend%20Bakery"),
           "Google Maps link goes from home through the stops")
+    check(Route.waze(to: "Example Servo") == "https://waze.com/ul?q=Example%20Servo&navigate=yes", "Waze link")
     check(Route.appleMaps(from: "Sunshine", to: "Example Servo") == "maps://?saddr=Sunshine&daddr=Example%20Servo&dirflg=d", "Apple Maps link")
 }
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")

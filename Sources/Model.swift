@@ -173,6 +173,8 @@ struct Settings: Codable {
     var checkForUpdates: Bool? = nil
     /// A version the person chose to skip.
     var skippedVersion: String? = nil
+    /// Which maps app Route opens (nil means automatic).
+    var mapsApp: MapsApp? = nil
 
     var crew: Together { together ?? Together() }
 }

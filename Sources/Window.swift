@@ -600,8 +600,8 @@ struct RideDetail: View {
                             .help(ride.linkHelp)
                     }
                     if ride.hasRoute {
-                        Button("Map") { app.openRoute(ride) }
-                            .help(Route.link(in: ride.notes) != nil ? "Open the organiser's route" : "Directions from your suburb to the meeting place and any stops")
+                        Button("Route") { app.openRoute(ride) }
+                            .help(Route.link(in: ride.notes) != nil ? "Open the organiser's route" : "Directions from your suburb to the meeting place and any stops (choose your maps app in Settings)")
                     }
                     if let g = ride.groupURL {
                         Button("Join group") { app.open(g) }.help("Open the group's page to join it")
@@ -1296,6 +1296,15 @@ struct SettingsPage: View {
             Section("General") {
                 Toggle("Open RollCall when you log in", isOn: Binding(
                     get: { app.opensAtLogin }, set: { app.setOpensAtLogin($0) }))
+                let maps = model.store.state.settings.mapsApp ?? .automatic
+                Picker("Maps app for Route", selection: Binding(
+                    get: { maps }, set: { model.store.state.settings.mapsApp = $0; model.store.save() })) {
+                    ForEach(MapsApp.allCases, id: \.self) { Text($0.name).tag($0) }
+                }
+                Text(maps == .automatic ? "Apple Maps for a trip straight to the meeting place, Google Maps when the ride has stops. A route the organiser shared opens as they shared it."
+                     : maps.holdsStops ? "Route goes from your suburb through the meeting place and any stops. A route the organiser shared opens as they shared it."
+                     : "\(maps.name) links hold one place, so Route goes to the meeting place. A route the organiser shared opens as they shared it.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Button("Open calendar") { app.openCalendarApp() }
                 Button("Run setup…") { model.later { app.showSetup() } }
             }
@@ -1360,7 +1369,8 @@ struct SettingsPage: View {
 
 // MARK: - Riding together
 
-/// Before, during and after a ride: invite the crew, keep in touch on the day, and share footage under one tag.
+/// Riding with friends: invite the crew, talk and find each other on the day, and share footage under one tag.
+/// Every button is always there; people use whichever they need.
 struct RideTogether: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
@@ -1371,6 +1381,8 @@ struct RideTogether: View {
         let app = model.app
         let crew = model.store.state.settings.crew
         let discord = Crew.discord(together: crew, links: app.links(ride))
+        let voice = crew.intercom
+        let voiceGroup = crew.intercomGroup.trimmingCharacters(in: .whitespaces)
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -1381,33 +1393,33 @@ struct RideTogether: View {
                         Button("Reset") { app.setRideTag(ride.id, ""); tag.value = app.rideTags(ride) }
                     }
                 }
-                Text(past ? "The first tag is the ride's code (#RC and the date), the same for everyone using RollCall, so your footage ends up with everyone else's. The rest name the club, place or occasion; change them if you like."
-                     : "The first tag is the ride's code (#RC and the date), the same for everyone using RollCall, so posts end up together. The rest name the club, place or occasion; change them if you like. They're in the invite, the calendar event and the caption.")
+                Text("The first tag is the ride's code (#RC and the date), the same for everyone using RollCall, so posts and footage end up together. The rest name the club, place or occasion; change them if you like.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
 
-                if past {
-                    PatchLabel(text: "After").padding(.top, 4)
-                    after
-                    if let d = discord {
-                        HStack { Button("Open Discord") { app.open(d) } }
-                    }
-                } else {
-                PatchLabel(text: "Before").padding(.top, 4)
-                HStack {
+                Flow {
                     Button("Invite…") { app.shareInvite(ride) }
                         .help("Send the details and a calendar file with Messages, AirDrop, Mail and more")
                     Button("Copy invite") { app.copy(app.invite(ride)); copied.value = "Invite copied: paste it into Discord, WhatsApp or any group chat." }
+                    if let d = discord { Button("Discord") { app.open(d) } }
+                    if voice == .discord, discord == nil {
+                        Button("Voice chat") { model.page = .settings }
+                            .help("Add your crew's Discord link in Settings → Riding together")
+                    } else if let help = voice.helpURL {
+                        Button("Voice chat") { app.open(help) }
+                            .help("\(voice.name)\(voiceGroup.isEmpty ? "" : ": " + voiceGroup). Pair it with your phone and join the group in the \(voice.name) app; this opens \(voice.name)'s help.")
+                    }
+                    if crew.locationApp == .findMy { Button("Find My") { app.openFindMy() } }
+                    Button("Share footage…") { app.shareFootage(ride) }
+                        .help("Pick photos or videos and send them with the caption and tags")
+                    Button("Copy caption") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
+                    Menu("See posts") {
+                        ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
+                    }
+                    .fixedSize()
                 }
-                PatchLabel(text: "During").padding(.top, 4)
-                HStack {
-                    if let d = discord { Button("Open Discord") { app.open(d) } }
-                    if crew.locationApp == .findMy { Button("Open Find My") { app.openFindMy() } }
-                    if ride.hasRoute { Button("Directions") { app.openRoute(ride) } }
-                }
-                Text(duringNote(crew, discord: discord)).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                PatchLabel(text: "After").padding(.top, 4)
-                after
+                if voice != .none {
+                    Label("\(voice.name)\(voiceGroup.isEmpty ? "" : ": " + voiceGroup)", systemImage: "headphones")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 if let c = copied.value { Label(c, systemImage: "doc.on.clipboard").font(.callout) }
             }
@@ -1418,42 +1430,48 @@ struct RideTogether: View {
         .onAppear { tag.value = app.rideTags(ride); copied.value = nil }
         .onChange(of: ride.id) { _, _ in tag.value = app.rideTags(ride); copied.value = nil }
     }
+}
 
-    var past: Bool { model.isPast(ride) }
+/// Lays buttons out in rows, wrapping onto the next row when the window is narrow.
+struct Flow: Layout {
+    var spacing: CGFloat = 8
 
-    var after: some View {
-        let app = model.app
-        let buttons = Group {
-            Button("Share footage…") { app.shareFootage(ride) }
-                .help("Pick photos or videos and send them with the caption and tags")
-            Button("Copy caption") { app.copy(app.caption(ride)); copied.value = "Caption copied: paste it into Instagram, TikTok, YouTube or Facebook." }
-            Menu("See posts") {
-                ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(subviews, width: proposal.width ?? .infinity)
+        return CGSize(width: rows.map(\.width).max() ?? 0, height: rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(subviews, width: bounds.width) {
+            var x = bounds.minX
+            for i in row.items {
+                let size = subviews[i].sizeThatFits(.unspecified)
+                subviews[i].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
+                x += size.width + spacing
             }
-            .fixedSize()
-        }
-        // Side by side when there's room, stacked in a narrow window.
-        return ViewThatFits(in: .horizontal) {
-            HStack { buttons }.fixedSize()
-            VStack(alignment: .leading) { buttons }
+            y += row.height + spacing
         }
     }
 
-    func duringNote(_ crew: Together, discord: String?) -> String {
-        var parts: [String] = []
-        if crew.intercom != .none {
-            let g = crew.intercomGroup.trimmingCharacters(in: .whitespaces)
-            parts.append("\(crew.intercom.name)\(g.isEmpty ? "" : " (\(g))") pairs on your phone and helmet; the group is in the invite.")
+    private struct Row { var items: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
+        var rows = [Row()]
+        for (i, v) in subviews.enumerated() {
+            let size = v.sizeThatFits(.unspecified)
+            if !rows[rows.count - 1].items.isEmpty, rows[rows.count - 1].width + spacing + size.width > width { rows.append(Row()) }
+            var r = rows[rows.count - 1]
+            r.width += (r.items.isEmpty ? 0 : spacing) + size.width
+            r.height = max(r.height, size.height)
+            r.items.append(i)
+            rows[rows.count - 1] = r
         }
-        if crew.locationApp != .none, crew.locationApp != .findMy {
-            parts.append("Location sharing is in \(crew.locationApp.name) on your phone; the invite reminds everyone to switch it on.")
-        }
-        if discord == nil { parts.append("Add your crew's Discord link in Settings → Riding together to get a button here.") }
-        return parts.joined(separator: " ")
+        return rows
     }
 }
 
-/// Location sharing, intercom, Discord and tags, used in setup and Settings. Saves by itself.
+/// Location sharing, voice chat, Discord and tags, used in setup and Settings. Saves by itself.
 struct TogetherForm: View {
     let app: AppDelegate
     @StateObject private var t = Box(Together())
@@ -1465,11 +1483,18 @@ struct TogetherForm: View {
             Picker("Share locations with", selection: $t.value.locationApp) {
                 ForEach(LocationApp.allCases, id: \.self) { Text($0.name).tag($0) }
             }
-            Picker("Intercom", selection: $t.value.intercom) {
-                ForEach(Intercom.allCases, id: \.self) { Text($0.name).tag($0) }
+            Picker("Voice chat", selection: $t.value.intercom) {
+                ForEach(Intercom.allCases.filter { !$0.isCall && $0 != .other && $0 != .none }, id: \.self) { Text($0.name).tag($0) }
+                Divider()
+                ForEach([Intercom.discord, .whatsApp, .other, .none], id: \.self) { Text($0.name).tag($0) }
             }
             if t.value.intercom != .none {
-                TextField("Intercom group (optional)", text: $t.value.intercomGroup, prompt: Text("e.g. DMC group SUNDAY CREW"))
+                TextField(t.value.intercom == .discord ? "Voice channel (optional)" : "Group or channel (optional)",
+                          text: $t.value.intercomGroup, prompt: Text(t.value.intercom.groupPrompt))
+                Text(t.value.intercom.isCall
+                     ? "Invites ask everyone to join the call before you leave."
+                     : "\(t.value.intercom.name) pairs with your phone, not your Mac: set up the group in its phone app. Invites tell everyone which group to join.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             TextField("Discord invite link", text: $t.value.discord, prompt: Text("https://discord.gg/…"))
             TextField("Tags you post under", text: $t.value.tags, prompt: Text("#hooligoon #melbourneriders"))

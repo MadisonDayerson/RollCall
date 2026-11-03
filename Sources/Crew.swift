@@ -5,7 +5,7 @@ import NaturalLanguage
 ///
 /// Life360, Cardo and the social apps don't let other apps join in (no public way to read locations,
 /// join an intercom group or post for you), so RollCall carries the details instead: every invite,
-/// calendar event and caption says where to meet, which Discord and intercom group to join, which app
+/// calendar event and caption says where to meet, which Discord and voice chat group to join, which app
 /// to share locations in, and the ride's tag, so the whole crew lands in the same places.
 enum LocationApp: String, Codable, CaseIterable {
     case findMy, life360, googleMaps, whatsApp, none
@@ -32,15 +32,48 @@ enum LocationApp: String, Codable, CaseIterable {
     }
 }
 
+/// How a crew talks on the ride: a helmet intercom, or a call on the phone. Intercoms pair with the phone
+/// over Bluetooth and set up groups in their own phone app, so RollCall can't connect them from the Mac;
+/// it carries the group or channel in every invite and links to the maker's pairing help.
 enum Intercom: String, Codable, CaseIterable {
-    case cardo, sena, other, none
+    case cardo, sena, interphone, uclear, midland, freedconn, lexin, discord, whatsApp, other, none
 
     var name: String {
         switch self {
         case .cardo: return "Cardo"
         case .sena: return "Sena"
-        case .other: return "Other intercom"
+        case .interphone: return "Interphone"
+        case .uclear: return "UClear"
+        case .midland: return "Midland"
+        case .freedconn: return "FreedConn"
+        case .lexin: return "LEXIN"
+        case .discord: return "Discord voice"
+        case .whatsApp: return "WhatsApp call"
+        case .other: return "Other"
         case .none: return "None"
+        }
+    }
+
+    /// A call on the phone rather than a headset to pair.
+    var isCall: Bool { self == .discord || self == .whatsApp }
+
+    /// What the group field asks for.
+    var groupPrompt: String {
+        switch self {
+        case .cardo: return "DMC group name, e.g. SUNDAY CREW"
+        case .sena: return "Mesh channel or group, e.g. Open Mesh channel 3"
+        case .discord: return "Voice channel, e.g. ride-voice"
+        case .whatsApp: return "Group chat for the call"
+        default: return "Group or channel"
+        }
+    }
+
+    /// The maker's site, for pairing and group help.
+    var helpURL: String? {
+        switch self {
+        case .cardo: return "https://www.cardosystems.com"
+        case .sena: return "https://www.sena.com"
+        default: return nil
         }
     }
 }
@@ -262,7 +295,8 @@ enum Crew {
         if let d = discord(together: together, links: links) { lines.append("💬 Discord: " + d) }
         if together.intercom != .none {
             let group = together.intercomGroup.trimmingCharacters(in: .whitespaces)
-            lines.append("🎧 \(together.intercom.name)" + (group.isEmpty ? ": pair up before we leave" : ": " + group))
+            lines.append("🎧 \(together.intercom.name)" + (!group.isEmpty ? ": " + group
+                : together.intercom.isCall ? ": join the call before we leave" : ": pair up before we leave"))
         }
         if let r = together.locationApp.reminder { lines.append(r) }
         lines.append("📸 Tag your footage " + hashtags(ride, together: together, links: links, override: override).joined(separator: " "))
@@ -322,6 +356,23 @@ enum Crew {
                 ("TikTok", "https://www.tiktok.com/tag/\(t)"),
                 ("YouTube", "https://www.youtube.com/hashtag/\(t)")]
     }
+}
+
+/// Which maps app Route opens.
+enum MapsApp: String, Codable, CaseIterable {
+    case automatic, apple, google, waze
+
+    var name: String {
+        switch self {
+        case .automatic: return "Automatic"
+        case .apple: return "Apple Maps"
+        case .google: return "Google Maps"
+        case .waze: return "Waze"
+        }
+    }
+
+    /// Apple Maps and Waze links only hold one place, so a route with stops goes to the first one.
+    var holdsStops: Bool { self == .google }
 }
 
 /// Directions for a ride. A route the organiser shared in the description wins. Otherwise it's from home
@@ -411,6 +462,13 @@ enum Route {
         c.queryItems = q
         c.percentEncodedQuery = c.percentEncodedQuery?.replacingOccurrences(of: "|", with: "%7C")
         return c.string
+    }
+
+    /// Waze, driving to one place (in the app if it's installed, otherwise its website).
+    static func waze(to place: String) -> String {
+        var c = URLComponents(string: "https://waze.com/ul")!
+        c.queryItems = [URLQueryItem(name: "q", value: place), URLQueryItem(name: "navigate", value: "yes")]
+        return c.string ?? "https://waze.com/ul"
     }
 
     /// Apple Maps directions, for a route with no stops in between (its links can't carry them).

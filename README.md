@@ -28,7 +28,7 @@ A setup guide opens the first time (re-open it any time with **Set up RollCall�
 3. **Groups & accounts:** pick from suggestions for your area, or paste any link or `@instagram` name.
 4. **Calendar:** allow access, then choose iCloud, Google, Exchange or this Mac.
    For Google, first add your Google account in **System Settings → Internet Accounts**.
-5. **Riding together:** your crew's location app, intercom, Discord and tags
+5. **Riding together:** your crew's location app, voice chat, Discord and tags
    (see [Riding with friends](#riding-with-friends)).
 
 ## Everyday use
@@ -100,11 +100,16 @@ Apple Intelligence on your Mac where available. Beeper needs to be open for chat
 
 Each ride's **Ride with friends** box helps the whole crew end up in the same places:
 
-- **Before:** **Invite…** or **Copy invite** for Discord or a group chat. Invites include
-  the time, meeting point, map link, Discord, intercom group and a location-sharing reminder.
-- **During:** the same details are in the calendar event on your phone, plus buttons for Discord,
-  Find My and directions.
-- **After:** **Share footage…** or **Copy caption**, and **See posts** to find everyone else's.
+- **Invite…** or **Copy invite** for Discord or a group chat. Invites include the time, meeting point, map
+  link, Discord, voice chat group and a location-sharing reminder. The same details are in the calendar event.
+- **Route** opens the organiser's route if the description has one, otherwise directions from your suburb
+  through the meeting place and stops.
+- **Discord**, **Voice chat** and **Find My** for the day, and **Share footage…**, **Copy caption** and
+  **See posts** for afterwards.
+
+**Voice chat** (Settings → Riding together) is your helmet intercom (Cardo, Sena, Interphone, UClear, Midland,
+FreedConn, LEXIN) or a call (Discord voice, WhatsApp). Intercoms pair with your phone, not your Mac, so set up
+the group in its phone app and add the group or channel name: every invite then tells your crew which to join.
 
 Every ride gets a code tag of #RC and the date, like `#RC03112026`, the same for everyone using RollCall.
 Tags for the club, brand, place or occasion follow it (`#Hooligoon #TTR #Broadford #Halloween`); change them on the
@@ -130,8 +135,8 @@ tags rather than showing friends' locations or posting for you.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
-  releases and its seal shows it hasn't been changed. When you click **Map** or **Directions**, your suburb
-  (never your street) and the ride's stops go to Apple Maps or Google Maps to plan the route.
+  releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
+  (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps or Waze) to plan the route.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
   choose. Text from chat messages isn't added. The invites and captions you copy only go where you paste them.
 
