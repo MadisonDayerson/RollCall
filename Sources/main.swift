@@ -575,6 +575,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     /// For checking the design: saves a picture of each page of the window.
     func saveSnapshots(to folder: URL) async {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        // `--dark` checks how everything looks in dark mode.
+        if CommandLine.arguments.contains("--dark") { NSApp.appearance = NSAppearance(named: .darkAqua) }
         func snap(_ name: String, _ w: NSWindow?) async {
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             // An app may capture its own windows; this includes the sidebar's translucency.

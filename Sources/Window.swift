@@ -246,6 +246,7 @@ struct MainView: View {
                 Label("Settings", systemImage: "gearshape").tag(UIModel.Page.settings)
             }
             .navigationSplitViewColumnWidth(min: 150, ideal: 190)
+            .safeAreaInset(edge: .bottom) { Wordmark().padding(.bottom, 14) }
         } detail: {
             switch model.page {
             case .rides: RidesPage(model: model)
@@ -266,6 +267,29 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $model.showAdd) { AddSheet(model: model) }
+    }
+}
+
+/// "Roll Call" in the logo's gothic lettering, at the foot of the sidebar. It's a picture of the letters (the
+/// font itself isn't shipped), drawn black and tinted like the sidebar's text, so it follows light and dark mode.
+struct Wordmark: View {
+    static let image: NSImage? = {
+        guard let url = Bundle.main.url(forResource: "Wordmark", withExtension: "png"), let img = NSImage(contentsOf: url) else { return nil }
+        img.isTemplate = true
+        return img
+    }()
+
+    var body: some View {
+        if let img = Self.image {
+            Image(nsImage: img)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 120, maxHeight: 34)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Roll Call")
+        }
     }
 }
 
