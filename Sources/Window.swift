@@ -19,7 +19,7 @@ final class UIModel: ObservableObject {
             case .undecided: return "Nothing to decide on. New rides from your sources show up here."
             case .going: return "Rides you mark Going show here, and go in your RollCall calendar."
             case .skipped: return "Rides you skip show here, in case you change your mind."
-            case .past: return "Rides you mark Going move here once they're over, so you can still share footage and find everyone's posts."
+            case .past: return "Rides you mark Going move here once they're over, so you can still post your footage."
             }
         }
     }
@@ -553,31 +553,6 @@ struct RideDetail: View {
                               past: model.isPast(ride), scale: 1.5)
                     Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
                 }
-                if ride.needsCheck == true {
-                    Label("The date and place were read from a post or message. Check them before going.",
-                          systemImage: "exclamationmark.triangle")
-                        .font(.callout)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.yellow.opacity(0.18), in: RoundedRectangle(cornerRadius: 6))
-                }
-                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
-                    GridRow { Text("When").foregroundStyle(.secondary); Text(rideWhen(ride, long: true)) }
-                    if !ride.location.isEmpty {
-                        GridRow {
-                            Text("Where").foregroundStyle(.secondary)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(ride.location).textSelection(.enabled)
-                                if let km = ride.distanceKm {
-                                    Text(String(format: "%.0f km from %@", km, model.store.state.settings.homeName))
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                    GridRow { Text("From").foregroundStyle(.secondary); Text(ride.sourceName) }
-                }
-
                 if model.isPast(ride) {
                     Label("You went", systemImage: "checkmark.seal")
                         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -594,6 +569,15 @@ struct RideDetail: View {
                     Text("Going adds it to the RollCall calendar, with a reminder the evening before.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                if ride.needsCheck == true {
+                    Label("The date and place were read from a post or message. Check them before going.",
+                          systemImage: "exclamationmark.triangle")
+                        .font(.callout)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.yellow.opacity(0.18), in: RoundedRectangle(cornerRadius: 6))
+                }
+                RideAbout(ride: ride, model: model).id(ride.id)
 
                 HStack {
                     if let url = ride.url {
@@ -623,10 +607,6 @@ struct RideDetail: View {
                         }
                     }
                 }
-
-                if !ride.notes.isEmpty { RideAbout(notes: ride.notes).id(ride.id) }
-
-                RideTogether(ride: ride, model: model)
 
                 PostBox(ride: ride, model: model).id(ride.id)
             }
@@ -1364,95 +1344,53 @@ struct SettingsPage: View {
     }
 }
 
-// MARK: - Riding together
-
-/// Riding with friends: invite the crew, talk and find each other on the day, and share footage under one tag.
-/// Every button is always there; people use whichever they need.
-struct RideTogether: View {
+/// When, where and who it's from, then the description: the few lines that matter in plain words,
+/// with the whole thing under See more.
+struct RideAbout: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
-    @StateObject private var tag = Box("")
-
-    var body: some View {
-        let app = model.app
-        let crew = model.store.state.settings.crew
-        let discord = Crew.discord(together: crew, links: app.links(ride))
-        let voice = crew.intercom
-        let voiceGroup = crew.intercomGroup.trimmingCharacters(in: .whitespaces)
-        GroupBox {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Ride tags").foregroundStyle(.secondary)
-                    TextField("#RC…", text: $tag.value, onCommit: { app.setRideTag(ride.id, tag.value) })
-                        .textFieldStyle(.roundedBorder).frame(maxWidth: 360)
-                    if model.store.state.rideTags[ride.id] != nil {
-                        Button("Reset") { app.setRideTag(ride.id, ""); tag.value = app.rideTags(ride) }
-                    }
-                }
-                Text("The first tag is the ride's code (#RC and the date), the same for everyone using RollCall, so posts and footage end up together. The rest name the club, place or occasion; change them if you like.")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-
-                Flow {
-                    Button("Share") { app.shareInvite(ride) }
-                        .help("Send the invite (time, meeting point, map, voice chat and tags) and a calendar file with Messages, Mail, AirDrop and more")
-                    if let d = discord { Button("Discord") { app.open(d) } }
-                    if voice == .discord, discord == nil {
-                        Button("Voice chat") { model.page = .settings }
-                            .help("Add your crew's Discord link in Settings → Riding together")
-                    } else if let help = voice.helpURL {
-                        Button("Voice chat") { app.open(help) }
-                            .help("\(voice.name)\(voiceGroup.isEmpty ? "" : ": " + voiceGroup). Pair it with your phone and join the group in the \(voice.name) app; this opens \(voice.name)'s help.")
-                    }
-                    if crew.locationApp == .findMy { Button("Find My") { app.openFindMy() } }
-                    Menu("See posts") {
-                        ForEach(Crew.tagPages(app.rideTag(ride)), id: \.name) { p in Button(p.name) { app.open(p.url) } }
-                    }
-                    .fixedSize()
-                }
-                if voice != .none {
-                    Label("\(voice.name)\(voiceGroup.isEmpty ? "" : ": " + voiceGroup)", systemImage: "headphones")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } label: {
-            Label("Ride with friends", systemImage: "person.2.wave.2")
-        }
-        .onAppear { tag.value = app.rideTags(ride) }
-        .onChange(of: ride.id) { _, _ in tag.value = app.rideTags(ride) }
-    }
-}
-
-/// The event description: the few lines that matter in plain words, with the whole thing under See more.
-struct RideAbout: View {
-    let notes: String
     @StateObject private var more = Box(false)
 
     var body: some View {
+        let notes = ride.notes
         let full = Web.readableNotes(notes)
-        let items = Brief.items(in: notes)
+        let summarise = !notes.isEmpty && Brief.needsSummary(notes)
+        let items = summarise ? Brief.items(in: notes) : []
         GroupBox {
-            VStack(alignment: .leading, spacing: 8) {
-                if !Brief.needsSummary(notes) {
-                    Text(full).textSelection(.enabled)
-                } else {
-                    if items.isEmpty {
-                        Text(Brief.opening(notes)).textSelection(.enabled)
-                    } else {
-                        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
-                            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                                GridRow {
-                                    Text(item.label).foregroundStyle(.secondary)
-                                    Text(item.value).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 10) {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
+                    GridRow { Text("When").foregroundStyle(.secondary); Text(rideWhen(ride, long: true)) }
+                    if !ride.location.isEmpty {
+                        GridRow {
+                            Text("Where").foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(ride.location).textSelection(.enabled)
+                                if let km = ride.distanceKm {
+                                    Text(String(format: "%.0f km from %@", km, model.store.state.settings.homeName))
+                                        .font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                         }
                     }
-                    Button(more.value ? "See less" : "See more") { more.value.toggle() }
-                        .buttonStyle(.link)
-                    if more.value {
-                        Divider()
+                    GridRow { Text("From").foregroundStyle(.secondary); Text(ride.sourceName) }
+                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                        GridRow {
+                            Text(item.label).foregroundStyle(.secondary)
+                            Text(item.value).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                if !notes.isEmpty {
+                    if !summarise {
                         Text(full).font(.callout).textSelection(.enabled)
+                    } else {
+                        if items.isEmpty { Text(Brief.opening(notes)).font(.callout).textSelection(.enabled) }
+                        Button(more.value ? "See less" : "See more") { more.value.toggle() }
+                            .buttonStyle(.link)
+                        if more.value {
+                            Divider()
+                            Text(full).font(.callout).textSelection(.enabled)
+                        }
                     }
                 }
             }
