@@ -64,11 +64,15 @@ extension AppDelegate {
         let edit = RideEdit(title: r.title, start: allDay ? ride.start : r.start,
                             end: allDay ? ride.end : r.start.addingTimeInterval(r.hours * 3600), allDay: allDay,
                             location: r.location, notes: r.notes, url: link)
-        store.state.rideEdits[id] = edit
-        var e = ride.applying(edit)
-        e.distanceKm = store.distance(e)
-        store.state.events[id] = e
-        syncCalendar(id)
+        // Every copy of a cross-posted ride gets the change, so the copies still match and show as one ride.
+        var e = ride
+        for copy in [ride] + store.copies(of: ride) {
+            store.state.rideEdits[copy.id] = edit
+            e = copy.applying(edit)
+            e.distanceKm = store.distance(e)
+            store.state.events[copy.id] = e
+            syncCalendar(copy.id)
+        }
         store.save()
         NotificationCenter.default.post(name: Store.changed, object: nil)
         updateBadge()

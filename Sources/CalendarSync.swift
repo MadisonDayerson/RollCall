@@ -77,7 +77,7 @@ final class CalendarSync {
         ev.startDate = ride.start
         ev.isAllDay = ride.allDay
         if ride.allDay {
-            ev.endDate = ride.end.map { $0.addingTimeInterval(-1) } ?? ride.start
+            ev.endDate = ride.finish.addingTimeInterval(-1)
         } else {
             ev.endDate = ride.end ?? ride.start.addingTimeInterval(4 * 3600)
         }

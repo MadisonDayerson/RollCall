@@ -309,13 +309,17 @@ final class LoopbackServer: @unchecked Sendable {
     }
 }
 
-/// Keeps the Beeper access token in the login keychain rather than a plain file.
+/// Keeps the Beeper access token in the login keychain rather than a plain file. It's read from the keychain
+/// once and then remembered, so drawing Settings or reading a chat never waits on a keychain prompt again.
 enum Keychain {
     static let service = "au.madiday.motorides.beeper"
     static let account = "beeper-desktop-api"
+    /// nil until the keychain has been read; then the token, or .some(nil) when there isn't one.
+    nonisolated(unsafe) private static var remembered: String??
 
     static func save(_ token: String) {
         delete()
+        remembered = token
         let item: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -327,6 +331,7 @@ enum Keychain {
     }
 
     static func read() -> String? {
+        if let remembered { return remembered }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -335,11 +340,15 @@ enum Keychain {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var out: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        let status = SecItemCopyMatching(query as CFDictionary, &out)
+        let token = status == errSecSuccess ? (out as? Data).flatMap { String(data: $0, encoding: .utf8) } : nil
+        // A denied or cancelled keychain prompt isn't remembered, so the next read can ask again.
+        if status == errSecSuccess || status == errSecItemNotFound { remembered = .some(token) }
+        return token
     }
 
     static func delete() {
+        remembered = .some(nil)
         SecItemDelete([
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

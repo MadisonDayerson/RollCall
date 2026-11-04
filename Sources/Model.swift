@@ -151,6 +151,14 @@ struct RideEvent: Codable {
     var needsCheck: Bool? = nil
 
     var isFacebook: Bool { url?.contains("facebook.com") ?? false }
+
+    /// When the ride is over. An all-day ride lasts to the end of its last day, even when the source gives
+    /// no end or an end that isn't after the start; a ride with a time and no end is taken to last 3 hours.
+    var finish: Date {
+        guard allDay else { return end ?? start.addingTimeInterval(3 * 3600) }
+        let dayAfter = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: start)) ?? start
+        return max(end ?? dayAfter, dayAfter)
+    }
 }
 
 struct Settings: Codable {
@@ -345,7 +353,7 @@ final class Store {
     func upcoming(now: Date = Date(), oneEach: Bool = true) -> [RideEvent] {
         let limit = Calendar.current.date(byAdding: .day, value: state.settings.daysAhead, to: now) ?? now
         let rides = state.events.values
-            .filter { ($0.end ?? $0.start.addingTimeInterval(3 * 3600)) >= now && $0.start <= limit }
+            .filter { $0.finish >= now && $0.start <= limit }
             .filter { e in
                 // Rides the user typed in or imported themselves are always shown.
                 if Store.userAdded.contains(e.source) { return true }
@@ -361,7 +369,7 @@ final class Store {
 
     /// Rides you went on that have finished, most recent first. Distance doesn't matter: you went.
     func past(now: Date = Date()) -> [RideEvent] {
-        oneEach(state.events.values.filter { ($0.end ?? $0.start.addingTimeInterval(3 * 3600)) < now && decision($0.id) == .attending })
+        oneEach(state.events.values.filter { $0.finish < now && decision($0.id) == .attending })
             .sorted { $0.start > $1.start }
     }
 
@@ -470,7 +478,7 @@ final class Store {
         let weekAgo = now.addingTimeInterval(-7 * 86400)
         for (id, e) in state.events {
             // Rides you went on stay, under Past rides.
-            let past = (e.end ?? e.start) < weekAgo && decision(id) != .attending
+            let past = e.finish < weekAgo && decision(id) != .attending
             let vanished = refreshedSources.contains(e.source) && e.lastSeen < refreshStarted && e.start > now
             if past || (vanished && decision(id) != .attending) {
                 state.events[id] = nil

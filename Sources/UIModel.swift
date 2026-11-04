@@ -100,7 +100,7 @@ final class UIModel: ObservableObject {
         page = .rides
     }
 
-    func isPast(_ ride: RideEvent) -> Bool { (ride.end ?? ride.start.addingTimeInterval(3 * 3600)) < Date() }
+    func isPast(_ ride: RideEvent) -> Bool { ride.finish < Date() }
 
     var undecidedCount: Int { store.upcoming().filter { store.decision($0.id) == .undecided }.count }
 

@@ -733,5 +733,21 @@ do {
     store.prune(refreshedSources: [], refreshStarted: Date())
     check(store.state.removedRides.isEmpty, "removed rides are forgotten a week after")
 }
+// An all-day ride lasts to the end of its day, whatever end the source gives.
+do {
+    let day = Calendar.current.startOfDay(for: Date())
+    func allDay(_ end: Date?) -> RideEvent {
+        RideEvent(id: "a", title: "Pretend shindig", start: day, end: end, allDay: true, location: "", notes: "", url: nil,
+                  source: "feed", sourceName: "Feed", lastSeen: Date())
+    }
+    let midnight = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+    check(allDay(nil).finish == midnight && allDay(day).finish == midnight, "an all-day ride with no end, or end = start, lasts all day")
+    let twoDays = Calendar.current.date(byAdding: .day, value: 2, to: day)!
+    check(allDay(twoDays).finish == twoDays, "a two-day ride lasts both days")
+    let store = Store(file: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("allday-\(UUID()).json"))
+    store.state.events["a"] = allDay(day)
+    check(store.upcoming(now: day.addingTimeInterval(12 * 3600)).count == 1, "an all-day ride still shows at midday on the day")
+}
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)
