@@ -57,8 +57,6 @@ enum Brand {
     }
     static let wordmark = gothic("Wordmark")
     static let monogram = gothic("Monogram")
-    /// 0–9 for the day on a ride's date patch (Design/make_digits.swift).
-    static let digits = (0...9).map { gothic("Digit\($0)") }
     /// What the window's text sits on, for lettering cut out of a filled patch.
     static let paper = Color(nsColor: .windowBackgroundColor)
 }
@@ -94,7 +92,8 @@ struct DateBadge: View {
         let small = Font.system(size: 8 * scale, weight: .bold)
         VStack(spacing: 1 * scale) {
             Text(Self.month.string(from: date).uppercased()).font(small).tracking(0.8 * scale)
-            dayNumber
+            Text(Self.day.string(from: date))
+                .font(.system(size: 22 * scale, weight: .black).width(.condensed)).monospacedDigit()
             Text(Self.weekday.string(from: date).uppercased()).font(small).tracking(0.8 * scale)
         }
         .foregroundStyle(ink)
@@ -115,22 +114,6 @@ struct DateBadge: View {
         }
         .opacity(decision == .skip ? 0.5 : past ? 0.7 : 1)
         .accessibilityHidden(true)
-    }
-
-    /// The day in the logo's gothic digits, or the system font if the pictures are missing.
-    @ViewBuilder private var dayNumber: some View {
-        let day = Self.day.string(from: date)
-        let images = day.compactMap { $0.wholeNumberValue.flatMap { Brand.digits[$0] } }
-        if images.count == day.count {
-            HStack(spacing: 0) {
-                ForEach(Array(images.enumerated()), id: \.offset) { _, img in
-                    Image(nsImage: img).renderingMode(.template).resizable().scaledToFit()
-                }
-            }
-            .frame(height: 23 * scale)
-        } else {
-            Text(day).font(.system(size: 19 * scale, weight: .black).width(.condensed)).monospacedDigit()
-        }
     }
 
     private static func fmt(_ f: String) -> DateFormatter {

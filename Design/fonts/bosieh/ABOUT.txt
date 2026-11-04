@@ -3,9 +3,8 @@ Licence: 1001Fonts Free For Personal Use (demo font, no commercial use).
 
 It's only used to draw the RollCall icon (Design/RollCall.png and Design/MenuIcon.png) and the "Roll Call"
 wordmark at the foot of the window's sidebar (Design/Wordmark.png) and the "RC" on empty pages
-(Design/Monogram.png), and the day numbers on ride dates (Design/Digits), which are in the repository. The font file itself isn't in the repository: to redraw the icon, download
+(Design/Monogram.png), which are in the repository. The font file itself isn't in the repository: to redraw the icon, download
 bosieh.regular.otf from the page above, save it here as Bosieh-Regular.otf, and run
   swift Design/make_icon.swift Design/RollCall.png
   swift Design/make_wordmark.swift Design/Wordmark.png
   swift Design/make_wordmark.swift Design/Monogram.png RC
-  swift Design/make_digits.swift
