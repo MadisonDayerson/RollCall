@@ -204,8 +204,6 @@ struct RideDetail: View {
                         .help(!ride.hasRoute ? "Add a place with Edit… to get a route"
                               : Route.link(in: ride.notes) != nil ? "Open the organiser's route"
                               : "Directions from your suburb to the meeting place and any stops (choose your maps app in Settings)")
-                    Button("Join group") { model.later { app.joinGroup(rideID: ride.id) } }
-                        .help(ride.groupURL == nil ? "Paste the link to the group that runs this ride, then open it" : "Open the group's page to join it")
                     Button("Remove", role: .destructive) {
                         model.selectedRide = nil
                         if model.isPast(ride) { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }

@@ -100,9 +100,8 @@ Apple Intelligence on your Mac where available. Beeper needs to be open for chat
 ## Riding with friends
 
 Each ride's page starts with its status, then **About**: when, where, who it's from and a plain summary of the
-description. Under it, every ride has the same buttons: **Open event**, **Edit…**, **Route**, **Join group** and
-**Remove** (one that can't do anything yet is greyed out and says why). **Join group** asks for the group's link the
-first time. **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
+description. Under it, every ride has the same buttons: **Open event**, **Edit…**, **Route** and **Remove** (one that
+can't do anything yet is greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to. **Route** opens the organiser's route if the
 description has one, otherwise directions from your suburb through the meeting place and stops.
 

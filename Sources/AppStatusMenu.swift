@@ -98,7 +98,6 @@ extension AppDelegate {
         for (title, sel, object, enabled) in [("Open event", #selector(openLink(_:)), ride.url ?? "", ride.url != nil),
                                               ("Edit…", #selector(editRide(_:)), ride.id, true),
                                               ("Route", #selector(openMaps(_:)), ride.id, ride.hasRoute),
-                                              ("Join group", #selector(joinGroup(_:)), ride.id, true),
                                               ("Remove", #selector(removeRide(_:)), ride.id, true)] {
             let it = action(title, sel, enabled: enabled)
             it.representedObject = object

@@ -93,29 +93,6 @@ extension AppDelegate {
         updateBadge()
     }
 
-    @objc func joinGroup(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        joinGroup(rideID: id)
-    }
-
-    /// Opens the group that runs the ride, asking for its link the first time.
-    func joinGroup(rideID id: String) {
-        guard var e = store.state.events[id] else { return }
-        if e.groupURL == nil {
-            guard let vals = Dialogs.ask("Group link", "Paste the link to the group or club that runs this ride, to join it.",
-                                         fields: [("", "https://…")], ok: "Join"),
-                  !vals[0].isEmpty else { return }
-            var link = vals[0]
-            if !link.lowercased().hasPrefix("http") { link = "https://" + link }
-            e.groupURL = link
-            store.state.events[id] = e
-            if let fb = Store.facebookEventID(e.url ?? "") { store.state.facebookGroups[fb] = link }
-            store.save()
-            NotificationCenter.default.post(name: Store.changed, object: nil)
-        }
-        open(e.groupURL)
-    }
-
     func markPostsRead() {
         store.state.postsReadUntil = Date()
         store.save()
