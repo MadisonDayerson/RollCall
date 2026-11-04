@@ -31,6 +31,8 @@ cp Design/MenuIcon.png "$APP/Contents/Resources/MenuIcon.png"
 # The "Roll Call" wordmark at the foot of the sidebar (Design/make_wordmark.swift draws it).
 cp Design/Wordmark.png "$APP/Contents/Resources/Wordmark.png"
 cp Design/Monogram.png "$APP/Contents/Resources/Monogram.png"
+# The gothic day numbers on ride dates (Design/make_digits.swift draws them).
+for d in 0 1 2 3 4 5 6 7 8 9; do cp "Design/Digits/$d.png" "$APP/Contents/Resources/Digit$d.png"; done
 
 codesign --force --sign - "$APP"
 
