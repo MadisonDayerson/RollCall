@@ -272,6 +272,8 @@ struct RideAbout: View {
                     }
                 }
             }
+            // Room between the text and the box's edge.
+            .padding(.horizontal, 14).padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
             Label("About", systemImage: "text.alignleft")
