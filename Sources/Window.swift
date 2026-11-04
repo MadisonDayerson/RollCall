@@ -1421,11 +1421,15 @@ struct PostBox: View {
     @StateObject private var over = Box(false)
     @StateObject private var note = Box<String?>(nil)
 
+    /// Upload pages. None of these sites let an app post for you (Instagram needs a business account and a
+    /// Meta-approved app, TikTok and YouTube keep posts from unapproved apps private, Facebook profiles have no
+    /// way in), so RollCall opens the page and hands you the footage to drop in.
     static let sites: [(name: String, url: String)] = [
         ("Instagram", "https://www.instagram.com/"),
-        ("TikTok", "https://www.tiktok.com/upload"),
+        ("TikTok", "https://www.tiktok.com/tiktokstudio/upload"),
         ("YouTube", "https://www.youtube.com/upload"),
         ("Facebook", "https://www.facebook.com/"),
+        ("Threads", "https://www.threads.com/"),
     ]
 
     var body: some View {
@@ -1447,19 +1451,18 @@ struct PostBox: View {
                         note.value = "The caption is copied too, in case the app leaves it out."
                     }
                     .help("Send the footage and caption with Messages, AirDrop, Photos, Mail and more")
-                    Menu("Post on") {
-                        ForEach(Self.sites, id: \.name) { site in
-                            Button(site.name) {
-                                save()
-                                app.postOn(site.url, caption: text.value, files: files.value)
-                                note.value = files.value.isEmpty
-                                    ? "Caption copied: paste it into \(site.name)."
-                                    : "Caption copied. Drag your footage from the Finder window into \(site.name), then paste the caption."
-                            }
+                    let site = Self.sites.first { $0.name == model.store.state.settings.postSite } ?? Self.sites[0]
+                    Menu {
+                        ForEach(Self.sites, id: \.name) { s in
+                            Button(s.name) { post(on: s) }
                         }
+                    } label: {
+                        Text("Post to \(site.name)")
+                    } primaryAction: {
+                        post(on: site)
                     }
                     .fixedSize()
-                    .help("Opens the site with the caption copied, ready to finish your post there")
+                    .help("Opens \(site.name)'s upload page with the caption copied, and your footage in a tray to drag in. Pick another site from the arrow.")
                     if text.value != app.caption(ride) {
                         Button("Reset caption") { text.value = app.caption(ride); save() }
                             .help("Go back to RollCall's caption with the ride's tags")
@@ -1494,6 +1497,7 @@ struct PostBox: View {
                     HStack(spacing: 8) {
                         ForEach(files.value, id: \.self) { url in
                             Thumb(url: url)
+                                .onDrag { NSItemProvider(object: url as NSURL) }
                                 .overlay(alignment: .topTrailing) {
                                     Button { files.value.removeAll { $0 == url }; save() } label: {
                                         Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette)
@@ -1518,6 +1522,15 @@ struct PostBox: View {
             add(urls)
             return true
         } isTargeted: { over.value = $0 }
+    }
+
+    private func post(on site: (name: String, url: String)) {
+        save()
+        model.app.setPostSite(site.name)
+        model.app.postOn(site, caption: text.value, files: files.value)
+        note.value = files.value.isEmpty
+            ? "Caption copied: paste it into \(site.name) (⌘V)."
+            : "Caption copied. Drag your footage from the tray into \(site.name), then paste the caption (⌘V)."
     }
 
     private func add(_ urls: [URL]) {
@@ -1733,5 +1746,93 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
                 list.frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+    }
+}
+
+// MARK: - Post tray
+
+/// Floats over the browser while you post: your footage to drag into the site's upload box, and the caption.
+struct PostTray: View {
+    let site: String
+    let files: [URL]
+    let caption: String
+    let app: AppDelegate
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Drag into \(site)").font(.headline)
+            if files.count > 1 {
+                DragAll(files: files)
+                    .frame(height: 44)
+                    .help("Drag all \(files.count) into the upload box at once")
+            }
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(96), spacing: 8), count: 3), alignment: .leading, spacing: 8) {
+                    ForEach(files, id: \.self) { url in
+                        Thumb(url: url).onDrag { NSItemProvider(object: url as NSURL) }
+                    }
+                }
+            }
+            .frame(maxHeight: 230)
+            Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(4).textSelection(.enabled)
+            HStack {
+                Button("Copy caption") { app.copy(caption) }
+                    .help("The caption is already copied; this copies it again if you've copied something else since")
+                Spacer()
+                Button("Done") { app.closePostTray() }.keyboardShortcut(.cancelAction)
+            }
+            Text("Paste the caption with ⌘V once your footage is in.").font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(width: 330)
+    }
+}
+
+/// A tile that drags every file at once, as a browser's upload box expects from the Finder.
+struct DragAll: NSViewRepresentable {
+    let files: [URL]
+
+    func makeNSView(context: Context) -> DragAllView {
+        let v = DragAllView()
+        v.files = files
+        return v
+    }
+
+    func updateNSView(_ v: DragAllView, context: Context) { v.files = files }
+
+    final class DragAllView: NSView, NSDraggingSource {
+        var files: [URL] = []
+        private var down: NSEvent?
+
+        override func draw(_ dirty: NSRect) {
+            let box = bounds.insetBy(dx: 1, dy: 1)
+            let path = NSBezierPath(roundedRect: box, xRadius: 8, yRadius: 8)
+            NSColor.secondaryLabelColor.withAlphaComponent(0.12).setFill()
+            path.fill()
+            path.setLineDash([6, 4], count: 2, phase: 0)
+            NSColor.secondaryLabelColor.setStroke()
+            path.stroke()
+            let text = "⠿  Drag all \(files.count)" as NSString
+            let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.labelColor]
+            let size = text.size(withAttributes: attrs)
+            text.draw(at: NSPoint(x: box.midX - size.width / 2, y: box.midY - size.height / 2), withAttributes: attrs)
+        }
+
+        override func mouseDown(with event: NSEvent) { down = event }
+
+        override func mouseDragged(with event: NSEvent) {
+            guard let down, !files.isEmpty else { return }
+            self.down = nil
+            let items = files.enumerated().map { i, url -> NSDraggingItem in
+                let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+                let icon = NSWorkspace.shared.icon(forFile: url.path)
+                item.setDraggingFrame(NSRect(x: 8 + CGFloat(i) * 6, y: 4, width: 36, height: 36), contents: icon)
+                return item
+            }
+            beginDraggingSession(with: items, event: down, source: self)
+        }
+
+        func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 }

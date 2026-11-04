@@ -106,8 +106,10 @@ link or notes; your changes stay when RollCall checks the source again, and go t
 description has one, otherwise directions from your suburb through the meeting place and stops.
 
 The **Post** box puts your post together: drop in photos or videos from the ride, and edit the caption and tags
-RollCall wrote. **Share…** sends it all with the share menu; **Post on** copies the caption, shows your footage in
-the Finder and opens Instagram, TikTok, YouTube or Facebook so you can finish the post there. Your draft is kept
+RollCall wrote. **Share…** sends it all with the share menu. **Post to Instagram** (pick TikTok, YouTube, Facebook or
+Threads from its arrow, and it remembers) copies the caption, opens the site's upload page and floats your footage in
+a tray over it: drag it into the upload box (**Drag all** takes every file at once), then paste the caption. None of
+these sites let other apps post for you, so this is as close as it gets. Your draft is kept
 until the ride is removed.
 
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a

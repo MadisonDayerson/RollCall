@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var checking: Set<String> = []
     lazy var ui = UIModel(app: self)
     var window: NSWindow?
+    /// Footage to drag into a site while posting.
+    var postTray: NSPanel?
     lazy var setup = SetupModel(app: self)
     var setupWindow: NSWindow?
     /// A newer RollCall on GitHub, once a check has found one.
@@ -675,6 +677,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         await snap("1-past", window)
         if let pastDemo { store.state.events[pastDemo.id] = nil; store.state.decisions[pastDemo.id] = nil }
         ui.rideFilter = filter
+        // The tray for posting, with pictures that come with macOS.
+        let samples = ((try? FileManager.default.contentsOfDirectory(atPath: "/System/Library/Desktop Pictures")) ?? [])
+            .filter { $0.hasSuffix(".heic") || $0.hasSuffix(".jpg") }.sorted().prefix(3)
+            .map { URL(fileURLWithPath: "/System/Library/Desktop Pictures/" + $0) }
+        showPostTray("Instagram", caption: "Sunday breakfast run 🏍️\n\n#RC08112026 #BlackSpur #RollCall", files: Array(samples))
+        await snap("1-post-tray", postTray)
+        closePostTray()
         // Back from another tab: the list must redraw cleanly, with no rows left over from the last one.
         ui.selectedRide = nil
         await snap("1-rides-again", window)
@@ -875,10 +884,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     /// For sites without a share option on the Mac: copies the caption, shows the footage in the Finder to drag in,
     /// and opens the site's upload page.
-    func postOn(_ site: String, caption text: String, files: [URL]) {
+    /// The sites don't let apps post (see PostBox.sites), so this gets everything ready to drop in: the caption
+    /// copied, the upload page open, and the footage in a tray that floats over the browser.
+    func postOn(_ site: (name: String, url: String), caption text: String, files: [URL]) {
         copy(text)
-        if !files.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(files) }
-        open(site)
+        open(site.url)
+        showPostTray(site.name, caption: text, files: files)
+    }
+
+    func showPostTray(_ site: String, caption text: String, files: [URL]) {
+        closePostTray()
+        guard !files.isEmpty else { return }
+        let host = NSHostingController(rootView: PostTray(site: site, files: files, caption: text, app: self))
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 330, height: 400),
+                            styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.title = "Post to \(site)"
+        panel.contentViewController = host
+        panel.isFloatingPanel = true
+        panel.level = .floating
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.setContentSize(host.view.fittingSize)
+        // Top right of the screen, clear of most upload boxes.
+        if let screen = NSScreen.main?.visibleFrame {
+            panel.setFrameTopLeftPoint(NSPoint(x: screen.maxX - panel.frame.width - 20, y: screen.maxY - 20))
+        }
+        panel.orderFrontRegardless()
+        postTray = panel
+    }
+
+    func closePostTray() {
+        postTray?.close()
+        postTray = nil
+    }
+
+    func setPostSite(_ name: String) {
+        guard store.state.settings.postSite != name else { return }
+        store.state.settings.postSite = name
+        store.save()
     }
 
     func openFindMy() {

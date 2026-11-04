@@ -175,6 +175,8 @@ struct Settings: Codable {
     var skippedVersion: String? = nil
     /// Which maps app Route opens (nil means automatic).
     var mapsApp: MapsApp? = nil
+    /// The site the Post box's main button posts to (the last one you picked).
+    var postSite: String? = nil
 
     var crew: Together { together ?? Together() }
 }
