@@ -41,8 +41,8 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
 
 - **Rides:** a ride posted in several places (say, Facebook and a forum) shows once, with every place under
   **From**. **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
-  ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP), the
-  group page (to join) and the route. A ? on the date means it was read from a post, so double-check it.
+  ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP) and
+  the route. A ? on the date means it was read from a post, so double-check it.
   Rides you went on move to **Past** once they're over.
 - **To review:** possible ride plans from your chats, plus ride posts that didn't say when.
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
