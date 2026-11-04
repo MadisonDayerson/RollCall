@@ -703,5 +703,22 @@ do {
           "a refusal in words is spotted")
     check(!AppleModel.looksLikeRefusal("PLAN: yes\nTITLE: Sorry state of the roads ride"), "a normal reply isn't")
 }
+// Editing a ride
+do {
+    let store = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-edit-\(UUID()).json"))
+    let start = cal.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 0))!
+    let item = ICSEvent(uid: "show", title: "bike ride to the pretend show", start: start, end: start.addingTimeInterval(3 * 3600),
+                        allDay: false, location: "Pretendville", notes: "", url: nil)
+    store.merge([item], source: "feed", sourceName: "Feed", groupURL: nil)
+    let id = Store.eventID(source: "feed", item: item)
+    let fixed = start.addingTimeInterval(9 * 3600)
+    store.state.rideEdits[id] = RideEdit(title: "Pretend Show ride", start: fixed, end: fixed.addingTimeInterval(5 * 3600), allDay: false,
+                                         location: "Example Servo, Sunshine", notes: "Bring cash", url: nil)
+    store.merge([item], source: "feed", sourceName: "Feed", groupURL: nil)
+    let e = store.state.events[id]
+    check(e?.title == "Pretend Show ride" && e?.start == fixed && e?.location == "Example Servo, Sunshine" && e?.notes == "Bring cash",
+          "your changes stay when the source is checked again")
+    check(e?.latitude == nil, "a changed place is looked up again")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

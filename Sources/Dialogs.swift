@@ -73,12 +73,12 @@ enum Dialogs {
                                   matchingPolicy: .nextTime) ?? Date()
     }
 
-    static func manualRide(prefill: ManualRide, note: String) -> ManualRide? {
+    static func manualRide(prefill: ManualRide, note: String, heading: String = "Add a ride", ok: String = "Add") -> ManualRide? {
         bringForward()
         let a = NSAlert()
-        a.messageText = "Add a ride"
+        a.messageText = heading
         a.informativeText = note
-        a.addButton(withTitle: "Add")
+        a.addButton(withTitle: ok)
         a.addButton(withTitle: "Cancel")
         let width: CGFloat = 380
         let stack = NSStackView()

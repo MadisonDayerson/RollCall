@@ -101,7 +101,8 @@ Apple Intelligence on your Mac where available. Beeper needs to be open for chat
 ## Riding with friends
 
 Each ride's page starts with its status, then **About**: when, where, who it's from and a plain summary of the
-description. Under it are the event, **Route** and group buttons. **Route** opens the organiser's route if the
+description. Under it are the event, **Edit…**, **Route** and group buttons. **Edit…** changes the name, time, length, place,
+link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to. **Route** opens the organiser's route if the
 description has one, otherwise directions from your suburb through the meeting place and stops.
 
 The **Post** box puts your post together: drop in photos or videos from the ride, and edit the caption and tags

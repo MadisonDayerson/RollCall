@@ -1321,6 +1321,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         removeRide(id: id)
     }
 
+    /// Opens the ride's details to change. The changes stay through refreshes and go to the calendar.
+    func editRide(id: String) {
+        guard let ride = store.state.events[id] else { return }
+        let hours = ride.end.map { max(0.5, $0.timeIntervalSince(ride.start) / 3600) } ?? 3
+        let shownStart = ride.allDay ? Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: ride.start) ?? ride.start : ride.start
+        let going = store.decision(id) == .attending && store.state.calendarItems[id] != nil
+        guard let r = Dialogs.manualRide(
+            prefill: .init(title: ride.title, start: shownStart, hours: ride.allDay ? 24 : hours,
+                           location: ride.location, link: ride.url ?? "", notes: ride.notes),
+            note: going ? "Your changes go to the calendar too, and stay when RollCall checks the source again."
+                        : "Your changes stay when RollCall checks the source again.",
+            heading: "Edit ride", ok: "Save") else { return }
+        // An all-day ride stays all day unless its start or length was changed.
+        let allDay = ride.allDay && r.start == shownStart && r.hours == 24
+        var link: String? = r.link.isEmpty ? nil : r.link
+        if let l = link, !l.lowercased().hasPrefix("http") { link = "https://" + l }
+        let edit = RideEdit(title: r.title, start: allDay ? ride.start : r.start,
+                            end: allDay ? ride.end : r.start.addingTimeInterval(r.hours * 3600), allDay: allDay,
+                            location: r.location, notes: r.notes, url: link)
+        store.state.rideEdits[id] = edit
+        var e = ride.applying(edit)
+        e.distanceKm = store.distance(e)
+        store.state.events[id] = e
+        syncCalendar(id)
+        store.save()
+        NotificationCenter.default.post(name: Store.changed, object: nil)
+        updateBadge()
+        if e.latitude == nil, !e.location.isEmpty {
+            Task { await geocoder.fill(store); store.save(); NotificationCenter.default.post(name: Store.changed, object: nil) }
+        }
+    }
+
     func removeRide(id: String) {
         store.state.decisions[id] = .skip
         syncCalendar(id)

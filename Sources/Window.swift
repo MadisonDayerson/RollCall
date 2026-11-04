@@ -587,6 +587,8 @@ struct RideDetail: View {
                         Button(model.isPast(ride) && ride.linkLabel == "RSVP" ? "Open event" : ride.linkLabel) { app.open(url) }
                             .help(ride.linkHelp)
                     }
+                    Button("Edit…") { model.later { app.editRide(id: ride.id) } }
+                        .help("Change the name, time, place, link or notes. Changes go to the calendar too.")
                     if ride.hasRoute {
                         Button("Route") { app.openRoute(ride) }
                             .help(Route.link(in: ride.notes) != nil ? "Open the organiser's route" : "Directions from your suburb to the meeting place and any stops (choose your maps app in Settings)")

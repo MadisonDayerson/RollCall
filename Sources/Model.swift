@@ -179,6 +179,28 @@ struct Settings: Codable {
     var crew: Together { together ?? Together() }
 }
 
+/// Your own changes to a ride's details. They're kept apart from the ride, so a refresh of its source
+/// doesn't undo them.
+struct RideEdit: Codable, Equatable {
+    var title: String
+    var start: Date
+    var end: Date?
+    var allDay: Bool
+    var location: String
+    var notes: String
+    var url: String?
+}
+
+extension RideEvent {
+    func applying(_ edit: RideEdit) -> RideEvent {
+        var e = self
+        if edit.location != location { e.latitude = nil; e.longitude = nil; e.distanceKm = nil }  // to be found again
+        e.title = edit.title; e.start = edit.start; e.end = edit.end; e.allDay = edit.allDay
+        e.location = edit.location; e.notes = edit.notes; e.url = edit.url
+        return e
+    }
+}
+
 /// A post being put together on a ride's page. A nil caption means RollCall's own, so tag changes still show.
 struct PostDraft: Codable, Equatable {
     var caption: String?
@@ -219,6 +241,8 @@ struct AppState: Codable {
     var rideTags: [String: String] = [:]
     /// Ride id -> the post you're putting together: footage you dropped in and the caption as you left it.
     var postDrafts: [String: PostDraft] = [:]
+    /// Ride id -> the details as you changed them.
+    var rideEdits: [String: RideEdit] = [:]
 
     init() {}
 
@@ -247,6 +271,7 @@ struct AppState: Codable {
         crew = get(.crew, [:])
         rideTags = get(.rideTags, [:])
         postDrafts = get(.postDrafts, [:])
+        rideEdits = get(.rideEdits, [:])
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion
@@ -390,6 +415,8 @@ final class Store {
                let g = state.facebookGroups[fbID] {
                 e.groupURL = g
             }
+            // Your changes win over what the source says.
+            if let edit = state.rideEdits[id] { e = e.applying(edit) }
             if let old = state.events[id] {
                 // Keep things we worked out earlier.
                 if e.latitude == nil, old.location == e.location {
@@ -468,6 +495,7 @@ final class Store {
             }
         }
         state.postDrafts = state.postDrafts.filter { state.events[$0.key] != nil }
+        state.rideEdits = state.rideEdits.filter { state.events[$0.key] != nil }
         let cutoff = now.addingTimeInterval(-120 * 86400)
         state.seenPosts = state.seenPosts.filter { $0.value > cutoff }
         // Reviews go once the conversation is two weeks old or the plan is well past.
