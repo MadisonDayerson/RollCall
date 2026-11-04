@@ -141,7 +141,6 @@ struct RideEvent: Codable {
     var location: String
     var notes: String
     var url: String?
-    var groupURL: String?
     var source: String          // feed id, "facebook", "file" or "manual"
     var sourceName: String
     var latitude: Double?
@@ -209,8 +208,6 @@ struct AppState: Codable {
     var decisions: [String: Decision] = [:]
     /// RideEvent id -> EventKit calendarItemIdentifier for rides added to Apple Calendar.
     var calendarItems: [String: String] = [:]
-    /// Facebook event id -> group page the user pasted, so "Join group" can open it.
-    var facebookGroups: [String: String] = [:]
     /// Location text -> [lat, lon]; an empty array means "couldn't find it".
     var geocodeCache: [String: [Double]] = [:]
     var lastDownloadsScan: Date?
@@ -249,7 +246,6 @@ struct AppState: Codable {
         events = get(.events, [:])
         decisions = get(.decisions, [:])
         calendarItems = get(.calendarItems, [:])
-        facebookGroups = get(.facebookGroups, [:])
         geocodeCache = get(.geocodeCache, [:])
         lastDownloadsScan = get(.lastDownloadsScan, nil)
         lastRefresh = get(.lastRefresh, nil)
@@ -391,7 +387,7 @@ final class Store {
 
     /// Adds or refreshes events from one source. Returns ids that changed (for calendar updates).
     @discardableResult
-    func merge(_ items: [ICSEvent], source: String, sourceName: String, groupURL: String?,
+    func merge(_ items: [ICSEvent], source: String, sourceName: String,
                needsCheck: Bool = false, now: Date = Date()) -> [String] {
         var changed: [String] = []
         for item in items {
@@ -399,14 +395,10 @@ final class Store {
             if state.removedRides[id] != nil { continue }
             var e = RideEvent(
                 id: id, title: item.title, start: item.start, end: item.end, allDay: item.allDay,
-                location: item.location, notes: item.notes, url: item.url, groupURL: groupURL,
+                location: item.location, notes: item.notes, url: item.url,
                 source: source, sourceName: sourceName,
                 latitude: item.latitude, longitude: item.longitude, distanceKm: nil, lastSeen: now,
                 needsCheck: needsCheck ? true : nil)
-            if let fbID = Store.facebookEventID(item.url ?? "") ?? Store.facebookEventID(item.uid),
-               let g = state.facebookGroups[fbID] {
-                e.groupURL = g
-            }
             // Your changes win over what the source says.
             if let edit = state.rideEdits[id] { e = e.applying(edit) }
             if let old = state.events[id] {
@@ -414,7 +406,6 @@ final class Store {
                 if e.latitude == nil, old.location == e.location {
                     e.latitude = old.latitude; e.longitude = old.longitude
                 }
-                if e.groupURL == nil { e.groupURL = old.groupURL }
                 if old.title != e.title || old.start != e.start || old.end != e.end || old.location != e.location {
                     changed.append(id)
                 }

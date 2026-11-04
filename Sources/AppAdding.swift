@@ -52,9 +52,8 @@ extension AppDelegate {
     func addFacebookEvent(link: String = "") {
         guard let vals = Dialogs.ask(
             "Add a Facebook event",
-            "Paste the link to the Facebook event. If it belongs to a group you want to join, paste the group's link too (optional).",
-            fields: [("Event link", "https://www.facebook.com/events/1234567890"),
-                     ("Group link (optional)", "https://www.facebook.com/groups/…")],
+            "Paste the link to the Facebook event.",
+            fields: [("Event link", "https://www.facebook.com/events/1234567890")],
             values: [link]),
               !vals[0].isEmpty else { return }
         let fbID = Store.facebookEventID(vals[0])
@@ -63,16 +62,6 @@ extension AppDelegate {
                          "On the event page, click Share → Copy link, and paste that. It looks like https://www.facebook.com/events/1234567890 or https://www.facebook.com/share/…")
             return
         }
-        if !vals[1].isEmpty {
-            if let fbID {
-                store.state.facebookGroups[fbID] = vals[1]
-                if var e = store.state.events["facebook:\(fbID)"] { e.groupURL = vals[1]; store.state.events[e.id] = e }
-            } else {
-                // A share link has no event number: the group goes with the next event downloaded from Facebook.
-                pendingFacebookGroup = (vals[1], Date())
-            }
-        }
-        store.save()
 
         Dialogs.bringForward()
         let a = NSAlert()
@@ -112,7 +101,7 @@ extension AppDelegate {
                             title: r.title, start: r.start, end: r.start.addingTimeInterval(r.hours * 3600),
                             allDay: false, location: r.location, notes: r.notes, url: link)
         let source = fbID != nil ? "facebook" : "manual"
-        store.merge([item], source: source, sourceName: fbID != nil ? "Facebook" : "Added by hand", groupURL: nil)
+        store.merge([item], source: source, sourceName: fbID != nil ? "Facebook" : "Added by hand")
         let id = Store.eventID(source: source, item: item)
         store.save()
         Task { await geocoder.fill(store); store.save() }
@@ -205,7 +194,7 @@ extension AppDelegate {
                             allDay: false, location: r.location,
                             notes: r.notes, url: url)
         let name = fbID != nil ? "Facebook" : isInstagram ? "Instagram post" : "Added from a post"
-        store.merge([item], source: source, sourceName: name, groupURL: nil)
+        store.merge([item], source: source, sourceName: name)
         let id = Store.eventID(source: source, item: item)
         store.save()
         Task { await geocoder.fill(store); store.save() }

@@ -111,7 +111,7 @@ extension AppDelegate {
                             end: ride.start.addingTimeInterval(ride.hours * 3600), allDay: false, location: ride.location,
                             notes: notes.count > 1500 ? String(notes.prefix(1500)) + "…" : notes,
                             url: ride.link.isEmpty ? nil : ride.link)
-        store.merge([item], source: "manual", sourceName: "Chat: " + chatName, groupURL: nil)
+        store.merge([item], source: "manual", sourceName: "Chat: " + chatName)
         let rideID = Store.eventID(source: "manual", item: item)
         for other in crossPosts(r) {
             store.state.reviews[other.id]?.status = .added
@@ -193,13 +193,8 @@ extension AppDelegate {
         for f in files {
             guard let text = try? String(contentsOf: f, encoding: .utf8) else { continue }
             let items = ICSParser.parse(text)
-            if source == "facebook", let (group, at) = pendingFacebookGroup, Date().timeIntervalSince(at) < 3600,
-               let fbID = items.first.flatMap({ Store.facebookEventID($0.uid) ?? Store.facebookEventID($0.url ?? "") }) {
-                if store.state.facebookGroups[fbID] == nil { store.state.facebookGroups[fbID] = group }
-                pendingFacebookGroup = nil
-            }
             count += items.count
-            changed += store.merge(items, source: source, sourceName: sourceName, groupURL: nil)
+            changed += store.merge(items, source: source, sourceName: sourceName)
         }
         for id in changed where store.decision(id) == .attending { syncCalendar(id) }
         Task { await geocoder.fill(store); store.save() }

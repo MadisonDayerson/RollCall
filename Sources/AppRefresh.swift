@@ -50,8 +50,8 @@ extension AppDelegate {
         lastTried[feed.id] = Date()
         do {
             let r = try await SourceReader.read(feed, store: store)
-            var changed = store.merge(r.events, source: feed.id, sourceName: feed.name, groupURL: feed.groupURL)
-            changed += store.merge(r.guessed, source: feed.id, sourceName: feed.name, groupURL: feed.groupURL, needsCheck: true)
+            var changed = store.merge(r.events, source: feed.id, sourceName: feed.name)
+            changed += store.merge(r.guessed, source: feed.id, sourceName: feed.name, needsCheck: true)
             addRecentPosts(r.undated, feed: feed)
             await keepReviews(r.reviews, feed: feed)
             store.state.feedErrors[feed.id] = nil

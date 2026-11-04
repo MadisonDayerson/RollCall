@@ -21,8 +21,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var timers: [Timer] = []
     /// Source id -> last automatic or manual read, even a failed one, so failing sources wait their turn.
     var lastTried: [String: Date] = [:]
-    /// A group link given with a Facebook share link, waiting for that event's download.
-    var pendingFacebookGroup: (String, Date)?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         Net.removeOldCache()

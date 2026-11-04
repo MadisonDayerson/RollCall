@@ -129,18 +129,18 @@ check(FeedLinks.normalise("x.org/a.ics")?.id == FeedLinks.normalise("x.org/a.ics
 let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("motorides-test-\(UUID()).json")
 let store = Store(file: tmp)
 store.state.events = [:]
-store.merge(m, source: "meetup-x", sourceName: "X", groupURL: "https://www.meetup.com/x/", now: now)
+store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 let far = ICSEvent(uid: "far", title: "Far ride", start: now.addingTimeInterval(86400 * 3), end: nil, allDay: false,
                    location: "Mildura", notes: "", url: nil, latitude: -34.18, longitude: 142.16)
-store.merge([far], source: "meetup-x", sourceName: "X", groupURL: nil, now: now)
+store.merge([far], source: "meetup-x", sourceName: "X", now: now)
 let up = store.upcoming(now: now)
 check(up.count == 1 && up[0].title == "Great Ocean Road day ride", "far ride (Mildura) hidden, Geelong shown")
 check(abs((up.first?.distanceKm ?? 0) - 64) < 10, "Geelong about 64 km from CBD (\(Int(up.first?.distanceKm ?? 0)))")
 let later = now.addingTimeInterval(3600)
-store.merge(Array(m.prefix(0)), source: "meetup-x", sourceName: "X", groupURL: nil, now: later)
+store.merge(Array(m.prefix(0)), source: "meetup-x", sourceName: "X", now: later)
 store.prune(refreshedSources: ["meetup-x"], refreshStarted: later, now: later)
 check(store.state.events.isEmpty, "rides that vanished from their feed are dropped")
-store.merge(m, source: "meetup-x", sourceName: "X", groupURL: nil, now: now)
+store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.prune(refreshedSources: ["meetup-x"], refreshStarted: later, now: later)
 check(store.state.events.count == 1, "...unless you're attending")
@@ -152,7 +152,7 @@ check(store.state.events.count == 1 && store.decision("meetup-x:event_316000001@
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .undecided
 store.prune(refreshedSources: [], refreshStarted: monthOn, now: monthOn)
 check(store.state.events.isEmpty, "removed from past rides, it's cleared away")
-store.merge(m, source: "meetup-x", sourceName: "X", groupURL: nil, now: now)
+store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.save()
 check(Store(file: tmp).state.decisions.count == 1, "state saves and reloads")
@@ -443,7 +443,7 @@ check(Starter.suggestions(for: Settings()).feeds.isEmpty, "no suggestions before
 check(AppState().feeds.isEmpty && !AppState().setupDone, "new installs start empty, before setup")
 func ride(_ title: String, _ notes: String = "", source: String = "manual") -> RideEvent {
     RideEvent(id: "r1", title: title, start: DateComponents(calendar: Calendar.current, year: 2026, month: 10, day: 31, hour: 17, minute: 30).date!,
-              end: nil, allDay: false, location: "45 Hoddle Street, Richmond", notes: notes, url: nil, groupURL: nil,
+              end: nil, allDay: false, location: "45 Hoddle Street, Richmond", notes: notes, url: nil,
               source: source, sourceName: "SUNDAY CREW", lastSeen: Date())
 }
 check(Crew.rideTags(ride("Halloween Pre-Meet Ride"))[0] == "#RC31102026", "ride code is RC and the date")
@@ -482,7 +482,7 @@ let chatStore = Store(file: FileManager.default.temporaryDirectory.appendingPath
 chatStore.state.settings.radiusKm = 10
 var farRide = ICSEvent(uid: "far", title: "Bright run", start: now.addingTimeInterval(86400 * 3), end: nil, allDay: true, location: "Bright", notes: "", url: nil)
 farRide.latitude = -36.7; farRide.longitude = 146.96
-_ = chatStore.merge([farRide], source: chatFeed.id, sourceName: chatFeed.name, groupURL: nil, needsCheck: true, now: now)
+_ = chatStore.merge([farRide], source: chatFeed.id, sourceName: chatFeed.name, needsCheck: true, now: now)
 for k in chatStore.state.events.keys { chatStore.state.events[k]?.distanceKm = 230 }
 check(chatStore.upcoming(now: now).count == 1, "rides from watched chats shown even when far away")
 
@@ -535,7 +535,7 @@ do {
     let st = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-far-\(UUID().uuidString).json"))
     st.state.settings.radiusKm = 50
     let far = RideEvent(id: "facebook:1", title: "Geelong bike night", start: Date().addingTimeInterval(86400), end: nil, allDay: false,
-                        location: "Example Waterfront", notes: "", url: nil, groupURL: nil, source: FeedLinks.facebookCalendarID,
+                        location: "Example Waterfront", notes: "", url: nil, source: FeedLinks.facebookCalendarID,
                         sourceName: "Your Facebook events", distanceKm: 62, lastSeen: Date())
     var club = far; club.id = "club:1"; club.source = "ics-abc"
     st.state.events = [far.id: far, club.id: club]
@@ -612,7 +612,7 @@ do {
 do {
     func ride(_ id: String, _ title: String, _ hour: Int, _ place: String = "", source: String = "feed") -> RideEvent {
         RideEvent(id: id, title: title, start: cal.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: hour))!,
-                  end: nil, allDay: false, location: place, notes: "", url: nil, groupURL: nil, source: source,
+                  end: nil, allDay: false, location: place, notes: "", url: nil, source: source,
                   sourceName: source, lastSeen: now)
     }
     let fb = ride("fb", "NOVEMBER '26 - PRETENDVILLE BIKE NIGHT", 16, "Pretendville Waterfront")
@@ -707,12 +707,12 @@ do {
     let start = cal.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 0))!
     let item = ICSEvent(uid: "show", title: "bike ride to the pretend show", start: start, end: start.addingTimeInterval(3 * 3600),
                         allDay: false, location: "Pretendville", notes: "", url: nil)
-    store.merge([item], source: "feed", sourceName: "Feed", groupURL: nil)
+    store.merge([item], source: "feed", sourceName: "Feed")
     let id = Store.eventID(source: "feed", item: item)
     let fixed = start.addingTimeInterval(9 * 3600)
     store.state.rideEdits[id] = RideEdit(title: "Pretend Show ride", start: fixed, end: fixed.addingTimeInterval(5 * 3600), allDay: false,
                                          location: "Example Servo, Sunshine", notes: "Bring cash", url: nil)
-    store.merge([item], source: "feed", sourceName: "Feed", groupURL: nil)
+    store.merge([item], source: "feed", sourceName: "Feed")
     let e = store.state.events[id]
     check(e?.title == "Pretend Show ride" && e?.start == fixed && e?.location == "Example Servo, Sunshine" && e?.notes == "Bring cash",
           "your changes stay when the source is checked again")
@@ -727,7 +727,7 @@ do {
                         location: "", notes: "", url: nil, latitude: nil, longitude: nil)
     let id = Store.eventID(source: "feed", item: item)
     store.state.removedRides[id] = start
-    store.merge([item], source: "feed", sourceName: "Feed", groupURL: nil)
+    store.merge([item], source: "feed", sourceName: "Feed")
     check(store.state.events[id] == nil, "a removed ride doesn't come back")
     store.state.removedRides[id] = Date().addingTimeInterval(-8 * 86400)
     store.prune(refreshedSources: [], refreshStarted: Date())

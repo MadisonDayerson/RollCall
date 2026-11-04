@@ -72,7 +72,7 @@ extension AppDelegate {
         let pastDemo: RideEvent? = store.past().isEmpty ? RideEvent(
             id: "demo:past", title: "Sunday breakfast run, Black Spur", start: Date().addingTimeInterval(-2 * 86400),
             end: Date().addingTimeInterval(-2 * 86400 + 4 * 3600), allDay: false, location: "Coldstream VIC", notes: "",
-            url: nil, groupURL: nil, source: "manual", sourceName: "Added by you", lastSeen: Date()) : nil
+            url: nil, source: "manual", sourceName: "Added by you", lastSeen: Date()) : nil
         if let pastDemo { store.state.events[pastDemo.id] = pastDemo; store.state.decisions[pastDemo.id] = .attending }
         ui.selectedRide = store.past().first?.id
         await snap("1-past", window)
