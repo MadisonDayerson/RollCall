@@ -129,7 +129,8 @@ tags rather than showing friends' locations or posting for you.
   send anything about you, and nobody else using RollCall can see your rides, chats or settings.
 - **Chats stay on your Mac.** They're read through Beeper Desktop on your own Mac, with read-only permission.
   The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
-  Intelligence is on), so messages never go to an online AI.
+  Intelligence is on), so messages never go to an online AI. Before the model reads them, swearing is left out, tracking is taken off links and long
+  conversations are trimmed to the messages that matter; your messages themselves aren't changed.
 - **Saved rides are private.** They're in `~/Library/Application Support/RollCall`, which only your Mac
   account can open. RollCall keeps no web cache or cookies.
 - **Only what's needed is kept.** Your home area is saved as just the suburb and a rough spot (about 1 km).

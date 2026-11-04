@@ -218,7 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let chatName = store.state.feeds.first { $0.id == r.feedID }?.name ?? "a chat"
         ui.readingReview = id
         Task {
-            let d = await RideDetails.extract(RideDetails.text(r.lines, chatName: chatName))
+            let d = await RideDetails.extract(RideDetails.input(r.lines, chatName: chatName))
             ui.readingReview = nil
             addRide(fromReview: id, details: d, chatName: chatName)
         }
@@ -1155,7 +1155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     func addFromPost(link: String = "") {
         guard let post = Dialogs.pastedPost(link: link), !(post.text.isEmpty && post.link.isEmpty) else { return }
         // Apple Intelligence (when it's on) reads the post too, for what RollCall's own rules miss.
-        Task { addFromPost(post, details: post.text.isEmpty ? nil : await RideDetails.extract(post.text)) }
+        Task { addFromPost(post, details: post.text.isEmpty ? nil : await RideDetails.extract(RideDetails.input(post: post.text))) }
     }
 
     private func addFromPost(_ post: (link: String, text: String), details d: RideDetails.Details?) {

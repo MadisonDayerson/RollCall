@@ -674,8 +674,34 @@ do {
     let vague = RideDetails.parse("TITLE: Night ride\nSTART: 2030-01-01\nMEET: the west\nLINK: www.example.com", now: now)
     check(vague?.start == nil && vague?.meet == nil && vague?.link == nil, "far-off dates, vague areas and half links are left out")
     check(RideDetails.parse("Sorry, I can't help with that.", now: now) == nil, "a reply in the wrong shape is ignored")
-    check(PlanSummariser.tidied("Shit yeah, ride Sunday you legends") == "… yeah, ride Sunday you legends", "swearing is left out of what the model reads")
-    check(PlanSummariser.tidied("Meet at Shitake Cafe? Scunthorpe") == "Meet at … Cafe? Scunthorpe", "words that only start like one may be hidden too, which only affects what the model reads")
+    check(AppleModel.tidied("Shit yeah, ride Sunday you legends") == "… yeah, ride Sunday you legends", "swearing is left out of what the model reads")
+    check(AppleModel.tidied("Meet at Shitake Cafe? Scunthorpe") == "Meet at … Cafe? Scunthorpe", "words that only start like one may be hidden too, which only affects what the model reads")
+}
+// Preparing text for Apple's on-device model
+do {
+    let raw = "Sooooooo keen!!!!!!!! hahahahahaha\u{200B} see https://www.facebook.com/events/123/?fbclid=AbCdEf&ref=x   ok"
+    check(AppleModel.prepared(raw) == "Sooo keen!!! hahaha see https://www.facebook.com/events/123/ ok",
+          "runs, invisible characters, tracking and extra spaces are cut down")
+    check(AppleModel.originalLink("https://www.facebook.com/events/123/", in: raw) == "https://www.facebook.com/events/123/?fbclid=AbCdEf&ref=x",
+          "a shortened link comes back as it was written")
+    check(AppleModel.originalLink("https://example.com/made-up", in: raw) == nil, "a link the text never had is dropped")
+
+    let lines = (1...40).map { "[Sat 9:0\($0 % 10) am] Sam: message number \($0) " + String(repeating: "blah ", count: 30) }
+    let input = AppleModel.Input(heading: "Chat: Sunday Crew", lines: lines, keep: [2, 39])
+    let fitted = AppleModel.fitted(input, maxChars: 1000)
+    check(fitted.count <= 1000, "trimmed to fit")
+    check(fitted.contains("message number 3 ") && fitted.contains("message number 40 "), "the key messages stay")
+    check(!fitted.contains("message number 1 "), "the oldest other messages go first")
+    let post = AppleModel.fitted(AppleModel.Input(heading: "Event post", lines: [String(repeating: "Ride details. ", count: 1000)]), maxChars: 500)
+    check(post.count <= 500 && post.hasSuffix("…"), "one long post is cut short")
+
+    check(AppleModel.keyOnly(input)?.lines == [lines[2], lines[39]], "a second try has just the key messages")
+    check(AppleModel.keyOnly(AppleModel.Input(heading: "", lines: ["a", "b"], keep: [0, 1])) == nil, "no second try when nothing would change")
+    let mixed = AppleModel.Input(heading: "Chat", lines: ["Ride Sunday 9am?", "ਸਵਾਰੀ ਐਤਵਾਰ ਨੂੰ", "Count me in"], keep: [0])
+    check(AppleModel.readableOnly(mixed)?.lines == ["Ride Sunday 9am?", "Count me in"], "messages in a script it can't read are left out")
+    check(AppleModel.looksLikeRefusal("Sorry, I can't help with that.") && AppleModel.looksLikeRefusal("I'm sorry, but I cannot"),
+          "a refusal in words is spotted")
+    check(!AppleModel.looksLikeRefusal("PLAN: yes\nTITLE: Sorry state of the roads ride"), "a normal reply isn't")
 }
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)
