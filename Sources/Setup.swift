@@ -346,23 +346,27 @@ struct SetupView: View {
                 Spacer()
                 if model.step == .finish {
                     Button("Start") { model.app.finishSetup(openWindow: true) }
-                        .keyboardShortcut(.defaultAction)
+                        .keyboardShortcut(.defaultAction).brandFill()
                 } else {
                     // Once a step is done, Continue is the only choice (no "Skip" for something already done).
                     if ![.welcome, .home].contains(model.step) && !model.stepDone {
                         Button("Skip") { model.next() }
                     }
                     Button(model.step == .welcome ? "Get started" : "Continue") { model.next() }
-                        .keyboardShortcut(.defaultAction)
+                        .keyboardShortcut(.defaultAction).brandFill()
                 }
             }
             .padding(16)
             }
         }
         .frame(minWidth: 520, minHeight: 400)
-        // Black and white, like the logo (near-black so white button text still reads in dark mode).
-        .tint(Color(white: 0.12))
     }
+}
+
+extension View {
+    /// Setup's main buttons are black and white, like the logo: near-black, so their white text still reads
+    /// in dark mode. Only the filled buttons get it; ordinary buttons keep the system's own text colour.
+    func brandFill() -> some View { tint(Color(white: 0.12)) }
 }
 
 struct StepDots: View {
@@ -515,7 +519,7 @@ struct MessagesStep: View {
                     Text("RollCall walks you through it one step at a time: downloading Beeper, adding your chats, and switching on the connection RollCall needs. It takes about 10 minutes, and RollCall checks each step for you.")
                         .fixedSize(horizontal: false, vertical: true)
                     Button("Set up Beeper") { model.startGuide() }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.borderedProminent).brandFill()
                         .controlSize(.large)
                 }
                 Text("Already use Beeper?").font(.headline).padding(.top, 4)
@@ -779,7 +783,7 @@ struct BeeperGuide: View {
                           "When it has downloaded, click **Open Downloads folder** below and double-click the Beeper file.",
                           "If a window shows Beeper and an Applications folder, drag Beeper onto Applications."]) {
             HStack {
-                Button("Download Beeper") { model.app.open(SetupModel.beeperDownload) }.buttonStyle(.borderedProminent)
+                Button("Download Beeper") { model.app.open(SetupModel.beeperDownload) }.buttonStyle(.borderedProminent).brandFill()
                 Button("Open Downloads") { model.openDownloads() }
             }
             Status(done: model.beeperInstalled, waiting: "Waiting for Beeper to be installed…", finished: "Beeper is installed")
@@ -794,7 +798,7 @@ struct BeeperGuide: View {
                           "Choose to sign up, and type your email address.",
                           "Beeper emails you a code. Type it into Beeper to finish signing up.",
                           "Come back here and click **Next**."]) {
-            Button("Open Beeper") { model.openBeeper() }.buttonStyle(.borderedProminent)
+            Button("Open Beeper") { model.openBeeper() }.buttonStyle(.borderedProminent).brandFill()
             Status(done: model.beeperOpen, waiting: "Waiting for Beeper to open…", finished: "Beeper is open")
         }
     }
@@ -839,7 +843,7 @@ struct BeeperGuide: View {
                                "Press **⌘** and **,** together to open Beeper's settings.",
                                "In the list on the left, click **Developers**. You may need to scroll down to see it.",
                                "Switch on **Beeper Desktop API**."])
-                Button("Show Beeper") { model.bringBeeperForward() }.buttonStyle(.borderedProminent)
+                Button("Show Beeper") { model.bringBeeperForward() }.buttonStyle(.borderedProminent).brandFill()
             }
             Status(done: model.apiOn, waiting: "Waiting for the switch to be turned on…", finished: "It's on")
             DisclosureGroup("Can't find Developers?") {
@@ -856,7 +860,7 @@ struct BeeperGuide: View {
                   steps: ["Click **Connect RollCall** below.",
                           "A Beeper page opens in your browser. Then switch to Beeper and click **Allow**.",
                           "Back in RollCall, tick the group chats where people post rides, and click **Check these chats**."]) {
-            Button("Connect RollCall") { model.connectFromGuide() }.buttonStyle(.borderedProminent)
+            Button("Connect RollCall") { model.connectFromGuide() }.buttonStyle(.borderedProminent).brandFill()
             Status(done: Keychain.read() != nil && model.watchingChats > 0,
                    waiting: "Waiting for you to connect and choose chats…", finished: "Connected")
         }
@@ -953,10 +957,10 @@ struct GuideFooter: View {
             if step != .done, step != .download { Button("Back") { model.guideBack() } }
             if step == .done {
                 Button("Continue") { model.leaveGuide(); model.next() }
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).brandFill()
             } else {
                 Button("Next") { model.guideNext() }
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction).brandFill()
             }
         }
     }

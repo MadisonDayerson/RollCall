@@ -185,24 +185,32 @@ struct FeedOptions: View {
         }
     }
 
+    func interval(_ feed: Feed) -> some View {
+        Picker("Check for new rides", selection: Binding(
+            get: { feed.interval },
+            set: { model.setInterval($0, for: [id]) })) {
+            ForEach(Feed.intervals, id: \.self) { m in
+                Text(Feed.describe(m) + (m == Feed.defaultInterval(kind) ? " (usual)" : "")).tag(m)
+            }
+        }
+    }
+
     var body: some View {
         if let feed = model.feed(id) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(status).foregroundStyle(.secondary)
-                // In a row when there's room, otherwise one under another (never cut off).
-                ViewThatFits(in: .horizontal) {
-                    HStack { buttons(feed) }
-                    VStack(alignment: .leading, spacing: 8) { buttons(feed) }
-                }
+                // Wraps onto another row in a narrow window rather than being cut off.
+                Flow { buttons(feed) }
 
-                Picker("Check for new rides", selection: Binding(
-                    get: { feed.interval },
-                    set: { model.setInterval($0, for: [id]) })) {
-                    ForEach(Feed.intervals, id: \.self) { m in
-                        Text(Feed.describe(m) + (m == Feed.defaultInterval(kind) ? " (usual)" : "")).tag(m)
+                // The label goes above the menu when there isn't room beside it, so the page never runs wider
+                // than its column.
+                ViewThatFits(in: .horizontal) {
+                    interval(feed).fixedSize()
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Check for new rides")
+                        interval(feed).labelsHidden().fixedSize()
                     }
                 }
-                .fixedSize()
 
                 switch kind {
                 case .chat:
@@ -261,7 +269,7 @@ struct FacebookOptions: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FacebookCalendarBox(app: model.app, connected: model.app.facebookCalendarConnected, later: model.later)
+            FacebookCalendarBox(app: model.app, connected: model.app.facebookCalendarConnected, later: model.later, pointToSources: false)
             Divider()
             Text("Or add one event at a time").font(.headline)
             Text("For events you haven't responded to, or if the calendar link stops working: paste the event's link with +, then download the event from Facebook and RollCall fills in the details.")
@@ -279,6 +287,8 @@ struct FacebookCalendarBox: View {
     let app: AppDelegate
     let connected: Bool
     let later: (@escaping @MainActor () -> Void) -> Void
+    /// Says it's on the Sources page too, except when it's shown there.
+    var pointToSources = true
     @StateObject private var link = Box("")
 
     var body: some View {
@@ -288,16 +298,19 @@ struct FacebookCalendarBox: View {
                 Label("Connected. Bike events you're Going or Interested in on Facebook come in by themselves.",
                       systemImage: "checkmark.circle.fill")
                     .fixedSize(horizontal: false, vertical: true)
+                // The field has its own line, so its hint is never cut short by the buttons.
+                TextField("Facebook calendar link", text: $link.value, prompt: Text("Paste a new link to replace it"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(connect)
                 HStack {
-                    TextField("Facebook calendar link", text: $link.value, prompt: Text("Paste a new link to replace it"))
-                        .labelsHidden()
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit(connect)
                     Button("Replace", action: connect).disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
                     Button("Disconnect") { later { app.removeSource(FeedLinks.facebookCalendarID) } }
                 }
-                Text("It's also listed under Facebook on the Sources page.")
-                    .font(.caption).foregroundStyle(.secondary)
+                if pointToSources {
+                    Text("It's also listed under Facebook on the Sources page.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             } else {
                 Text("Facebook can share a private calendar of the events you're Going or Interested in, so they come in by themselves:")
                     .fixedSize(horizontal: false, vertical: true)

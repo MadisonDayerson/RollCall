@@ -39,7 +39,7 @@ struct SettingsPage: View {
             }
             Section("Chats") {
                 LabeledContent("Beeper", value: Keychain.read() == nil ? "Not connected" : "Connected (read only)")
-                Button(Keychain.read() == nil ? "Connect Beeper…" : "Choose chats…") {
+                Button(Keychain.read() == nil ? "Connect Beeper…" : "Change chats…") {
                     model.later { Task { await app.setUpBeeper() } }
                 }
             }
@@ -184,7 +184,7 @@ struct CrewLinksEditor: View {
                     .textFieldStyle(.roundedBorder)
                 TextField("Tags", text: $tags.value, prompt: Text("e.g. #hooligoon"))
                     .textFieldStyle(.roundedBorder)
-                Text("Added to invites, calendar events and captions for this group's rides.")
+                Text("Added to the calendar events for this group's rides.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         } label: {
