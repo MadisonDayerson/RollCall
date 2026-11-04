@@ -39,7 +39,8 @@ Going adds the ride to your **RollCall** calendar, with a reminder the evening b
 The full window opens when you open RollCall (or choose **Open RollCall…** in the menu). While it's open,
 RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch pages:
 
-- **Rides:** **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
+- **Rides:** a ride posted in several places (say, Facebook and a forum) shows once, with every place under
+  **From**. **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
   ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP), the
   group page (to join) and the route. A ? on the date means it was read from a post, so double-check it.
   Rides you went on move to **Past** once they're over, so you can still post your footage with the
@@ -94,7 +95,7 @@ through each step below in plain language and checks each one for you.
 3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
-where, who's in) and asks you to review it. **Add ride…** fills in the details. Summaries use
+where, who's in) and asks you to review it. A message sent to several of your chats shows once. **Add ride…** fills in the details. Summaries use
 Apple Intelligence on your Mac where available. Beeper needs to be open for chats to be checked.
 
 ## Riding with friends

@@ -610,5 +610,44 @@ do {
     check(Brief.plainValue("MEET AT THE SERVO, 8 AM SHARP") == "Meet at the servo, 8am sharp", "capitals calmed down, times tidied")
     check(Brief.opening(String(repeating: "Lovely ride through the hills. ", count: 20), limit: 40) == "Lovely ride through the hills. Lovely…", "long text is cut at a word")
 }
+// Cross-posts
+do {
+    func ride(_ id: String, _ title: String, _ hour: Int, _ place: String = "", source: String = "feed") -> RideEvent {
+        RideEvent(id: id, title: title, start: cal.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: hour))!,
+                  end: nil, allDay: false, location: place, notes: "", url: nil, groupURL: nil, source: source,
+                  sourceName: source, lastSeen: now)
+    }
+    let fb = ride("fb", "NOVEMBER '26 - PRETENDVILLE BIKE NIGHT", 16, "Pretendville Waterfront")
+    let forum = ride("forum", "Pretendville Bike Night", 16, "Waterfront, Pretendville")
+    let other = ride("other", "Pretendville Coffee Run", 16, "Pretendville Waterfront")
+    let later = ride("later", "Pretendville Bike Night", 20)
+    check(CrossPost.sameRide(fb, forum), "the same event on Facebook and a forum is one ride")
+    check(!CrossPost.sameRide(fb, other), "a different ride from the same place isn't")
+    check(!CrossPost.sameRide(fb, later), "the same name four hours later isn't")
+    check(!CrossPost.sameRide(ride("a", "Sunday ride", 9), ride("b", "Sunday ride", 10)), "a vague name a hour apart isn't enough")
+    check(CrossPost.sameRide(ride("a", "Brekky at Make Believe Cafe", 9, "Make Believe Cafe, Fernvale"),
+                             ride("b", "Sunday social", 9, "Make Believe Cafe Fernvale")) == false,
+          "same place and time with nothing else in common stays apart")
+
+    let store = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-crosspost-\(UUID()).json"))
+    for e in [fb, forum, other] { store.state.events[e.id] = e }
+    store.state.decisions["forum"] = .attending
+    let shown = store.oneEach(store.state.events.values).map(\.id).sorted()
+    check(shown == ["forum", "other"], "cross-posts show once, as the copy you decided on")
+    check(store.copies(of: store.state.events["forum"]!).map(\.id) == ["fb"], "the other copies are listed")
+
+    let msg = "Camping trip this weekend! Leaving Saturday 8am from the Example Servo in Sunshine, bring a tent and snacks"
+    func plan(_ id: String, chat: String, _ text: String) -> PlanReview {
+        let line = ChatLine(id: id, sender: "Sam", sent: now, text: text, mentionsWhen: true)
+        return PlanReview(id: id, feedID: chat, chatID: chat, lines: [line],
+                          summary: PlanSummary(title: "Camping trip", when: "Saturday", start: nil, hasTime: true, place: nil, who: [],
+                                               undecided: nil, summary: "", isPlan: true, byAI: false),
+                          status: .open, created: now, updated: now, rideID: nil)
+    }
+    check(CrossPost.samePlan(plan("1", chat: "a", msg), plan("2", chat: "b", msg + " 🏕️")), "one message sent to two chats is one plan")
+    check(!CrossPost.samePlan(plan("1", chat: "a", msg), plan("2", chat: "a", msg)), "two plans in one chat stay apart")
+    check(!CrossPost.samePlan(plan("1", chat: "a", msg), plan("2", chat: "b", "Anyone keen for a ride Saturday 8am from Sunshine?")),
+          "a different message about the same day isn't the same plan")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

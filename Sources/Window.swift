@@ -169,7 +169,7 @@ final class UIModel: ObservableObject {
     static let yourSources: Set<String> = ["manual", "file", "instagram"]
 
     func rides(fromSource id: String) -> [RideEvent] {
-        store.upcoming().filter { id == "yours" ? Self.yourSources.contains($0.source) : $0.source == id }
+        store.upcoming(oneEach: false).filter { id == "yours" ? Self.yourSources.contains($0.source) : $0.source == id }
     }
 
     func sourceRows() -> [SourceRow] {
@@ -676,11 +676,13 @@ struct PlanCard: View {
     var body: some View {
         let s = review.summary
         let app = model.app
-        let chatName = model.feed(review.feedID)?.name ?? "Chat"
+        let others = app.crossPosts(review)
+        let chatName = ([review] + others).map { model.feed($0.feedID)?.name ?? "Chat" }.joined(separator: ", ")
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: "bubble.left.and.bubble.right").foregroundStyle(.secondary)
-                Text(chatName).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text(others.isEmpty ? chatName : "\(others.count + 1) chats: " + chatName).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    .help(others.isEmpty ? chatName : "The same message was posted in \(others.count + 1) chats: \(chatName)")
                 Text("· " + AppDelegate.relative.localizedString(for: min(review.updated, Date().addingTimeInterval(-1)), relativeTo: Date()))
                     .font(.callout).foregroundStyle(.secondary)
                 Spacer()
@@ -1372,7 +1374,11 @@ struct RideAbout: View {
                             }
                         }
                     }
-                    GridRow { Text("From").foregroundStyle(.secondary); Text(ride.sourceName) }
+                    GridRow {
+                        Text("From").foregroundStyle(.secondary)
+                        // A ride posted in several places shows once; this says where else it was.
+                        Text(([ride] + model.store.copies(of: ride)).map(\.sourceName).uniqued().joined(separator: ", "))
+                    }
                     ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                         GridRow {
                             Text(item.label).foregroundStyle(.secondary)

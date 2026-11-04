@@ -160,15 +160,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             if !r.summary.isPlan { r.status = .dismissed }
             if r.status == .dismissed { r.lines = [] }  // keep no more of people's messages than needed
             let wasShowing = old?.status == .open && old?.summary.isPlan == true
+            // The same message sent to several chats: one heads-up is enough.
+            let echo = store.state.reviews.values.contains { $0.status == .open && CrossPost.samePlan($0, r) }
             store.state.reviews[r.id] = r
-            if r.status == .open, !wasShowing || old?.summary.start != r.summary.start || old?.summary.place != r.summary.place {
+            if r.status == .open, !echo, !wasShowing || old?.summary.start != r.summary.start || old?.summary.place != r.summary.place {
                 notify(r, chatName: feed.name)
             }
         }
     }
 
+    /// Plans to review, once each: a message sent to several chats shows as one plan.
     func openReviews() -> [PlanReview] {
-        store.state.reviews.values.filter { $0.status == .open }.sorted { $0.updated > $1.updated }
+        let open = store.state.reviews.values.filter { $0.status == .open }.sorted { $0.updated > $1.updated || ($0.updated == $1.updated && $0.id < $1.id) }
+        return CrossPost.groups(open, same: CrossPost.samePlan).map { $0[0] }
+    }
+
+    /// The other chats the same plan was posted in.
+    func crossPosts(_ r: PlanReview) -> [PlanReview] {
+        store.state.reviews.values.filter { $0.status == .open && CrossPost.samePlan(r, $0) }.sorted { $0.id < $1.id }
     }
 
     func notify(_ r: PlanReview, chatName: String) {
@@ -221,6 +230,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                             url: ride.link.isEmpty ? nil : ride.link)
         store.merge([item], source: "manual", sourceName: "Chat: " + chatName, groupURL: nil)
         let rideID = Store.eventID(source: "manual", item: item)
+        for other in crossPosts(r) {
+            store.state.reviews[other.id]?.status = .added
+            store.state.reviews[other.id]?.rideID = rideID
+        }
         r.status = .added
         r.rideID = rideID
         store.state.reviews[id] = r
@@ -233,6 +246,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     }
 
     func dismissReview(_ id: String) {
+        for other in store.state.reviews[id].map(crossPosts) ?? [] {
+            store.state.reviews[other.id]?.status = .dismissed
+            store.state.reviews[other.id]?.lines = []
+        }
         store.state.reviews[id]?.status = .dismissed
         store.state.reviews[id]?.lines = []
         store.save()
@@ -1089,7 +1106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 store.state.feeds.append(feed)
                 ui.selectedSource = feed.id
                 await checkFeed(feed.id)
-                let r = store.upcoming().filter { $0.source == feed.id }.count
+                let r = store.upcoming(oneEach: false).filter { $0.source == feed.id }.count
                 let undated = (store.state.recentPosts[feed.id] ?? []).count
                 var msg = "Found \(r) upcoming ride\(r == 1 ? "" : "s") nearby."
                 if undated > 0 { msg += " \(undated) post\(undated == 1 ? "" : "s") without a date are under Posts to look at." }
