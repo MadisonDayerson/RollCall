@@ -14,8 +14,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var checking: Set<String> = []
     lazy var ui = UIModel(app: self)
     var window: NSWindow?
-    /// Footage to drag into a site while posting.
-    var postTray: NSPanel?
     lazy var setup = SetupModel(app: self)
     var setupWindow: NSWindow?
     /// A newer RollCall on GitHub, once a check has found one.
@@ -677,13 +675,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         await snap("1-past", window)
         if let pastDemo { store.state.events[pastDemo.id] = nil; store.state.decisions[pastDemo.id] = nil }
         ui.rideFilter = filter
-        // The tray for posting, with pictures that come with macOS.
-        let samples = ((try? FileManager.default.contentsOfDirectory(atPath: "/System/Library/Desktop Pictures")) ?? [])
-            .filter { $0.hasSuffix(".heic") || $0.hasSuffix(".jpg") }.sorted().prefix(3)
-            .map { URL(fileURLWithPath: "/System/Library/Desktop Pictures/" + $0) }
-        showPostTray("Instagram", caption: "Sunday breakfast run 🏍️\n\n#RC08112026 #BlackSpur #RollCall", files: Array(samples))
-        await snap("1-post-tray", postTray)
-        closePostTray()
         // Back from another tab: the list must redraw cleanly, with no rows left over from the last one.
         ui.selectedRide = nil
         await snap("1-rides-again", window)
@@ -771,19 +762,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     // MARK: - Riding together
 
     func links(_ ride: RideEvent) -> CrewLinks? { store.state.crew[Crew.key(forSource: ride.source)] }
-    func rideTag(_ ride: RideEvent) -> String { Crew.rideTag(ride, override: store.state.rideTags[ride.id]) }
-    func rideTags(_ ride: RideEvent) -> String { Crew.rideTags(ride, override: store.state.rideTags[ride.id]).joined(separator: " ") }
     func crewCard(_ ride: RideEvent) -> [String] {
         Crew.card(ride, together: store.state.settings.crew, links: links(ride), override: store.state.rideTags[ride.id])
     }
-    func invite(_ ride: RideEvent) -> String {
-        Crew.invite(ride, when: rideWhen(ride, long: true), together: store.state.settings.crew,
-                    links: links(ride), override: store.state.rideTags[ride.id])
-    }
-    func caption(_ ride: RideEvent) -> String {
-        Crew.caption(ride, together: store.state.settings.crew, links: links(ride), override: store.state.rideTags[ride.id])
-    }
-
     func setTogether(_ t: Together) {
         guard t != store.state.settings.crew else { return }
         store.state.settings.together = t
@@ -797,14 +778,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         guard clean != store.state.crew[key] ?? CrewLinks() else { return }
         store.state.crew[key] = clean == CrewLinks() ? nil : clean
         resyncCalendar()
-        store.save()
-    }
-
-    func setRideTag(_ id: String, _ tag: String) {
-        let t = tag.trimmingCharacters(in: .whitespaces)
-        let automatic = store.state.events[id].map { Crew.rideTags($0).joined(separator: " ") }
-        store.state.rideTags[id] = t.isEmpty || t == automatic ? nil : t
-        syncCalendar(id)
         store.save()
     }
 
@@ -828,106 +801,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     func resyncCalendar() {
         guard calendar.authorised else { return }
         for (id, d) in store.state.decisions where d == .attending && store.state.calendarItems[id] != nil { syncCalendar(id) }
-    }
-
-    func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
-
-    /// Opens the share menu (Messages, AirDrop, Mail…) next to the pointer.
-    func share(_ items: [Any]) {
-        guard let view = NSApp.keyWindow?.contentView else { return }
-        let p = view.convert(view.window!.mouseLocationOutsideOfEventStream, from: nil)
-        NSSharingServicePicker(items: items).show(relativeTo: NSRect(x: p.x, y: p.y, width: 1, height: 1), of: view, preferredEdge: .minY)
-    }
-
-    /// Shares the invite text with a calendar file friends can add in one tap.
-    func shareInvite(_ ride: RideEvent) {
-        let text = invite(ride)
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent(
-            ride.title.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.prefix(5).joined(separator: " ") + ".ics")
-        try? Crew.ics(ride, description: text).write(to: file, atomically: true, encoding: .utf8)
-        share([text, file])
-    }
-
-    /// Asks for photos or videos from the ride, for the Post box.
-    func chooseFootage() -> [URL] {
-        Dialogs.bringForward()
-        let panel = NSOpenPanel()
-        panel.title = "Choose photos or videos from the ride"
-        panel.allowedContentTypes = [.image, .movie]
-        panel.allowsMultipleSelection = true
-        panel.directoryURL = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
-        return panel.runModal() == .OK ? panel.urls : []
-    }
-
-    func postDraft(_ ride: RideEvent) -> (caption: String, files: [URL]) {
-        let d = store.state.postDrafts[ride.id]
-        let files = (d?.files ?? []).map { URL(fileURLWithPath: $0) }.filter { FileManager.default.fileExists(atPath: $0.path) }
-        return (d?.caption ?? caption(ride), files)
-    }
-
-    func savePostDraft(_ ride: RideEvent, caption text: String, files: [URL]) {
-        let d = PostDraft(caption: text == caption(ride) ? nil : text, files: files.map(\.path))
-        let new: PostDraft? = d == PostDraft() ? nil : d
-        guard store.state.postDrafts[ride.id] != new else { return }
-        store.state.postDrafts[ride.id] = new
-        store.save()
-    }
-
-    /// Shares the footage and caption with the share menu. The caption is copied too, for apps that drop text.
-    func sharePost(caption text: String, files: [URL]) {
-        copy(text)
-        share([text] + files)
-    }
-
-    /// For sites without a share option on the Mac: copies the caption, shows the footage in the Finder to drag in,
-    /// and opens the site's upload page.
-    /// The sites don't let apps post (see PostBox.sites), so this gets everything ready to drop in: the caption
-    /// copied, the upload page open, and the footage in a tray that floats over the browser.
-    func postOn(_ site: (name: String, url: String), caption text: String, files: [URL]) {
-        copy(text)
-        open(site.url)
-        showPostTray(site.name, caption: text, files: files)
-    }
-
-    func showPostTray(_ site: String, caption text: String, files: [URL]) {
-        closePostTray()
-        guard !files.isEmpty else { return }
-        let host = NSHostingController(rootView: PostTray(site: site, files: files, caption: text, app: self))
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 330, height: 400),
-                            styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = "Post to \(site)"
-        panel.contentViewController = host
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.setContentSize(host.view.fittingSize)
-        // Top right of the screen, clear of most upload boxes.
-        if let screen = NSScreen.main?.visibleFrame {
-            panel.setFrameTopLeftPoint(NSPoint(x: screen.maxX - panel.frame.width - 20, y: screen.maxY - 20))
-        }
-        panel.orderFrontRegardless()
-        postTray = panel
-    }
-
-    func closePostTray() {
-        postTray?.close()
-        postTray = nil
-    }
-
-    func setPostSite(_ name: String) {
-        guard store.state.settings.postSite != name else { return }
-        store.state.settings.postSite = name
-        store.save()
-    }
-
-    func openFindMy() {
-        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.findmy") {
-            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
-        }
     }
 
     // MARK: - Updates

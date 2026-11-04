@@ -1,7 +1,5 @@
 import SwiftUI
 import AppKit
-import QuickLookThumbnailing
-import UniformTypeIdentifiers
 
 /// What the window shows, kept in step with the saved state.
 @MainActor
@@ -19,7 +17,7 @@ final class UIModel: ObservableObject {
             case .undecided: return "Nothing to decide on. New rides from your sources show up here."
             case .going: return "Rides you mark Going show here, and go in your RollCall calendar."
             case .skipped: return "Rides you skip show here, in case you change your mind."
-            case .past: return "Rides you mark Going move here once they're over, so you can still post your footage."
+            case .past: return "Rides you mark Going move here once they're over."
             }
         }
     }
@@ -581,7 +579,7 @@ struct RideDetail: View {
                 }
                 RideAbout(ride: ride, model: model).id(ride.id)
 
-                HStack {
+                Flow {
                     if let url = ride.url {
                         // A finished ride has nothing left to RSVP to.
                         Button(model.isPast(ride) && ride.linkLabel == "RSVP" ? "Open event" : ride.linkLabel) { app.open(url) }
@@ -612,7 +610,6 @@ struct RideDetail: View {
                     }
                 }
 
-                PostBox(ride: ride, model: model).id(ride.id)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1412,206 +1409,6 @@ struct RideAbout: View {
     }
 }
 
-/// Put a post together: drop in footage, edit the caption and tags, then send it to the app of your choice.
-struct PostBox: View {
-    let ride: RideEvent
-    @ObservedObject var model: UIModel
-    @StateObject private var text = Box("")
-    @StateObject private var files = Box<[URL]>([])
-    @StateObject private var over = Box(false)
-    @StateObject private var note = Box<String?>(nil)
-
-    /// Upload pages. None of these sites let an app post for you (Instagram needs a business account and a
-    /// Meta-approved app, TikTok and YouTube keep posts from unapproved apps private, Facebook profiles have no
-    /// way in), so RollCall opens the page and hands you the footage to drop in.
-    static let sites: [(name: String, url: String)] = [
-        ("Instagram", "https://www.instagram.com/"),
-        ("TikTok", "https://www.tiktok.com/tiktokstudio/upload"),
-        ("YouTube", "https://www.youtube.com/upload"),
-        ("Facebook", "https://www.facebook.com/"),
-        ("Threads", "https://www.threads.com/"),
-    ]
-
-    var body: some View {
-        let app = model.app
-        GroupBox {
-            VStack(alignment: .leading, spacing: 10) {
-                dropZone
-                Text("Caption").font(.caption).foregroundStyle(.secondary)
-                TextEditor(text: $text.value)
-                    .font(.body)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 80, maxHeight: 160)
-                    .padding(6)
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.35)))
-                Flow {
-                    Button("Share…") {
-                        save()
-                        app.sharePost(caption: text.value, files: files.value)
-                        note.value = "The caption is copied too, in case the app leaves it out."
-                    }
-                    .help("Send the footage and caption with Messages, AirDrop, Photos, Mail and more")
-                    let site = Self.sites.first { $0.name == model.store.state.settings.postSite } ?? Self.sites[0]
-                    Menu {
-                        ForEach(Self.sites, id: \.name) { s in
-                            Button(s.name) { post(on: s) }
-                        }
-                    } label: {
-                        Text("Post to \(site.name)")
-                    } primaryAction: {
-                        post(on: site)
-                    }
-                    .fixedSize()
-                    .help("Opens \(site.name)'s upload page with the caption copied, and your footage in a tray to drag in. Pick another site from the arrow.")
-                    if text.value != app.caption(ride) {
-                        Button("Reset caption") { text.value = app.caption(ride); save() }
-                            .help("Go back to RollCall's caption with the ride's tags")
-                    }
-                }
-                if let n = note.value { Label(n, systemImage: "doc.on.clipboard").font(.callout) }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } label: {
-            Label("Post", systemImage: "photo.on.rectangle.angled")
-        }
-        .onAppear {
-            let d = app.postDraft(ride)
-            text.value = d.caption
-            files.value = d.files
-        }
-        .onDisappear { save() }
-    }
-
-    private var dropZone: some View {
-        let shape = RoundedRectangle(cornerRadius: 8)
-        return Group {
-            if files.value.isEmpty {
-                VStack(spacing: 6) {
-                    Image(systemName: "square.and.arrow.down").font(.title2).foregroundStyle(.secondary)
-                    Text("Drop photos or videos from the ride here").foregroundStyle(.secondary)
-                    Button("Choose…") { add(model.app.chooseFootage()) }
-                }
-                .frame(maxWidth: .infinity, minHeight: 110)
-            } else {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        ForEach(files.value, id: \.self) { url in
-                            Thumb(url: url)
-                                .onDrag { NSItemProvider(object: url as NSURL) }
-                                .overlay(alignment: .topTrailing) {
-                                    Button { files.value.removeAll { $0 == url }; save() } label: {
-                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette)
-                                            .foregroundStyle(.white, .black.opacity(0.6))
-                                    }
-                                    .buttonStyle(.plain).padding(4).help("Take this out of the post")
-                                }
-                        }
-                        Button { add(model.app.chooseFootage()) } label: {
-                            Image(systemName: "plus").font(.title2).frame(width: 96, height: 96)
-                                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.35)))
-                        }
-                        .buttonStyle(.plain).help("Add more photos or videos")
-                    }
-                    .padding(8)
-                }
-            }
-        }
-        .background(over.value ? Color.secondary.opacity(0.12) : .clear, in: shape)
-        .overlay(shape.strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])).foregroundStyle(over.value ? .primary : .secondary))
-        .dropDestination(for: URL.self) { urls, _ in
-            add(urls)
-            return true
-        } isTargeted: { over.value = $0 }
-    }
-
-    private func post(on site: (name: String, url: String)) {
-        save()
-        model.app.setPostSite(site.name)
-        model.app.postOn(site, caption: text.value, files: files.value)
-        note.value = files.value.isEmpty
-            ? "Caption copied: paste it into \(site.name) (⌘V)."
-            : "Caption copied. Drag your footage from the tray into \(site.name), then paste the caption (⌘V)."
-    }
-
-    private func add(_ urls: [URL]) {
-        let footage = urls.filter { url in
-            guard url.isFileURL, let type = UTType(filenameExtension: url.pathExtension) else { return false }
-            return type.conforms(to: .image) || type.conforms(to: .movie)
-        }
-        for u in footage where !files.value.contains(u) { files.value.append(u) }
-        save()
-    }
-
-    private func save() { model.app.savePostDraft(ride, caption: text.value, files: files.value) }
-}
-
-/// A photo or video's thumbnail, from Quick Look.
-struct Thumb: View {
-    let url: URL
-    @StateObject private var image = Box<NSImage?>(nil)
-
-    var body: some View {
-        Group {
-            if let i = image.value {
-                Image(nsImage: i).resizable().scaledToFill()
-            } else {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().scaledToFit().padding(16)
-            }
-        }
-        .frame(width: 96, height: 96)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(alignment: .bottomLeading) {
-            if UTType(filenameExtension: url.pathExtension)?.conforms(to: .movie) == true {
-                Image(systemName: "play.fill").font(.caption).foregroundStyle(.white).shadow(radius: 2).padding(6)
-            }
-        }
-        .help(url.lastPathComponent)
-        .task(id: url) {
-            let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 96, height: 96), scale: 2, representationTypes: .thumbnail)
-            if let t = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { image.value = t.nsImage }
-        }
-    }
-}
-
-/// Lays buttons out in rows, wrapping onto the next row when the window is narrow.
-struct Flow: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = arrange(subviews, width: proposal.width ?? .infinity)
-        return CGSize(width: rows.map(\.width).max() ?? 0, height: rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0)))
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var y = bounds.minY
-        for row in arrange(subviews, width: bounds.width) {
-            var x = bounds.minX
-            for i in row.items {
-                let size = subviews[i].sizeThatFits(.unspecified)
-                subviews[i].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
-                x += size.width + spacing
-            }
-            y += row.height + spacing
-        }
-    }
-
-    private struct Row { var items: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
-
-    private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
-        var rows = [Row()]
-        for (i, v) in subviews.enumerated() {
-            let size = v.sizeThatFits(.unspecified)
-            if !rows[rows.count - 1].items.isEmpty, rows[rows.count - 1].width + spacing + size.width > width { rows.append(Row()) }
-            var r = rows[rows.count - 1]
-            r.width += (r.items.isEmpty ? 0 : spacing) + size.width
-            r.height = max(r.height, size.height)
-            r.items.append(i)
-            rows[rows.count - 1] = r
-        }
-        return rows
-    }
-}
-
 /// Location sharing, voice chat, Discord and tags, used in setup and Settings. Saves by itself.
 struct TogetherForm: View {
     let app: AppDelegate
@@ -1749,90 +1546,41 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
     }
 }
 
-// MARK: - Post tray
+/// Lays buttons out in rows, wrapping onto the next row when the window is narrow.
+struct Flow: Layout {
+    var spacing: CGFloat = 8
 
-/// Floats over the browser while you post: your footage to drag into the site's upload box, and the caption.
-struct PostTray: View {
-    let site: String
-    let files: [URL]
-    let caption: String
-    let app: AppDelegate
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Drag into \(site)").font(.headline)
-            if files.count > 1 {
-                DragAll(files: files)
-                    .frame(height: 44)
-                    .help("Drag all \(files.count) into the upload box at once")
-            }
-            ScrollView {
-                LazyVGrid(columns: Array(repeating: GridItem(.fixed(96), spacing: 8), count: 3), alignment: .leading, spacing: 8) {
-                    ForEach(files, id: \.self) { url in
-                        Thumb(url: url).onDrag { NSItemProvider(object: url as NSURL) }
-                    }
-                }
-            }
-            .frame(maxHeight: 230)
-            Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(4).textSelection(.enabled)
-            HStack {
-                Button("Copy caption") { app.copy(caption) }
-                    .help("The caption is already copied; this copies it again if you've copied something else since")
-                Spacer()
-                Button("Done") { app.closePostTray() }.keyboardShortcut(.cancelAction)
-            }
-            Text("Paste the caption with ⌘V once your footage is in.").font(.caption).foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .frame(width: 330)
-    }
-}
-
-/// A tile that drags every file at once, as a browser's upload box expects from the Finder.
-struct DragAll: NSViewRepresentable {
-    let files: [URL]
-
-    func makeNSView(context: Context) -> DragAllView {
-        let v = DragAllView()
-        v.files = files
-        return v
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(subviews, width: proposal.width ?? .infinity)
+        return CGSize(width: rows.map(\.width).max() ?? 0, height: rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0)))
     }
 
-    func updateNSView(_ v: DragAllView, context: Context) { v.files = files }
-
-    final class DragAllView: NSView, NSDraggingSource {
-        var files: [URL] = []
-        private var down: NSEvent?
-
-        override func draw(_ dirty: NSRect) {
-            let box = bounds.insetBy(dx: 1, dy: 1)
-            let path = NSBezierPath(roundedRect: box, xRadius: 8, yRadius: 8)
-            NSColor.secondaryLabelColor.withAlphaComponent(0.12).setFill()
-            path.fill()
-            path.setLineDash([6, 4], count: 2, phase: 0)
-            NSColor.secondaryLabelColor.setStroke()
-            path.stroke()
-            let text = "⠿  Drag all \(files.count)" as NSString
-            let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: NSColor.labelColor]
-            let size = text.size(withAttributes: attrs)
-            text.draw(at: NSPoint(x: box.midX - size.width / 2, y: box.midY - size.height / 2), withAttributes: attrs)
-        }
-
-        override func mouseDown(with event: NSEvent) { down = event }
-
-        override func mouseDragged(with event: NSEvent) {
-            guard let down, !files.isEmpty else { return }
-            self.down = nil
-            let items = files.enumerated().map { i, url -> NSDraggingItem in
-                let item = NSDraggingItem(pasteboardWriter: url as NSURL)
-                let icon = NSWorkspace.shared.icon(forFile: url.path)
-                item.setDraggingFrame(NSRect(x: 8 + CGFloat(i) * 6, y: 4, width: 36, height: 36), contents: icon)
-                return item
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(subviews, width: bounds.width) {
+            var x = bounds.minX
+            for i in row.items {
+                let size = subviews[i].sizeThatFits(.unspecified)
+                subviews[i].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
+                x += size.width + spacing
             }
-            beginDraggingSession(with: items, event: down, source: self)
+            y += row.height + spacing
         }
+    }
 
-        func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    private struct Row { var items: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
+        var rows = [Row()]
+        for (i, v) in subviews.enumerated() {
+            let size = v.sizeThatFits(.unspecified)
+            if !rows[rows.count - 1].items.isEmpty, rows[rows.count - 1].width + spacing + size.width > width { rows.append(Row()) }
+            var r = rows[rows.count - 1]
+            r.width += (r.items.isEmpty ? 0 : spacing) + size.width
+            r.height = max(r.height, size.height)
+            r.items.append(i)
+            rows[rows.count - 1] = r
+        }
+        return rows
     }
 }

@@ -692,7 +692,7 @@ struct TogetherStep: View {
                 .formStyle(.grouped)
                 .frame(height: 300)
                 .padding(.horizontal, -20)
-            Text("Life360, Cardo, Instagram and TikTok don't let other apps connect to them, so RollCall can't see where friends are or post for you. It gives everyone the same details and tags instead, and opens the share menu with your footage and caption ready.")
+            Text("Life360, Cardo, Instagram and TikTok don't let other apps connect to them, so RollCall can't see where friends are or post for you. It gives everyone the same details and tags instead.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }

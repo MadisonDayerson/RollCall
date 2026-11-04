@@ -43,8 +43,7 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   **From**. **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
   ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP), the
   group page (to join) and the route. A ? on the date means it was read from a post, so double-check it.
-  Rides you went on move to **Past** once they're over, so you can still post your footage with the
-  ride's tag.
+  Rides you went on move to **Past** once they're over.
 - **To review:** possible ride plans from your chats, plus ride posts that didn't say when.
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
@@ -105,13 +104,6 @@ description. Under it are the event, **Edit…**, **Route** and group buttons. *
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to. **Route** opens the organiser's route if the
 description has one, otherwise directions from your suburb through the meeting place and stops.
 
-The **Post** box puts your post together: drop in photos or videos from the ride, and edit the caption and tags
-RollCall wrote. **Share…** sends it all with the share menu. **Post to Instagram** (pick TikTok, YouTube, Facebook or
-Threads from its arrow, and it remembers) copies the caption, opens the site's upload page and floats your footage in
-a tray over it: drag it into the upload box (**Drag all** takes every file at once), then paste the caption. None of
-these sites let other apps post for you, so this is as close as it gets. Your draft is kept
-until the ride is removed.
-
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.
 
@@ -120,11 +112,11 @@ FreedConn, LEXIN) or a call (Discord voice, WhatsApp). Intercoms pair with your 
 the group in its phone app and add the group or channel name: calendar events then say which to join.
 
 Every ride gets a code tag of #RC and the date, like `#RC03112026`, the same for everyone using RollCall.
-Tags for the club, brand, place or occasion follow it (`#Hooligoon #TTR #Broadford #Halloween`); change them in the
-Post box's caption.
+Tags for the club, brand, place or occasion follow it (`#Hooligoon #TTR #Broadford #Halloween`). They're in the
+calendar event, so everyone tags their photos and videos the same way.
 
-Life360, Cardo and the social apps don't let other apps connect, so RollCall shares the details and
-tags rather than showing friends' locations or posting for you.
+Life360, Cardo and the social apps don't let other apps connect, so RollCall puts the details and
+tags in the calendar event rather than showing friends' locations or posting for you.
 
 ## Your privacy
 
@@ -147,7 +139,7 @@ tags rather than showing friends' locations or posting for you.
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps or Waze) to plan the route.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
-  choose. Text from chat messages isn't added. The invites and posts you share only go where you send them.
+  choose. Text from chat messages isn't added.
 
 RollCall is made to follow the Australian Privacy Principles: it only collects what it needs, keeps it
 secure, and deletes it when it's no longer needed. To report a security problem, see [SECURITY.md](SECURITY.md).
