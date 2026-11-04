@@ -1,12 +1,12 @@
 import Foundation
 import NaturalLanguage
 
-/// Riding with friends: the apps a crew uses before, during and after a ride, and the tags they post under.
+/// Riding with friends: the apps a crew uses on a ride, and the tags they post under.
 ///
 /// Life360, Cardo and the social apps don't let other apps join in (no public way to read locations,
-/// join an intercom group or post for you), so RollCall carries the details instead: every invite,
-/// calendar event and caption says where to meet, which Discord and voice chat group to join, which app
-/// to share locations in, and the ride's tag, so the whole crew lands in the same places.
+/// join an intercom group or post for you), so RollCall carries the details instead: every calendar event
+/// says where to meet, which Discord and voice chat group to join, which app to share locations in, and
+/// the ride's tag, so the whole crew lands in the same places.
 enum LocationApp: String, Codable, CaseIterable {
     case findMy, life360, googleMaps, whatsApp, none
 
@@ -20,7 +20,7 @@ enum LocationApp: String, Codable, CaseIterable {
         }
     }
 
-    /// The line on invites and calendar events.
+    /// The line on calendar events.
     var reminder: String? {
         switch self {
         case .findMy: return "📡 Share your location in Find My before we head off"
@@ -34,7 +34,7 @@ enum LocationApp: String, Codable, CaseIterable {
 
 /// How a crew talks on the ride: a helmet intercom, or a call on the phone. Intercoms pair with the phone
 /// over Bluetooth and set up groups in their own phone app, so RollCall can't connect them from the Mac;
-/// it carries the group or channel in every invite and links to the maker's pairing help.
+/// it carries the group or channel in every calendar event.
 enum Intercom: String, Codable, CaseIterable {
     case cardo, sena, interphone, uclear, midland, freedconn, lexin, discord, whatsApp, other, none
 
@@ -68,14 +68,6 @@ enum Intercom: String, Codable, CaseIterable {
         }
     }
 
-    /// The maker's site, for pairing and group help.
-    var helpURL: String? {
-        switch self {
-        case .cardo: return "https://www.cardosystems.com"
-        case .sena: return "https://www.sena.com"
-        default: return nil
-        }
-    }
 }
 
 /// How someone rides with their friends; set in setup or Settings.
@@ -88,8 +80,6 @@ struct Together: Codable, Equatable {
     var discord = ""
     /// Tags you always post under, e.g. "#hooligoon #melbourneriders".
     var tags = ""
-    /// Your handle, for captions.
-    var handle = ""
 
     init() {}
 
@@ -101,7 +91,6 @@ struct Together: Codable, Equatable {
         intercomGroup = (try? c.decodeIfPresent(String.self, forKey: .intercomGroup)) ?? ""
         discord = (try? c.decodeIfPresent(String.self, forKey: .discord)) ?? ""
         tags = (try? c.decodeIfPresent(String.self, forKey: .tags)) ?? ""
-        handle = (try? c.decodeIfPresent(String.self, forKey: .handle)) ?? ""
     }
 }
 
@@ -155,20 +144,14 @@ enum Crew {
     static func rideCode(_ ride: RideEvent) -> String { "#RC" + dateTag.string(from: ride.start) }
 
     /// The ride's code, then tags for its brand, place or occasion (#Hooligoon #Broadford #Halloween).
-    /// Tags you typed for the ride replace them.
-    static func rideTags(_ ride: RideEvent, override: String? = nil) -> [String] {
-        let typed = tags(in: override)
-        if !typed.isEmpty { return typed }
+    static func rideTags(_ ride: RideEvent) -> [String] {
         var seen = Set<String>()
         return ([rideCode(ride)] + Array(extraTags(ride).prefix(5))).filter { seen.insert($0.lowercased()).inserted }
     }
 
-    /// The ride's main tag, used to find everyone's posts.
-    static func rideTag(_ ride: RideEvent, override: String? = nil) -> String { rideTags(ride, override: override)[0] }
-
     static func extraTags(_ ride: RideEvent) -> [String] {
         var out: [String] = []
-        // Tags already in the name or someone's invite.
+        // Tags already in the name or description.
         for text in [ride.title, ride.notes] {
             var rest = text[...]
             while let r = rest.range(of: #"#[A-Za-z][A-Za-z0-9_]+"#, options: .regularExpression) {
@@ -272,9 +255,9 @@ enum Crew {
     }
 
     /// The ride's tags, then the group's tags, then yours, without repeats.
-    static func hashtags(_ ride: RideEvent, together: Together, links: CrewLinks?, override: String?) -> [String] {
+    static func hashtags(_ ride: RideEvent, together: Together, links: CrewLinks?) -> [String] {
         var seen = Set<String>()
-        return (rideTags(ride, override: override) + ["#RollCall"] + tags(in: links?.tags) + tags(in: together.tags))
+        return (rideTags(ride) + ["#RollCall"] + tags(in: links?.tags) + tags(in: together.tags))
             .filter { seen.insert($0.lowercased()).inserted }
     }
 
@@ -289,7 +272,7 @@ enum Crew {
     }
 
     /// The crew details: where to meet, how to keep in touch on the day, and what to tag.
-    static func card(_ ride: RideEvent, together: Together, links: CrewLinks?, override: String?) -> [String] {
+    static func card(_ ride: RideEvent, together: Together, links: CrewLinks?) -> [String] {
         var lines: [String] = []
         if let m = mapLink(ride.location) { lines.append("🗺️ " + m) }
         if let d = discord(together: together, links: links) { lines.append("💬 Discord: " + d) }
@@ -299,184 +282,8 @@ enum Crew {
                 : together.intercom.isCall ? ": join the call before we leave" : ": pair up before we leave"))
         }
         if let r = together.locationApp.reminder { lines.append(r) }
-        lines.append("📸 Tag your footage " + hashtags(ride, together: together, links: links, override: override).joined(separator: " "))
+        lines.append("📸 Tag your footage " + hashtags(ride, together: together, links: links).joined(separator: " "))
         return lines
-    }
-
-    /// A message to paste into a group chat or Discord, or send with the share menu.
-    static func invite(_ ride: RideEvent, when: String, together: Together, links: CrewLinks?, override: String?) -> String {
-        var lines = ["🏍️ " + ride.title, "📅 " + when]
-        if !ride.location.isEmpty { lines.append("📍 " + ride.location) }
-        if let u = ride.url { lines.append("🔗 " + u) }
-        lines += card(ride, together: together, links: links, override: override)
-        return lines.joined(separator: "\n")
-    }
-
-    /// A caption for after the ride, ready to paste under a photo or video.
-    static func caption(_ ride: RideEvent, together: Together, links: CrewLinks?, override: String?) -> String {
-        var first = ride.title + " 🏍️"
-        if !together.handle.isEmpty { first += " with " + (together.handle.hasPrefix("@") ? together.handle : "@" + together.handle) }
-        return first + "\n\n" + hashtags(ride, together: together, links: links, override: override).joined(separator: " ")
-    }
-
-    /// A calendar file of the ride, attached to invites so friends can add it in one tap.
-    static func ics(_ ride: RideEvent, description: String) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-        let day = DateFormatter()
-        day.locale = Locale(identifier: "en_US_POSIX")
-        day.dateFormat = "yyyyMMdd"
-        func esc(_ s: String) -> String {
-            s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: ";", with: "\\;")
-                .replacingOccurrences(of: ",", with: "\\,").replacingOccurrences(of: "\n", with: "\\n")
-        }
-        var lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//RollCall//EN", "BEGIN:VEVENT",
-                     "UID:\(ride.id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "ride")@rollcall",
-                     "DTSTAMP:" + f.string(from: Date())]
-        if ride.allDay {
-            lines.append("DTSTART;VALUE=DATE:" + day.string(from: ride.start))
-            lines.append("DTEND;VALUE=DATE:" + day.string(from: ride.end ?? ride.start.addingTimeInterval(86400)))
-        } else {
-            lines.append("DTSTART:" + f.string(from: ride.start))
-            lines.append("DTEND:" + f.string(from: ride.end ?? ride.start.addingTimeInterval(4 * 3600)))
-        }
-        lines.append("SUMMARY:" + esc(ride.title))
-        if !ride.location.isEmpty { lines.append("LOCATION:" + esc(ride.location)) }
-        if let u = ride.url { lines.append("URL:" + u) }
-        lines += ["DESCRIPTION:" + esc(description), "END:VEVENT", "END:VCALENDAR"]
-        return lines.joined(separator: "\r\n") + "\r\n"
-    }
-
-    /// Web pages showing what people posted under a tag.
-    static func tagPages(_ tag: String) -> [(name: String, url: String)] {
-        let t = tag.trimmingCharacters(in: CharacterSet(charactersIn: "#")).lowercased()
-        return [("Instagram", "https://www.instagram.com/explore/tags/\(t)/"),
-                ("TikTok", "https://www.tiktok.com/tag/\(t)"),
-                ("YouTube", "https://www.youtube.com/hashtag/\(t)")]
-    }
-}
-
-/// Which maps app Route opens.
-enum MapsApp: String, Codable, CaseIterable {
-    case automatic, apple, google, waze
-
-    var name: String {
-        switch self {
-        case .automatic: return "Automatic"
-        case .apple: return "Apple Maps"
-        case .google: return "Google Maps"
-        case .waze: return "Waze"
-        }
-    }
-
-    /// Apple Maps and Waze links only hold one place, so a route with stops goes to the first one.
-    var holdsStops: Bool { self == .google }
-}
-
-/// Directions for a ride. A route the organiser shared in the description wins. Otherwise it's from home
-/// (the rough spot of your suburb) to the meeting place, any stops, and the destination, read from labelled
-/// lines like "Meet point: …", "Stop: …" or "Destination: …".
-enum Route {
-    struct Stops: Equatable {
-        var meet: String?
-        var via: [String] = []
-        var destination: String?
-    }
-
-    /// A directions link in the text: Google Maps or Apple Maps. Short Google links can be a single place,
-    /// so they only count on a line that mentions a route or directions.
-    static func link(in text: String) -> String? {
-        let full = #"https?://(?:www\.|maps\.)?google\.[a-z.]+/maps/dir/[^\s<>"]+|https?://maps\.apple\.com/[^\s<>"]*[?&](?:daddr|destination)=[^\s<>"]+"#
-        let short = #"https?://(?:maps\.app\.goo\.gl|goo\.gl/maps)/[^\s<>"]+"#
-        for line in text.components(separatedBy: .newlines) {
-            if let l = first(full, in: line) { return l }
-            if line.range(of: #"(?i)\b(route|directions|ride map|map of the ride)\b"#, options: .regularExpression) != nil,
-               let l = first(short, in: line) { return l }
-        }
-        return nil
-    }
-
-    private static func first(_ pattern: String, in line: String) -> String? {
-        guard let r = line.range(of: pattern, options: .regularExpression) else { return nil }
-        return String(line[r]).trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!?)]'"))
-    }
-
-    static func stops(in text: String) -> Stops {
-        var s = Stops()
-        let labels: [(kind: Int, pattern: String)] = [
-            (0, #"meet(?:ing)?(?: up)?(?: point| spot| place| location)?|start(?:ing)?(?: point)?|kick ?stands? up(?: from)?|depart(?:ing|ure)?(?: from| point)?|leaving from"#),
-            (1, #"stops?|via|regroup|fuel(?: stop)?|coffee(?: stop)?|lunch(?: stop)?|break|pit stop|waypoints?"#),
-            (2, #"destination|finish(?:ing)?(?: point)?|end(?:ing)?(?: point)?|final stop|ride to|heading to"#),
-        ]
-        for raw in text.components(separatedBy: .newlines) {
-            // Skip bullets and emoji before the label.
-            let line = String(raw.drop { !$0.isLetter })
-            for (kind, label) in labels {
-                let p = #"(?i)^(?:"# + label + #")\s*\d*\s*[:\-–—]\s*(.+)$"#
-                guard let re = try? NSRegularExpression(pattern: p),
-                      let m = re.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)),
-                      let r = Range(m.range(at: 1), in: line) else { continue }
-                let places = clean(String(line[r]), split: kind == 1)
-                switch kind {
-                case 0: if s.meet == nil { s.meet = places.first }
-                case 1: s.via += places
-                default: if s.destination == nil { s.destination = places.last }
-                }
-                break
-            }
-        }
-        return s
-    }
-
-    /// "6:30pm at Shell Laverton" → "Shell Laverton"; stops can be listed as "A → B; C".
-    private static func clean(_ value: String, split: Bool) -> [String] {
-        var v = value.replacingOccurrences(of: #"https?://\S+"#, with: "", options: .regularExpression)
-        v = v.replacingOccurrences(of: #"(?i)^\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\s*(?:at|@|from|-|–)?\s*"#, with: "",
-                                   options: .regularExpression)
-        let parts = split ? v.components(separatedBy: CharacterSet(charactersIn: "→;|")).flatMap { $0.components(separatedBy: "->") } : [v]
-        return parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".,"))) }
-            .filter { $0.count >= 3 && $0.rangeOfCharacter(from: .letters) != nil }
-    }
-
-    /// The places in order, without repeats next to each other.
-    static func places(meetingPlace: String, notes: String) -> [String] {
-        let s = stops(in: notes)
-        var out: [String] = []
-        for p in [s.meet ?? meetingPlace] + s.via + [s.destination ?? ""] where !p.isEmpty {
-            if out.last?.lowercased() != p.lowercased() { out.append(p) }
-        }
-        return out
-    }
-
-    /// Google Maps directions in the browser, with every stop. Without a start it begins wherever you are.
-    static func googleMaps(from origin: String?, through places: [String]) -> String? {
-        guard let destination = places.last else { return nil }
-        var c = URLComponents(string: "https://www.google.com/maps/dir/")!
-        var q = [URLQueryItem(name: "api", value: "1")]
-        if let origin { q.append(URLQueryItem(name: "origin", value: origin)) }
-        q.append(URLQueryItem(name: "destination", value: destination))
-        if places.count > 1 { q.append(URLQueryItem(name: "waypoints", value: places.dropLast().joined(separator: "|"))) }
-        q.append(URLQueryItem(name: "travelmode", value: "driving"))
-        c.queryItems = q
-        c.percentEncodedQuery = c.percentEncodedQuery?.replacingOccurrences(of: "|", with: "%7C")
-        return c.string
-    }
-
-    /// Waze, driving to one place (in the app if it's installed, otherwise its website).
-    static func waze(to place: String) -> String {
-        var c = URLComponents(string: "https://waze.com/ul")!
-        c.queryItems = [URLQueryItem(name: "q", value: place), URLQueryItem(name: "navigate", value: "yes")]
-        return c.string ?? "https://waze.com/ul"
-    }
-
-    /// Apple Maps directions, for a route with no stops in between (its links can't carry them).
-    static func appleMaps(from origin: String?, to place: String) -> String {
-        var c = URLComponents(string: "maps://")!
-        c.queryItems = (origin.map { [URLQueryItem(name: "saddr", value: $0)] } ?? [])
-            + [URLQueryItem(name: "daddr", value: place), URLQueryItem(name: "dirflg", value: "d")]
-        return c.string ?? "maps://"
     }
 }
 
@@ -484,90 +291,3 @@ extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
-/// The few lines of an event description that matter (where to meet, when to leave, where you're going),
-/// in plain words. Long descriptions bury them under links, socials and fine print.
-enum Brief {
-    struct Item: Equatable {
-        var label: String
-        var value: String
-    }
-
-    /// Labels that only point elsewhere: links, socials and contact details.
-    private static let skip = #"(?i)^(?:our )?(?:socials?|facebook|fb|instagram|insta|ig|whatsapp|discord|tiktok|youtube|telegram|website|web|link|links|url|email|e-mail|phone|mobile|contact|google maps(?: route)?|maps?|route|ride map|tickets?|hashtags?|tags?)\b"#
-
-    static func items(in notes: String) -> [Item] {
-        var out: [Item] = []
-        for raw in Web.readableNotes(notes).components(separatedBy: .newlines) {
-            // Skip bullets and emoji before the label.
-            let line = String(raw.drop { !$0.isLetter }).trimmingCharacters(in: .whitespaces)
-            guard let colon = line.firstIndex(of: ":") else { continue }
-            let label = line[..<colon].trimmingCharacters(in: .whitespaces)
-            var value = String(line[line.index(after: colon)...])
-            // "https://…" splits at its own colon: that's a link, not a label.
-            if value.hasPrefix("//") { continue }
-            let words = label.split(separator: " ")
-            guard !words.isEmpty, words.count <= 4, label.count <= 30, label.rangeOfCharacter(from: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: ".!?,;"))) == nil,
-                  label.range(of: skip, options: .regularExpression) == nil else { continue }
-            value = value.replacingOccurrences(of: #"https?://\S+"#, with: "", options: .regularExpression)
-                .trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: "-–—")))
-            guard value.rangeOfCharacter(from: .alphanumerics) != nil else { continue }
-            out.append(Item(label: plainLabel(label), value: plainValue(value)))
-            if out.count == 6 { break }
-        }
-        // One labelled line on its own is more likely a sentence with a colon in it.
-        return out.count >= 2 ? out : []
-    }
-
-    /// Short descriptions read fine as they are; long ones without labelled lines get their first few lines.
-    static func needsSummary(_ notes: String) -> Bool {
-        let text = Web.readableNotes(notes)
-        return text.count > 280 || text.components(separatedBy: .newlines).filter { !$0.isEmpty }.count > 6
-            || text.range(of: #"https?://\S{80,}"#, options: .regularExpression) != nil
-    }
-
-    /// The opening of a description, links taken out, for when there are no labelled lines to pick from.
-    static func opening(_ notes: String, limit: Int = 240) -> String {
-        let text = Web.readableNotes(notes)
-            .replacingOccurrences(of: #"https?://\S+"#, with: "", options: .regularExpression)
-            .components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-            .joined(separator: " ")
-        let plain = plainValue(text)
-        guard plain.count > limit else { return plain }
-        let cut = plain.prefix(limit)
-        return (cut.range(of: " ", options: .backwards).map { String(cut[..<$0.lowerBound]) } ?? String(cut)) + "…"
-    }
-
-    private static func plainLabel(_ label: String) -> String {
-        let l = label.lowercased()
-        if l.range(of: #"^(?:kick ?stands? up|stands up|ksu|depart(?:ing|ure)?|leaving|wheels up|roll out|rolling out)"#, options: .regularExpression) != nil { return "Leave" }
-        if l.range(of: #"^meet"#, options: .regularExpression) != nil { return "Meet" }
-        if l.range(of: #"^(?:destination|finish|end point|ending)"#, options: .regularExpression) != nil { return "Finish" }
-        return l.prefix(1).uppercased() + l.dropFirst()
-    }
-
-    /// Calms down text written in capitals ("NO OPTIONAL RIDE THIS TIME" → "No optional ride this time"),
-    /// keeping state names like VIC, and writes times as "7pm".
-    static func plainValue(_ value: String) -> String {
-        var v = value.replacingOccurrences(of: #"^\s*(?:@|at)\s+(?=\d)"#, with: "", options: [.regularExpression, .caseInsensitive])
-        let letters = v.unicodeScalars.filter { CharacterSet.letters.contains($0) }
-        let capitals = letters.filter { CharacterSet.uppercaseLetters.contains($0) }
-        if letters.count >= 6, Double(capitals.count) / Double(letters.count) > 0.7 {
-            let keep: Set<String> = ["VIC", "NSW", "QLD", "SA", "WA", "TAS", "NT", "ACT", "NZ", "UK", "USA", "CBD", "BP"]
-            var start = true
-            v = v.split(separator: " ", omittingEmptySubsequences: false).map { word -> String in
-                let w = String(word)
-                let bare = w.trimmingCharacters(in: .punctuationCharacters)
-                defer { if !w.isEmpty { start = w.last.map { ".!?".contains($0) } ?? false } }
-                if keep.contains(bare) || w.rangeOfCharacter(from: .decimalDigits) != nil { return w }
-                let lower = w.lowercased()
-                return start ? lower.prefix(1).uppercased() + lower.dropFirst() : lower
-            }.joined(separator: " ")
-        }
-        // "7 PM" → "7pm"
-        let times = try! NSRegularExpression(pattern: #"(?i)\b\d{1,2}(?:[:.]\d{2})?\s*[ap]m\b"#)
-        for m in times.matches(in: v, range: NSRange(v.startIndex..., in: v)).reversed() {
-            if let r = Range(m.range, in: v) { v.replaceSubrange(r, with: v[r].lowercased().replacingOccurrences(of: " ", with: "")) }
-        }
-        return v
-    }
-}

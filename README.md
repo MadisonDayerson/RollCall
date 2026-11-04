@@ -155,7 +155,7 @@ secure, and deletes it when it's no longer needed. To report a security problem,
 Run the tests:
 
 ```bash
-swiftc Sources/ICS.swift Sources/Model.swift Sources/Sources.swift Sources/Web.swift Sources/Refresh.swift Sources/Beeper.swift Sources/RidePlan.swift Sources/Plans.swift Sources/Crew.swift Sources/Updater.swift Tests/main.swift -o build/tests && build/tests
+./test.sh
 ```
 
 - Data is saved in `~/Library/Application Support/RollCall/state.json`; the Beeper token is in your

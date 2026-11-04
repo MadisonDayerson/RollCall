@@ -17,7 +17,6 @@ enum Beeper {
         var network: String?
         var type: String?
         var isArchived: Bool?
-        var lastActivity: String?
     }
 
     struct LinkPreview: Decodable { var url: String? }

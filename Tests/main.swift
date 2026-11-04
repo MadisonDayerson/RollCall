@@ -446,7 +446,7 @@ func ride(_ title: String, _ notes: String = "", source: String = "manual") -> R
               end: nil, allDay: false, location: "45 Hoddle Street, Richmond", notes: notes, url: nil, groupURL: nil,
               source: source, sourceName: "SUNDAY CREW", lastSeen: Date())
 }
-check(Crew.rideTag(ride("Halloween Pre-Meet Ride")) == "#RC31102026", "ride code is RC and the date")
+check(Crew.rideTags(ride("Halloween Pre-Meet Ride"))[0] == "#RC31102026", "ride code is RC and the date")
 check(Crew.rideTags(ride("Halloween Pre-Meet Ride")) == ["#RC31102026", "#Halloween", "#Richmond"], "occasion and town tags follow the code")
 check(Crew.rideTags(ride("HOOLIGOON TTR - STREET RUN")).filter { $0 != "#Halloween" }.dropFirst().prefix(2) == ["#Hooligoon", "#TTR"], "club names tamed, short acronyms kept, everyday words skipped")
 check(Crew.rideTags(ride("Torque & Terror bike night")).contains("#TorqueTerror"), "names joined by & stay one tag")
@@ -455,14 +455,12 @@ check(Crew.rideTags(ride("Krispy Kreme run to the Black Spur")).contains("#Black
 check(!Crew.rideTags(ride("Breakfast at Marysville with Sam")).contains("#Sam"), "people's names aren't tags")
 check(Crew.placeTags("Kebab Shop, 12 Example St, Broadford VIC 3658, Australia") == ["#KebabShop", "#Broadford"], "venue and town from an address")
 check(Crew.rideTags(ride("Sunday ride", "see you there #blackspur")).contains("#blackspur"), "tags in someone's invite are kept")
-check(Crew.rideTags(ride("Sunday ride"), override: "MyTag #Extra") == ["#MyTag", "#Extra"], "typed tags win")
 var crewT = Together(); crewT.tags = "hooligoon, #RollCall #melbriders"; crewT.discord = "https://discord.gg/abc"; crewT.intercomGroup = "DMC SUNDAY CREW"
-let tagsOut = Crew.hashtags(ride("Halloween Pre-Meet Ride"), together: crewT, links: CrewLinks(tags: "#sundaycrew"), override: nil)
+let tagsOut = Crew.hashtags(ride("Halloween Pre-Meet Ride"), together: crewT, links: CrewLinks(tags: "#sundaycrew"))
 check(tagsOut == ["#RC31102026", "#Halloween", "#Richmond", "#RollCall", "#sundaycrew", "#hooligoon", "#melbriders"], "tags: ride, app, group, yours, no repeats")
-let inv = Crew.invite(ride("Halloween Pre-Meet Ride"), when: "Saturday 31 October, 5:30 pm", together: crewT, links: CrewLinks(discord: "https://discord.gg/group"), override: nil)
-check(inv.contains("discord.gg/group") && !inv.contains("discord.gg/abc"), "a group's Discord replaces yours")
-check(inv.contains("Cardo: DMC SUNDAY CREW") && inv.contains("Find My") && inv.contains("maps.apple.com/?q=45%20Hoddle"), "invite has intercom, location app and map")
-check(Crew.ics(ride("Halloween, Pre-Meet"), description: inv).contains("SUMMARY:Halloween\\, Pre-Meet"), "calendar file escapes commas")
+let card = Crew.card(ride("Halloween Pre-Meet Ride"), together: crewT, links: CrewLinks(discord: "https://discord.gg/group")).joined(separator: "\n")
+check(card.contains("discord.gg/group") && !card.contains("discord.gg/abc"), "a group's Discord replaces yours")
+check(card.contains("Cardo: DMC SUNDAY CREW") && card.contains("Find My") && card.contains("maps.apple.com/?q=45%20Hoddle"), "calendar card has intercom, location app and map")
 check(Crew.key(forSource: "file") == "yours" && Crew.key(forSource: "facebook") == "facebook", "hand-added rides share crew settings")
 check(Updater.isNewer("1.10", than: "1.9") && Updater.isNewer("v1.1", than: "1.0") && !Updater.isNewer("1.0", than: "1.0.0"), "version comparison")
 check(Updater.isOurDownload("https://github.com/MadisonDayerson/RollCall/releases/download/v1.2.3/RollCall.dmg")

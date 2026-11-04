@@ -687,7 +687,7 @@ struct TogetherStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             StepHeader(title: "Ride together",
-                       text: "Tell RollCall how your crew keeps in touch. Every invite and calendar event then says which Discord and voice chat group to join and where to share locations, and every ride gets a tag so everyone's photos and videos end up together.")
+                       text: "Tell RollCall how your crew keeps in touch. Every calendar event then says which Discord and voice chat group to join and where to share locations, and every ride gets a tag so everyone's photos and videos end up together.")
             Form { TogetherForm(app: model.app) }
                 .formStyle(.grouped)
                 .frame(height: 300)

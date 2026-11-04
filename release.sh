@@ -8,10 +8,7 @@ NOTES=${2:-}
 REPO=MadisonDayerson/rollcall
 
 # Tests first, so a broken build never reaches anyone.
-swiftc Sources/ICS.swift Sources/Model.swift Sources/Sources.swift Sources/Web.swift Sources/Refresh.swift \
-  Sources/Beeper.swift Sources/RidePlan.swift Sources/Plans.swift Sources/Crew.swift Sources/Updater.swift \
-  Tests/main.swift -o build/tests
-./build/tests | tail -1 | grep -q "All tests passed" || { echo "Tests failed; not releasing."; exit 1; }
+./test.sh | tail -1 | grep -q "All tests passed" || { echo "Tests failed; not releasing."; exit 1; }
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Info.plist
 BUILD=$(( $(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist) + 1 ))
