@@ -94,28 +94,14 @@ extension AppDelegate {
             sub.addItem(it)
         }
         sub.addItem(.separator())
-        if let url = ride.url {
-            let it = action(ride.linkLabel, #selector(openLink(_:)))
-            it.representedObject = url
-            sub.addItem(it)
-        }
-        if let g = ride.groupURL {
-            let it = action("Join group", #selector(openLink(_:)))
-            it.representedObject = g
-            sub.addItem(it)
-        } else if ride.isFacebook {
-            let it = action("Add group…", #selector(setGroupLink(_:)))
-            it.representedObject = ride.id
-            sub.addItem(it)
-        }
-        if ride.hasRoute {
-            let it = action("Route", #selector(openMaps(_:)))
-            it.representedObject = ride.id
-            sub.addItem(it)
-        }
-        if Store.userAdded.contains(ride.source) || ride.needsCheck == true {
-            let it = action("Remove", #selector(removeRide(_:)))
-            it.representedObject = ride.id
+        // The same items as the buttons on the ride's page.
+        for (title, sel, object, enabled) in [("Open event", #selector(openLink(_:)), ride.url ?? "", ride.url != nil),
+                                              ("Edit…", #selector(editRide(_:)), ride.id, true),
+                                              ("Route", #selector(openMaps(_:)), ride.id, ride.hasRoute),
+                                              ("Join group", #selector(joinGroup(_:)), ride.id, true),
+                                              ("Remove", #selector(removeRide(_:)), ride.id, true)] {
+            let it = action(title, sel, enabled: enabled)
+            it.representedObject = object
             sub.addItem(it)
         }
         item.submenu = sub

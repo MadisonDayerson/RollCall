@@ -718,5 +718,20 @@ do {
           "your changes stay when the source is checked again")
     check(e?.latitude == nil, "a changed place is looked up again")
 }
+
+// A removed ride stays removed when its source is checked again, until a week after it.
+do {
+    let store = Store(file: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("removed-\(UUID()).json"))
+    let start = Date().addingTimeInterval(3 * 86400)
+    let item = ICSEvent(uid: "r1", title: "Pretend Sunday ride", start: start, end: nil, allDay: false,
+                        location: "", notes: "", url: nil, latitude: nil, longitude: nil)
+    let id = Store.eventID(source: "feed", item: item)
+    store.state.removedRides[id] = start
+    store.merge([item], source: "feed", sourceName: "Feed", groupURL: nil)
+    check(store.state.events[id] == nil, "a removed ride doesn't come back")
+    store.state.removedRides[id] = Date().addingTimeInterval(-8 * 86400)
+    store.prune(refreshedSources: [], refreshStarted: Date())
+    check(store.state.removedRides.isEmpty, "removed rides are forgotten a week after")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

@@ -192,35 +192,25 @@ struct RideDetail: View {
                 }
                 RideAbout(ride: ride, model: model).id(ride.id)
 
+                // The same buttons for every ride, in the same order; one that can't do anything yet says why.
                 Flow {
-                    if let url = ride.url {
-                        // A finished ride has nothing left to RSVP to.
-                        Button(model.isPast(ride) && ride.linkLabel == "RSVP" ? "Open event" : ride.linkLabel) { app.open(url) }
-                            .help(ride.linkHelp)
-                    }
+                    Button("Open event") { app.open(ride.url) }
+                        .disabled(ride.url == nil)
+                        .help(ride.url == nil ? "This ride has no event page. Add a link with Edit…" : ride.linkHelp)
                     Button("Edit…") { model.later { app.editRide(id: ride.id) } }
                         .help("Change the name, time, place, link or notes. Changes go to the calendar too.")
-                    if ride.hasRoute {
-                        Button("Route") { app.openRoute(ride) }
-                            .help(Route.link(in: ride.notes) != nil ? "Open the organiser's route" : "Directions from your suburb to the meeting place and any stops (choose your maps app in Settings)")
+                    Button("Route") { app.openRoute(ride) }
+                        .disabled(!ride.hasRoute)
+                        .help(!ride.hasRoute ? "Add a place with Edit… to get a route"
+                              : Route.link(in: ride.notes) != nil ? "Open the organiser's route"
+                              : "Directions from your suburb to the meeting place and any stops (choose your maps app in Settings)")
+                    Button("Join group") { model.later { app.joinGroup(rideID: ride.id) } }
+                        .help(ride.groupURL == nil ? "Paste the link to the group that runs this ride, then open it" : "Open the group's page to join it")
+                    Button("Remove", role: .destructive) {
+                        model.selectedRide = nil
+                        if model.isPast(ride) { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }
                     }
-                    if let g = ride.groupURL {
-                        Button("Join group") { app.open(g) }.help("Open the group's page to join it")
-                    } else if ride.isFacebook {
-                        Button("Add group…") { model.later { app.setGroupLink(rideID: ride.id) } }
-                    }
-                    if !model.isPast(ride), Store.userAdded.contains(ride.source) || ride.needsCheck == true {
-                        Button("Remove", role: .destructive) {
-                            model.selectedRide = nil
-                            app.removeRide(id: ride.id)
-                        }
-                    }
-                    if model.isPast(ride) {
-                        Button("Remove") {  // from past rides
-                            model.selectedRide = nil
-                            model.later { model.app.forgetPastRide(ride.id) }
-                        }
-                    }
+                    .help(model.isPast(ride) ? "Remove it from your past rides" : "Remove this ride. It won't come back when its source is checked again.")
                 }
 
             }

@@ -84,14 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 }
 
 extension RideEvent {
-    /// What the "open" button for this ride's link should say: a word or two, with `linkHelp` as its tooltip.
-    var linkLabel: String {
-        guard let url else { return "" }
-        return isFacebook || url.contains("meetup.com") ? "RSVP"
-            : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open chat"
-            : url.contains("instagram.com") || needsCheck == true ? "Open post" : "Open event"
-    }
-
     var hasRoute: Bool { !location.isEmpty || Route.link(in: notes) != nil }
 
     var linkHelp: String {

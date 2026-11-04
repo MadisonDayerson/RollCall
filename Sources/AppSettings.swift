@@ -40,6 +40,11 @@ extension AppDelegate {
         removeRide(id: id)
     }
 
+    @objc func editRide(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        editRide(id: id)
+    }
+
     /// Opens the ride's details to change. The changes stay through refreshes and go to the calendar.
     func editRide(id: String) {
         guard let ride = store.state.events[id] else { return }
@@ -72,28 +77,43 @@ extension AppDelegate {
         }
     }
 
+    /// Removes the ride and every cross-posted copy of it. Rides from a source stay removed when it's checked again.
     func removeRide(id: String) {
-        store.state.decisions[id] = .skip
-        syncCalendar(id)
-        store.state.events[id] = nil
-        store.state.decisions[id] = nil
+        guard let ride = store.state.events[id] else { return }
+        for e in [ride] + store.copies(of: ride) {
+            store.state.decisions[e.id] = .skip
+            syncCalendar(e.id)
+            store.state.events[e.id] = nil
+            store.state.decisions[e.id] = nil
+            store.state.rideEdits[e.id] = nil
+            store.state.removedRides[e.id] = e.start
+        }
         store.save()
+        NotificationCenter.default.post(name: Store.changed, object: nil)
         updateBadge()
     }
 
-    @objc func setGroupLink(_ sender: NSMenuItem) {
+    @objc func joinGroup(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
-        setGroupLink(rideID: id)
+        joinGroup(rideID: id)
     }
 
-    func setGroupLink(rideID id: String) {
-        guard let vals = Dialogs.ask("Facebook group link", "Paste the link to the group that runs this ride.",
-                                     fields: [("", "https://www.facebook.com/groups/…")], ok: "Save"),
-              !vals[0].isEmpty, var e = store.state.events[id] else { return }
-        e.groupURL = vals[0]
-        store.state.events[id] = e
-        if let fb = Store.facebookEventID(e.url ?? "") { store.state.facebookGroups[fb] = vals[0] }
-        store.save()
+    /// Opens the group that runs the ride, asking for its link the first time.
+    func joinGroup(rideID id: String) {
+        guard var e = store.state.events[id] else { return }
+        if e.groupURL == nil {
+            guard let vals = Dialogs.ask("Group link", "Paste the link to the group or club that runs this ride, to join it.",
+                                         fields: [("", "https://…")], ok: "Join"),
+                  !vals[0].isEmpty else { return }
+            var link = vals[0]
+            if !link.lowercased().hasPrefix("http") { link = "https://" + link }
+            e.groupURL = link
+            store.state.events[id] = e
+            if let fb = Store.facebookEventID(e.url ?? "") { store.state.facebookGroups[fb] = link }
+            store.save()
+            NotificationCenter.default.post(name: Store.changed, object: nil)
+        }
+        open(e.groupURL)
     }
 
     func markPostsRead() {

@@ -233,6 +233,8 @@ struct AppState: Codable {
     var crew: [String: CrewLinks] = [:]
     /// Ride id -> the details as you changed them.
     var rideEdits: [String: RideEdit] = [:]
+    /// Ride id -> its start, for rides you removed, so checking the source again doesn't bring them back.
+    var removedRides: [String: Date] = [:]
 
     init() {}
 
@@ -260,6 +262,7 @@ struct AppState: Codable {
         setupDone = get(.setupDone, false)
         crew = get(.crew, [:])
         rideEdits = get(.rideEdits, [:])
+        removedRides = get(.removedRides, [:])
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion
@@ -393,6 +396,7 @@ final class Store {
         var changed: [String] = []
         for item in items {
             let id = Store.eventID(source: source, item: item)
+            if state.removedRides[id] != nil { continue }
             var e = RideEvent(
                 id: id, title: item.title, start: item.start, end: item.end, allDay: item.allDay,
                 location: item.location, notes: item.notes, url: item.url, groupURL: groupURL,
@@ -483,6 +487,7 @@ final class Store {
             }
         }
         state.rideEdits = state.rideEdits.filter { state.events[$0.key] != nil }
+        state.removedRides = state.removedRides.filter { $0.value > weekAgo }
         let cutoff = now.addingTimeInterval(-120 * 86400)
         state.seenPosts = state.seenPosts.filter { $0.value > cutoff }
         // Reviews go once the conversation is two weeks old or the plan is well past.
