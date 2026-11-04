@@ -81,7 +81,7 @@ enum Fetcher {
     static func download(_ urlString: String) async throws -> String {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
         var req = URLRequest(url: url, timeoutInterval: 30)
-        req.setValue("RollCall/1.0 (personal calendar reader)", forHTTPHeaderField: "User-Agent")
+        req.setValue(Web.userAgent, forHTTPHeaderField: "User-Agent")
         req.setValue("text/calendar, */*", forHTTPHeaderField: "Accept")
         let (data, response) = try await Net.session.data(for: req)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {

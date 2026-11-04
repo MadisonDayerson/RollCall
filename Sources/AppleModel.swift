@@ -71,7 +71,7 @@ enum AppleModel {
         let session = LanguageModelSession(model: model, instructions: instructions)
         do {
             // Greedy sampling gives the same answer for the same text every time.
-            return .success(try await session.respond(to: prompt, options: GenerationOptions(sampling: .greedy)).content)
+            return .success(try await session.respond(to: prompt, options: GenerationOptions(samplingMode: .greedy)).content)
         } catch {
             return .failure(failure(error))
         }
