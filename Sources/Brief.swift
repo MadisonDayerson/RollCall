@@ -11,7 +11,8 @@ enum Brief {
     /// Labels that only point elsewhere: links, socials and contact details.
     private static let skip = #"(?i)^(?:our )?(?:socials?|facebook|fb|instagram|insta|ig|whatsapp|discord|tiktok|youtube|telegram|website|web|link|links|url|email|e-mail|phone|mobile|contact|google maps(?: route)?|maps?|route|ride map|tickets?|hashtags?|tags?)\b"#
 
-    static func items(in notes: String) -> [Item] {
+    /// `location` is the ride's place, already shown above: lines that only repeat it, or the date and time, are left out.
+    static func items(in notes: String, location: String = "") -> [Item] {
         var out: [Item] = []
         for raw in Web.readableNotes(notes).components(separatedBy: .newlines) {
             // Skip bullets and emoji before the label.
@@ -31,7 +32,18 @@ enum Brief {
             if out.count == 6 { break }
         }
         // One labelled line on its own is more likely a sentence with a colon in it.
-        return out.count >= 2 ? out : []
+        guard out.count >= 2 else { return [] }
+        let place = letters(location)
+        return out.filter { item in
+            if item.label.range(of: #"(?i)^(?:date|time|when|start|starts|starting)$"#, options: .regularExpression) != nil { return false }
+            let value = letters(item.value)
+            return place.isEmpty || value.count < 6 || !(place.contains(value) || value.contains(place))
+        }
+    }
+
+    /// Just the letters and digits, lowercased, so "216 Lorimer St," matches "216 lorimer st".
+    private static func letters(_ s: String) -> String {
+        String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
     }
 
     /// Short descriptions read fine as they are; long ones without labelled lines get their first few lines.

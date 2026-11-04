@@ -229,7 +229,7 @@ struct RideAbout: View {
         let notes = ride.notes
         let full = Web.readableNotes(notes)
         let summarise = !notes.isEmpty && Brief.needsSummary(notes)
-        let items = summarise ? Brief.items(in: notes) : []
+        let items = summarise ? Brief.items(in: notes, location: ride.location) : []
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {

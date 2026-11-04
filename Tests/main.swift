@@ -604,6 +604,9 @@ do {
     ], "labelled lines become a short summary, without links, socials, fine print or sentences")
     check(Brief.needsSummary(long), "a description with a huge link gets a summary")
     check(!Brief.needsSummary("Coffee and a short loop. Back by noon."), "a short description is shown as it is")
+    check(Brief.items(in: long, location: "1 Example St, Sunshine VIC 3020, Australia").map(\.label) == ["Leave", "Dinner", "Chill spot"],
+          "a meeting point that's the ride's place isn't shown twice")
+    check(Brief.items(in: "Date: Sat 7 Nov\nTime: 9am\nDinner: The Pub").map(\.label) == ["Dinner"], "the date and time aren't shown twice")
     check(Brief.items(in: "Note: bring a jacket") == [], "one colon in a sentence isn't a summary")
     check(Brief.plainValue("MEET AT THE SERVO, 8 AM SHARP") == "Meet at the servo, 8am sharp", "capitals calmed down, times tidied")
     check(Brief.opening(String(repeating: "Lovely ride through the hills. ", count: 20), limit: 40) == "Lovely ride through the hills. Lovely…", "long text is cut at a word")
