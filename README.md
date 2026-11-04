@@ -95,7 +95,7 @@ through each step below in plain language and checks each one for you.
 3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
-where, who's in) and asks you to review it. A message sent to several of your chats shows once. **Add ride…** fills in the details. Summaries use
+where, who's in) and asks you to review it. A message sent to several of your chats shows once. **Add ride…** has Apple Intelligence read the conversation and fill in the name, start, length, meeting place, link and notes (destination and stops) for you to check. Summaries use
 Apple Intelligence on your Mac where available. Beeper needs to be open for chats to be checked.
 
 ## Riding with friends

@@ -211,19 +211,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         done([.banner, .sound])
     }
 
-    /// Turns a reviewed plan into a ride, after the user checks the details.
+    /// Turns a reviewed plan into a ride, after the user checks the details. Apple Intelligence (when it's on)
+    /// reads the conversation first, to fill in as much of the form as it can.
     func addRide(fromReview id: String) {
+        guard let r = store.state.reviews[id] else { return }
+        let chatName = store.state.feeds.first { $0.id == r.feedID }?.name ?? "a chat"
+        ui.readingReview = id
+        Task {
+            let d = await RideDetails.extract(RideDetails.text(r.lines, chatName: chatName))
+            ui.readingReview = nil
+            addRide(fromReview: id, details: d, chatName: chatName)
+        }
+    }
+
+    private func addRide(fromReview id: String, details d: RideDetails.Details?, chatName: String) {
         guard var r = store.state.reviews[id] else { return }
         let s = r.summary
         var start = s.start ?? Dialogs.nextSundayMorning()
-        if s.start != nil, !s.hasTime { start = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: start) ?? start }
-        let chatName = store.state.feeds.first { $0.id == r.feedID }?.name ?? "a chat"
+        var hasTime = s.hasTime
+        // RollCall's own rules read a time written in the messages reliably; otherwise the model's reading is used.
+        if let ds = d?.start, !s.hasTime || s.start == nil { start = ds; hasTime = d?.hasTime ?? false }
+        if s.start != nil || d?.start != nil, !hasTime { start = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: start) ?? start }
         let link = Beeper.chatLink(chatID: r.chatID, messageID: r.keyMessage?.id)
+        // The plan's own on-device summary already names the ride and place well; the form's reading fills the rest.
+        var parts = [s.byAI && !s.summary.isEmpty ? s.summary : d?.details ?? s.calendarNote]
+        if let d, !d.stops.isEmpty { parts.append("Stops: " + d.stops.joined(separator: "; ")) }
+        if let dest = d?.destination { parts.append("Destination: " + dest) }
+        if let l = d?.link { parts.append("Link: " + l) }
+        var notes = parts.joined(separator: "\n")
+        let intro = d != nil ? "Apple Intelligence filled this in from the conversation in \(chatName), on this Mac. Check it before adding."
+                             : "From the conversation in \(chatName). Check the time and meeting place."
         guard let ride = Dialogs.manualRide(
-            prefill: .init(title: s.title, start: start, hours: 3, location: s.place ?? "", link: link),
-            note: "From the conversation in \(chatName). Check the time and meeting place." + (s.hasTime ? "" : " No time was agreed, so 9am is filled in.")) else { return }
+            prefill: .init(title: s.byAI ? s.title : d?.title ?? s.title, start: start, hours: d?.hours ?? 3,
+                           location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", link: link, notes: notes),
+            note: intro + (hasTime ? "" : " No time was agreed, so 9am is filled in.")) else { return }
         // Only the summary goes in the ride (and so the calendar): the chat's messages stay in the chat.
-        let notes = s.calendarNote
+        notes = ride.notes
         let item = ICSEvent(uid: "plan-" + stableHash(r.id), title: ride.title, start: ride.start,
                             end: ride.start.addingTimeInterval(ride.hours * 3600), allDay: false, location: ride.location,
                             notes: notes.count > 1500 ? String(notes.prefix(1500)) + "…" : notes,
@@ -1073,7 +1096,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let fbID = link.flatMap(Store.facebookEventID)
         let item = ICSEvent(uid: fbID.map { "e\($0)@facebook.com" } ?? "manual-\(UUID().uuidString)",
                             title: r.title, start: r.start, end: r.start.addingTimeInterval(r.hours * 3600),
-                            allDay: false, location: r.location, notes: "", url: link)
+                            allDay: false, location: r.location, notes: r.notes, url: link)
         let source = fbID != nil ? "facebook" : "manual"
         store.merge([item], source: source, sourceName: fbID != nil ? "Facebook" : "Added by hand", groupURL: nil)
         let id = Store.eventID(source: source, item: item)
@@ -1131,21 +1154,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func addFromPost(link: String = "") {
         guard let post = Dialogs.pastedPost(link: link), !(post.text.isEmpty && post.link.isEmpty) else { return }
+        // Apple Intelligence (when it's on) reads the post too, for what RollCall's own rules miss.
+        Task { addFromPost(post, details: post.text.isEmpty ? nil : await RideDetails.extract(post.text)) }
+    }
+
+    private func addFromPost(_ post: (link: String, text: String), details d: RideDetails.Details?) {
         var link = post.link
         if !link.isEmpty, !link.lowercased().hasPrefix("http") { link = "https://" + link }
-        let found = TextDetect.scan(post.text, daysAhead: 365)
+        if link.isEmpty, let l = d?.link { link = l }
+        var found = TextDetect.scan(post.text, daysAhead: 365)
+        if let ds = d?.start, found.start == nil || !found.hasTime { found.start = ds; found.hasTime = d?.hasTime ?? false }
+        if found.address == nil { found.address = d?.meet }
         var start = found.start ?? Dialogs.nextSundayMorning()
         if found.start != nil, !found.hasTime {
             start = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: start) ?? start
         }
         var notes: [String] = []
+        if d != nil { notes.append("Apple Intelligence helped fill this in, on this Mac.") }
         notes.append(found.start == nil ? "No date found in the text, so pick one below."
                      : found.hasTime ? "Date and time found in the text. Check they're right."
                      : "A date was found but no time, so 9am is filled in. Check it.")
         if found.address == nil { notes.append("No address found. Type the meeting place if you know it.") }
         guard let r = Dialogs.manualRide(
-            prefill: .init(title: TextDetect.title(from: post.text), start: start, hours: 4,
-                           location: found.address ?? "", link: link),
+            prefill: .init(title: d?.title ?? TextDetect.title(from: post.text), start: start, hours: d?.hours ?? 4,
+                           location: found.address ?? "", link: link,
+                           notes: post.text.count > 1000 ? String(post.text.prefix(1000)) + "…" : post.text),
             note: notes.joined(separator: " ")) else { return }
 
         var url: String? = r.link.isEmpty ? nil : r.link
@@ -1156,7 +1189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let item = ICSEvent(uid: fbID.map { "e\($0)@facebook.com" } ?? "post-\(UUID().uuidString)",
                             title: r.title, start: r.start, end: r.start.addingTimeInterval(r.hours * 3600),
                             allDay: false, location: r.location,
-                            notes: post.text.count > 1000 ? String(post.text.prefix(1000)) + "…" : post.text, url: url)
+                            notes: r.notes, url: url)
         let name = fbID != nil ? "Facebook" : isInstagram ? "Instagram post" : "Added from a post"
         store.merge([item], source: source, sourceName: name, groupURL: nil)
         let id = Store.eventID(source: source, item: item)

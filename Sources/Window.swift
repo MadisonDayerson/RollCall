@@ -30,6 +30,8 @@ final class UIModel: ObservableObject {
     @Published var selectedSource: String?
     @Published var selectedRide: String?
     @Published var selectedReview: String?
+    /// The plan Apple Intelligence is reading for the Add ride form.
+    @Published var readingReview: String?
     @Published var rideFilter: RideFilter = .all
     private var observer: NSObjectProtocol?
 
@@ -723,8 +725,9 @@ struct PlanCard: View {
             .font(.callout)
 
             HStack {
-                Button("Add ride…") { model.later { app.addRide(fromReview: review.id) } }
+                Button(model.readingReview == review.id ? "Reading…" : "Add ride…") { model.later { app.addRide(fromReview: review.id) } }
                     .buttonStyle(.borderedProminent)
+                    .disabled(model.readingReview != nil)
                 Button("Open chat") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
                 Spacer()
                 Button("Not a ride") { app.dismissReview(review.id) }

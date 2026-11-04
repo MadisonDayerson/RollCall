@@ -649,5 +649,33 @@ do {
     check(!CrossPost.samePlan(plan("1", chat: "a", msg), plan("2", chat: "b", "Anyone keen for a ride Saturday 8am from Sunshine?")),
           "a different message about the same day isn't the same plan")
 }
+// Ride details from the on-device model
+do {
+    let reply = """
+    TITLE: CAMPING TRIP TO PRETEND FALLS
+    START: 2026-11-07 08:00
+    END: 2026-11-07 17:30
+    MEET: Example Servo, Sunshine
+    DESTINATION: Pretend Falls campground
+    STOPS: Make Believe Bakery; Lookout Rd
+    LINK: unknown
+    **DETAILS:** Overnight camping ride. Bring a tent and food.
+    """
+    let d = RideDetails.parse(reply, now: now)
+    check(d?.title == "Camping trip to pretend falls", "a shouted title is calmed down")
+    check(d?.hasTime == true && d.map { comps($0.start!).hour } == 8, "start time read")
+    check(d?.hours == 9.5, "length from the end time, to the half hour")
+    check(d?.meet == "Example Servo, Sunshine" && d?.stops == ["Make Believe Bakery", "Lookout Rd"], "meeting place and stops read")
+    check(d?.link == nil, "no link when it says unknown")
+    check(d?.notes == "Overnight camping ride. Bring a tent and food.\nStops: Make Believe Bakery; Lookout Rd\nDestination: Pretend Falls campground",
+          "notes carry the details, stops and destination on lines Route reads")
+    check(Route.places(meetingPlace: d?.meet ?? "", notes: d?.notes ?? "") == ["Example Servo, Sunshine", "Make Believe Bakery", "Lookout Rd", "Pretend Falls campground"],
+          "Route follows the filled-in stops")
+    let vague = RideDetails.parse("TITLE: Night ride\nSTART: 2030-01-01\nMEET: the west\nLINK: www.example.com", now: now)
+    check(vague?.start == nil && vague?.meet == nil && vague?.link == nil, "far-off dates, vague areas and half links are left out")
+    check(RideDetails.parse("Sorry, I can't help with that.", now: now) == nil, "a reply in the wrong shape is ignored")
+    check(PlanSummariser.tidied("Shit yeah, ride Sunday you legends") == "… yeah, ride Sunday you legends", "swearing is left out of what the model reads")
+    check(PlanSummariser.tidied("Meet at Shitake Cafe? Scunthorpe") == "Meet at … Cafe? Scunthorpe", "words that only start like one may be hidden too, which only affects what the model reads")
+}
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

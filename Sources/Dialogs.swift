@@ -60,6 +60,7 @@ enum Dialogs {
         var hours: Double
         var location: String
         var link: String
+        var notes = ""
     }
 
     static func manualRide(prefillLink: String = "") -> ManualRide? {
@@ -103,6 +104,19 @@ enum Dialogs {
         let hours = field("How long (hours)", "4", String(format: "%g", prefill.hours))
         let place = field("Meeting place", "Shell Coldstream, Maroondah Hwy", prefill.location)
         let link = field("Event link (optional)", "https://www.facebook.com/events/…", prefill.link)
+        stack.addArrangedSubview(NSTextField(labelWithString: "Notes (optional)"))
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: width, height: 90))
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        let notes = NSTextView(frame: scroll.bounds)
+        notes.isRichText = false
+        notes.font = .systemFont(ofSize: 13)
+        notes.string = prefill.notes
+        notes.autoresizingMask = [.width]
+        scroll.documentView = notes
+        scroll.widthAnchor.constraint(equalToConstant: width).isActive = true
+        scroll.heightAnchor.constraint(equalToConstant: 90).isActive = true
+        stack.addArrangedSubview(scroll)
         stack.frame = NSRect(x: 0, y: 0, width: width, height: stack.fittingSize.height)
         a.accessoryView = stack
         a.window.initialFirstResponder = title
@@ -112,7 +126,8 @@ enum Dialogs {
         return ManualRide(title: name, start: picker.dateValue,
                           hours: Double(hours.stringValue) ?? 4,
                           location: place.stringValue.trimmingCharacters(in: .whitespaces),
-                          link: link.stringValue.trimmingCharacters(in: .whitespaces))
+                          link: link.stringValue.trimmingCharacters(in: .whitespaces),
+                          notes: notes.string.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     /// Asks for a post's link and text (an Instagram caption, forum post or message).
