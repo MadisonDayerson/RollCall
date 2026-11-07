@@ -4,7 +4,8 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
 "ROLLCALL" in spaced capitals underneath.
 
 - **Black and white.** Text and marks use the system's text colours, so they invert for dark mode. Colour is
-  kept for meaning only: warnings, problems, and the person's own accent colour on standard controls.
+  kept for meaning only: warnings and problems. Selections, filled buttons and highlighted text are grey
+  (RollCall uses macOS's Graphite accent whatever the Mac is set to), never blue.
 - **The patch.** A rounded rectangle with a single 1.5pt line (`DateBadge`, which stays crisp), kept simple so a list of
   rides stays clean. The day is in heavy condensed numbers, the month and weekday in small bold capitals. Each ride's
   date is one: filled for Going (like the icon), dashed for Maybe, outlined while undecided, faded when

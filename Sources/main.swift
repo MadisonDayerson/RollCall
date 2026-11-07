@@ -156,6 +156,11 @@ if CommandLine.arguments.contains("--check-chats") {
     RunLoop.main.run()
 }
 
+// Grey (macOS's Graphite) instead of blue for selections, filled buttons and highlighted text, in RollCall
+// only: black and white is the brand, and colour is kept for meaning.
+UserDefaults.standard.set(-1, forKey: "AppleAccentColor")
+UserDefaults.standard.set("0.847059 0.847059 0.862745 Graphite", forKey: "AppleHighlightColor")
+
 let app = NSApplication.shared
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate

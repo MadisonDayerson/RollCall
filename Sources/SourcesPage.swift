@@ -125,7 +125,7 @@ struct SourceDetail: View {
                       systemImage: row.automatic ? "arrow.triangle.2.circlepath" : "hand.point.up.left")
                     .font(.callout)
                     .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background((row.automatic ? Color.green : Color.blue).opacity(0.14), in: Capsule())
+                    .background(Color.secondary.opacity(0.14), in: Capsule())
 
                 if let p = row.problem {
                     Label(p, systemImage: "exclamationmark.triangle")

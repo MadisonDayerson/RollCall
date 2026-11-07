@@ -100,7 +100,7 @@ struct RideSectionView: View {
                     RideRow(ride: r, model: model)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 6).padding(.horizontal, 8)
-                        .background(selected ? Color.accentColor.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                        .background(selected ? Color.secondary.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
                         .contentShape(Rectangle())
                         .onTapGesture { model.selectedRide = r.id }
                         .padding(.leading, 20)
@@ -188,7 +188,7 @@ struct RideDetail: View {
                         .font(.callout)
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.yellow.opacity(0.18), in: RoundedRectangle(cornerRadius: 6))
+                        .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
                 }
                 RideAbout(ride: ride, model: model).id(ride.id)
 

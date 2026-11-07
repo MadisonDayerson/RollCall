@@ -134,7 +134,7 @@ struct PlanCard: View {
                 Button("Open chat") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
                 Spacer()
                 if review.status == .dismissed {
-                    Button("Back to review") { app.restoreReview(review.id) }
+                    Button("Restore") { app.restoreReview(review.id) }
                         .help("Put it back under Possible plans")
                 } else {
                     Button("Not a ride") { app.dismissReview(review.id) }
