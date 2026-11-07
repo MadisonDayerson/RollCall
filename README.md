@@ -44,7 +44,10 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP) and
   the route. A ? on the date means it was read from a post, so double-check it.
   Rides you went on move to **Past** once they're over.
-- **To review:** possible ride plans from your chats, plus ride posts that didn't say when. Plans you mark
+- **To review:** ride plans from your chats, in two groups. **Possible plans** meet every test: a ride or bike
+  event on a day still to come, with a time and a place. **Partial plans** are still missing one of those, along
+  with ride posts that didn't say when. RollCall keeps reading each conversation for four days as the details
+  are settled, and a partial plan moves up (with a notification) once it's complete. Plans you mark
   **Not a ride** wait under **Reviewed** for a week, in case you change your mind.
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
@@ -95,7 +98,8 @@ through each step below in plain language and checks each one for you.
 3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
-where, who's in) and asks you to review it. Rides are named after where they start and end when the chat says,
+where, who's in) and asks you to review it. Replies that settle the details later join the same plan, and a ride
+you added from a plan takes its new time or place if the chat changes it (your own edits stay). Rides are named after where they start and end when the chat says,
 like "Yarra Glen to Sugarloaf Reservoir". A message sent to several of your chats shows once. **Add ride…** has Apple Intelligence read the conversation and fill in the name, start, length, meeting place, link and notes (destination and stops) for you to check. Summaries use
 Apple Intelligence on your Mac where available. Beeper needs to be open for chats to be checked.
 

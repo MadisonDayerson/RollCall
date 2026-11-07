@@ -14,7 +14,7 @@ struct MainView: View {
                     .badge(model.undecidedCount)
                     .tag(UIModel.Page.rides)
                 Label("To review", systemImage: "tray")
-                    .badge(model.app.openReviews().count + model.app.postsToLookAt().count)
+                    .badge(model.app.possiblePlans().count)
                     .tag(UIModel.Page.review)
                 Label("Sources", systemImage: "antenna.radiowaves.left.and.right").tag(UIModel.Page.sources)
                 Label("Settings", systemImage: "gearshape").tag(UIModel.Page.settings)

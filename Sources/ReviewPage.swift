@@ -7,7 +7,8 @@ struct ReviewPage: View {
     @ObservedObject var model: UIModel
 
     var body: some View {
-        let plans = model.app.openReviews()
+        let plans = model.app.possiblePlans()
+        let partial = model.app.partialPlans()
         let posts = model.app.postsToLookAt()
         let reviewed = model.app.reviewedPlans()
         let keep = model.store.state.settings.keepDismissed
@@ -20,13 +21,35 @@ struct ReviewPage: View {
                         Text(PlanSummariser.modelAvailable ? "Summaries by Apple Intelligence, on this Mac" : "Summaries are RollCall's best guess")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("Conversations in your chats where people mention a time, day or date for a ride. Check what RollCall made of it, then add it as a ride or dismiss it.")
+                    Text("Rides your chats have settled: a day still to come, a time and a place. Check what RollCall made of it, then add it as a ride or dismiss it.")
                         .font(.callout).foregroundStyle(.secondary)
                     if plans.isEmpty {
                         Text("Nothing to review.").foregroundStyle(.secondary).padding(.vertical, 8)
                     }
                     ForEach(plans, id: \.id) { r in
                         PlanCard(review: r, model: model).id(r.id)
+                    }
+                    Divider().padding(.vertical, 6)
+                    Text("Partial plans").font(.title3).fontWeight(.semibold)
+                    Text("Rides being talked about that are still missing a day, time or place. RollCall keeps reading the conversation, and a plan moves up to Possible plans once those are settled.")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if partial.isEmpty && posts.isEmpty {
+                        Text("Nothing new.").foregroundStyle(.secondary).padding(.vertical, 8)
+                    }
+                    ForEach(partial, id: \.id) { r in
+                        PlanCard(review: r, model: model).id(r.id)
+                    }
+                    if !posts.isEmpty {
+                        HStack(alignment: .firstTextBaseline) {
+                            PatchLabel(text: "Posts that didn't say when", count: posts.count)
+                            Spacer()
+                            Button("Mark all read") { model.app.markPostsRead() }
+                        }
+                        .padding(.top, 4)
+                    }
+                    ForEach(posts, id: \.post.id) { item in
+                        PostRow(feed: item.feed, post: item.post, model: model)
+                        Divider()
                     }
                     if keep > 0 {
                         DisclosureGroup {
@@ -44,24 +67,9 @@ struct ReviewPage: View {
                         } label: {
                             PatchLabel(text: "Reviewed", count: reviewed.count)
                         }
-                        .padding(.top, 4)
+                        .padding(.top, 12)
                     }
 
-                    Divider().padding(.vertical, 6)
-                    HStack {
-                        Text("Posts without a day").font(.title3).fontWeight(.semibold)
-                        Spacer()
-                        Button("Mark all as read") { model.app.markPostsRead() }.disabled(posts.isEmpty)
-                    }
-                    Text("Ride posts and invites that didn't say when. Open one to read it, or turn it into a ride.")
-                        .font(.callout).foregroundStyle(.secondary)
-                    if posts.isEmpty {
-                        Text("Nothing new.").foregroundStyle(.secondary).padding(.vertical, 8)
-                    }
-                    ForEach(posts, id: \.post.id) { item in
-                        PostRow(feed: item.feed, post: item.post, model: model)
-                        Divider()
-                    }
                 }
                 .padding(20)
                 .frame(maxWidth: 820, alignment: .leading)
@@ -103,6 +111,9 @@ struct PlanCard: View {
                 GridRow { Text("Where").foregroundStyle(.secondary); Text(s.place ?? "Not settled") }
                 if !s.who.isEmpty {
                     GridRow { Text("Who's in").foregroundStyle(.secondary); Text(s.who.joined(separator: ", ")) }
+                }
+                if case .partial(let missing) = s.readiness(), review.status == .open {
+                    GridRow { Text("Still needed").foregroundStyle(.secondary); Text(missing.joined(separator: ", ").capitalizedFirst) }
                 }
                 if let u = s.undecided {
                     GridRow { Text("Still open").foregroundStyle(.secondary); Text(u) }

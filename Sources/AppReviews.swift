@@ -5,7 +5,8 @@ import UserNotifications
 extension AppDelegate {
     // MARK: - Plans to review
 
-    /// Saves conversations that moved on, summarises them, and lets the user know about new ones.
+    /// Saves conversations that moved on, summarises them, and lets the user know when one becomes a possible plan
+    /// (or its time or place changes). Rides added from a plan follow it when the chat changes the time or place.
     func keepReviews(_ found: [PlanReview], feed: Feed) async {
         for var r in found {
             let old = store.state.reviews[r.id]
@@ -17,23 +18,55 @@ extension AppDelegate {
             }
             r.summary = await PlanSummariser.summarise(r, chatName: feed.name)
             // The on-device model read it and found no plan: keep it out of the way.
-            if !r.summary.isPlan { r.status = .dismissed }
+            if !r.summary.isPlan, r.status == .open { r.status = .dismissed }
             r.dismissed = nil
             if r.status == .dismissed { r.lines = [] }  // keep no more of people's messages than needed
-            let wasShowing = old?.status == .open && old?.summary.isPlan == true
+            let changed = old?.summary.start != r.summary.start || old?.summary.place != r.summary.place
+            let wasReady = old?.status == .open && old?.summary.isReady == true
             // The same message sent to several chats: one heads-up is enough.
-            let echo = store.state.reviews.values.contains { $0.status == .open && CrossPost.samePlan($0, r) }
+            let echo = store.state.reviews.values.contains { $0.status == .open && $0.id != r.id && CrossPost.samePlan($0, r) }
             store.state.reviews[r.id] = r
-            if r.status == .open, !echo, !wasShowing || old?.summary.start != r.summary.start || old?.summary.place != r.summary.place {
-                notify(r, chatName: feed.name)
-            }
+            if r.status == .open, r.summary.isReady, !echo, !wasReady || changed { notify(r, chatName: feed.name) }
+            if r.status == .added, changed, let old { followPlan(r, was: old.summary, chatName: feed.name) }
         }
+    }
+
+    /// A ride added from a chat plan takes the plan's new time or place, keeping its length. Your own edits
+    /// (Edit…) still win, and a ride you're going to updates its calendar event.
+    private func followPlan(_ r: PlanReview, was: PlanSummary, chatName: String) {
+        guard let id = r.rideID, var ride = store.state.events[id] else { return }
+        let s = r.summary
+        var notes: [String] = []
+        if let start = s.start, s.hasTime, start != was.start, start > Date() {
+            let length = ride.end.map { $0.timeIntervalSince(ride.start) } ?? 3 * 3600
+            ride.start = start
+            ride.end = start.addingTimeInterval(length)
+            notes.append(PlanFinder.describe(start, hasTime: true))
+        }
+        if let place = s.place, !place.isEmpty, place != was.place, place != ride.location {
+            ride.location = place
+            ride.latitude = nil; ride.longitude = nil; ride.distanceKm = nil
+            notes.append(place)
+        }
+        guard !notes.isEmpty else { return }
+        store.state.events[id] = ride
+        if store.decision(id) == .attending { syncCalendar(id) }
+        Task { await geocoder.fill(store); store.save() }
+        notifyRideChanged(ride.title, change: notes.joined(separator: " · "), chatName: chatName, rideID: id)
     }
 
     /// Plans to review, once each: a message sent to several chats shows as one plan.
     func openReviews() -> [PlanReview] {
         let open = store.state.reviews.values.filter { $0.status == .open }.sorted { $0.updated > $1.updated || ($0.updated == $1.updated && $0.id < $1.id) }
         return CrossPost.groups(open, same: CrossPost.samePlan).map { $0[0] }
+    }
+
+    /// Plans that meet every criterion (see `PlanSummary.readiness`): these are the ones RollCall suggests.
+    func possiblePlans() -> [PlanReview] { openReviews().filter { $0.summary.readiness() == .ready } }
+
+    /// Rides being arranged that are still missing a day, time or place. They move up once the chat settles them.
+    func partialPlans() -> [PlanReview] {
+        openReviews().filter { if case .partial = $0.summary.readiness() { return true } else { return false } }
     }
 
     /// The other chats the same plan was posted in.
@@ -53,13 +86,25 @@ extension AppDelegate {
         center.add(UNNotificationRequest(identifier: r.id, content: content, trigger: nil))
     }
 
+    func notifyRideChanged(_ title: String, change: String, chatName: String, rideID: String) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Ride updated: " + title
+        content.subtitle = "From the conversation in " + chatName
+        content.body = change
+        content.userInfo = ["ride": rideID]
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "ride-" + rideID, content: content, trigger: nil))
+    }
+
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler done: @escaping () -> Void) {
         let id = response.notification.request.content.userInfo["review"] as? String
         let isUpdate = response.notification.request.content.userInfo["update"] != nil
+        let ride = response.notification.request.content.userInfo["ride"] as? String
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
                 if isUpdate { self.updateMenu(); return }
+                if let ride { self.ui.selectedRide = ride; self.showWindow(page: .rides); return }
                 self.ui.selectedReview = id
                 self.showWindow(page: .review)
             }
@@ -227,7 +272,7 @@ extension AppDelegate {
     }
 
     func updateBadge() {
-        let undecided = store.upcoming().filter { store.decision($0.id) == .undecided }.count + openReviews().count
+        let undecided = store.upcoming().filter { store.decision($0.id) == .undecided }.count + possiblePlans().count
         let hasImage = statusItem.button?.image != nil
         let base = hasImage ? "" : "🏍"
         statusItem.button?.title = undecided > 0 ? "\(base) \(undecided)" : base

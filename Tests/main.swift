@@ -384,6 +384,46 @@ check(PlanFinder.find(thread, newIDs: ["a3", "a5"], feedID: "x", chatID: "x", no
 check(PlanFinder.find(thread, newIDs: Set(thread.map(\.id)), feedID: "x", chatID: "x",
                       now: cal.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 20))!).isEmpty, "plans that are over aren't raised")
 
+// Criteria: a possible plan has a day still to come, a time and a place; a partial one is missing some.
+do {
+    let base = PlanSummary(title: "Ride", when: "", start: nil, hasTime: false, place: nil, who: [], undecided: nil,
+                           summary: "", isPlan: true, byAI: false)
+    let soon = cal.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 14))!
+    let morning = cal.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 9))!
+    var p = base
+    check(p.readiness(now: morning) == .partial(missing: ["day", "time", "place"]), "a ride with nothing settled is partial")
+    p.start = soon; p.hasTime = true
+    check(p.readiness(now: morning) == .partial(missing: ["place"]), "still needs a place")
+    p.place = "Example Servo"
+    check(p.readiness(now: morning) == .ready, "day, time and place make a possible plan")
+    check(p.readiness(now: soon.addingTimeInterval(4 * 3600)) == nil, "a plan that's over isn't suggested")
+    p.isPlan = false
+    check(p.readiness(now: morning) == nil, "not a ride plan")
+}
+// Conversations keep growing as the details are settled (made-up messages).
+do {
+    let start = [msgAt("f1", "Alex", 2, 9, 0, "Ride Sunday anyone?"), msgAt("f2", "Sam", 2, 9, 5, "Keen")]
+    let monday = cal.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 10))!
+    var review = PlanFinder.find(start, newIDs: ["f1", "f2"], feedID: "x", chatID: "!x", now: monday)
+    check(review.count == 1, "a ride on Sunday is raised")
+    var r = review.removeFirst()
+    r.updated = monday
+    let later = start + [
+        msgAt("f3", "Jo", 3, 19, 0, "anyone selling a helmet?"),
+        msgAt("f4", "Alex", 4, 12, 0, "Let's meet at Example Servo, 9am"),
+        msgAt("f5", "Sam", 4, 12, 4, "perfect"),
+    ]
+    let wed = cal.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 13))!
+    var newlyFound = PlanFinder.find(later, newIDs: ["f3", "f4", "f5"], feedID: "x", chatID: "!x", now: wed)
+    let grown = PlanFinder.followUps(later, newIDs: ["f3", "f4", "f5"], found: &newlyFound, existing: [r], now: wed)
+    check(grown.first?.lines.map(\.id) == ["f1", "f2", "f4", "f5"], "the meeting place and time join the plan; unrelated chat doesn't")
+    check(newlyFound.isEmpty, "the same plan isn't raised twice")
+    check(grown.first?.summary.place?.contains("Example Servo") == true && grown.first?.summary.hasTime == true, "the plan now has its place and time")
+    var stale = r; stale.updated = monday.addingTimeInterval(-10 * 86400)
+    var none: [PlanReview] = []
+    check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [stale], now: wed).isEmpty, "old conversations stop collecting")
+}
+
 let fallback = plan!
 let aiReply = """
 PLAN: yes

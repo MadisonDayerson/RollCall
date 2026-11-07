@@ -146,7 +146,12 @@ enum SourceReader {
                 newIDs.insert(m.id)
             }
         }
-        result.reviews = PlanFinder.find(lines, newIDs: newIDs, feedID: feed.id, chatID: chatID, now: now)
+        var found = PlanFinder.find(lines, newIDs: newIDs, feedID: feed.id, chatID: chatID, now: now)
+        // Plans already under review, or added as rides, take in the replies that settle their details.
+        let following = store.state.reviews.values.filter { $0.feedID == feed.id && ($0.status == .open || $0.status == .added) }
+            .sorted { $0.updated > $1.updated }
+        let grown = PlanFinder.followUps(lines, newIDs: newIDs, found: &found, existing: following, now: now)
+        result.reviews = grown + found
         // "Anyone keen for a ride soon?" with no day goes to Posts to look at.
         let inReview = Set(result.reviews.flatMap { $0.lines.map(\.id) })
         for id in newIDs where !inReview.contains(id) {

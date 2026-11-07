@@ -36,7 +36,7 @@ extension AppDelegate {
 
         menu.addItem(.separator())
         menu.addItem(action("Open RollCall…", #selector(openWindowMenu), key: "o"))
-        let toReview = openReviews().count + postsToLookAt().count
+        let toReview = possiblePlans().count
         if toReview > 0 { menu.addItem(action("To review (\(toReview))…", #selector(openPostsMenu))) }
         menu.addItem(action("Add…", #selector(openAddMenu), key: "n"))
         menu.addItem(action("Set up RollCall…", #selector(openSetupMenu)))

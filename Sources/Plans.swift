@@ -28,6 +28,26 @@ struct PlanSummary: Codable, Equatable {
 }
 
 extension PlanSummary {
+    /// How far a plan has got. A **possible plan** meets every criterion: people are arranging a ride or bike event,
+    /// on a day still to come, with a time and a place (a meeting point or destination). A **partial plan** is a ride
+    /// being arranged that's still missing some of those. Nil when it isn't a ride plan or it's over.
+    enum Readiness: Equatable {
+        case ready
+        case partial(missing: [String])
+    }
+
+    func readiness(now: Date = Date()) -> Readiness? {
+        guard isPlan else { return nil }
+        if let start, start.addingTimeInterval(hasTime ? 3 * 3600 : 86400) < now { return nil }
+        var missing: [String] = []
+        if start == nil { missing.append("day") }
+        if !hasTime { missing.append("time") }
+        if (place ?? "").isEmpty { missing.append("place") }
+        return missing.isEmpty ? .ready : .partial(missing: missing)
+    }
+
+    var isReady: Bool { readiness() == .ready }
+
     /// What goes in the calendar event: a plain description of the plan, never the chat messages themselves.
     /// Apple Intelligence's summary is already that; RollCall's own guess quotes a message, so it's described instead.
     var calendarNote: String {
@@ -143,6 +163,41 @@ enum PlanFinder {
                                     summary: summary, status: .open, created: now, updated: now))
         }
         return found
+    }
+
+    /// How long a conversation under review keeps collecting replies as people settle the details.
+    static let followFor: TimeInterval = 4 * 86400
+
+    /// Conversations already under review (or added as rides) with new messages that add to them: the time, day or
+    /// place, ride talk, people saying they're in, or quick replies. A newly found conversation in the same chat
+    /// about the same day joins the one already there instead of being a second plan. Returns the reviews that grew.
+    static func followUps(_ lines: [ChatLine], newIDs: Set<String>, found: inout [PlanReview], existing: [PlanReview], now: Date) -> [PlanReview] {
+        var grown: [PlanReview] = []
+        let sorted = lines.sorted { $0.sent < $1.sent }
+        for var r in existing where now.timeIntervalSince(r.updated) <= followFor {
+            guard let lastSent = r.lines.last?.sent else { continue }
+            var adding: [ChatLine] = []
+            var previous = lastSent
+            for l in sorted where newIDs.contains(l.id) && l.sent > lastSent && !r.lines.contains(where: { $0.id == l.id }) {
+                let relevant = l.mentionsWhen || RidePlan.place(in: l.text) != nil || RidePlan.has(RidePlan.rideWords, l.text)
+                    || RidePlan.has(yesWords, l.text.lowercased()) || l.sent.timeIntervalSince(previous) <= 20 * 60
+                if relevant { adding.append(l); previous = l.sent }
+            }
+            // The same plan raised again: its messages join this one.
+            let sameDay = { (a: Date?, b: Date?) in a == nil || b == nil || Calendar.current.isDate(a!, inSameDayAs: b!) }
+            if let i = found.firstIndex(where: { $0.chatID == r.chatID && sameDay($0.summary.start, r.summary.start) }) {
+                adding += found[i].lines.filter { l in !r.lines.contains { $0.id == l.id } && !adding.contains { $0.id == l.id } }
+                found.remove(at: i)
+            }
+            guard !adding.isEmpty else { continue }
+            let all = (r.lines + adding).sorted { $0.sent < $1.sent }
+            // Keep how it started and the latest replies.
+            r.lines = all.count > maxLines ? Array(all.prefix(5) + all.suffix(maxLines - 5)) : all
+            r.updated = now
+            r.summary = guess(r.lines, now: now)
+            grown.append(r)
+        }
+        return grown
     }
 
     // MARK: Best guess without the on-device model
