@@ -18,6 +18,10 @@ it can be fixed or taken out without touching the others.
 
 ## Task 1: Route map preview
 
+**Status: built (commit 07cf25a), waiting to be tried in the app.** The map is greyscale to suit the black-and-white
+look. Rides only show a map when they name a start and a destination (a "Destination:" line, which rides added
+from chats now get).
+
 A still picture of the planned road route under the ride's About box, plus Kurviger as a Route choice.
 
 | Step | What | Resources |
@@ -33,6 +37,8 @@ A still picture of the planned road route under the ride's About box, plus Kurvi
   and Kurviger opens with every stop.
 
 ## Task 2: Weather along the route
+
+**Status: next.**
 
 Temperature, chance of rain and wind at points along the route, at the time you'd reach each one.
 
