@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 var failures = 0
 func check(_ cond: Bool, _ msg: String, line: Int = #line) {
@@ -846,6 +847,54 @@ do {
     let store = Store(file: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("allday-\(UUID()).json"))
     store.state.events["a"] = allDay(day)
     check(store.upcoming(now: day.addingTimeInterval(12 * 3600)).count == 1, "an all-day ride still shows at midday on the day")
+}
+
+// Weather along the route: a made-up straight route of about 100 km due north, ridden in 2 hours.
+do {
+    let line = (0...100).map { CLLocationCoordinate2D(latitude: -38.0 + Double($0) * 0.009, longitude: 145.0) }
+    let leave = now
+    let pts = RouteWeather.points(along: [Array(line[0...40]), Array(line[40...])], seconds: 7200, leave: leave)
+    check(pts.count == 3, "a 100 km route gets a point at the start, middle and finish (got \(pts.count))")
+    check(abs(pts[1].km - pts[2].km / 2) < 0.01 && abs(pts[2].km - 100) < 1, "points are evenly spaced along the road")
+    check(abs(pts[1].time.timeIntervalSince(leave) - 3600) < 1 && abs(pts[2].time.timeIntervalSince(leave) - 7200) < 1,
+          "each point has when you'd reach it")
+    check(abs(pts[1].spot.latitude - (-37.55)) < 0.01, "the middle point is half way up the road")
+    let short = RouteWeather.points(along: [Array(line[0...10])], seconds: 900, leave: leave)
+    check(short.count == 2, "a short route gets the start and finish")
+    let long = RouteWeather.points(along: [line + line.map { CLLocationCoordinate2D(latitude: $0.latitude + 0.91, longitude: 145.0) }
+        + line.map { CLLocationCoordinate2D(latitude: $0.latitude + 1.82, longitude: 145.0) } + line.map { CLLocationCoordinate2D(latitude: $0.latitude + 2.73, longitude: 145.0) }
+        + line.map { CLLocationCoordinate2D(latitude: $0.latitude + 3.64, longitude: 145.0) }], seconds: 30000, leave: leave)
+    check(long.count == RouteWeather.maxPoints, "a very long route is capped at \(RouteWeather.maxPoints) points")
+    let url = RouteWeather.url(for: pts)?.absoluteString ?? ""
+    check(url.contains("latitude=-38.000,-37.550") && url.contains("timeformat=unixtime"), "one forecast request for all the points")
+
+    // A saved sample reply for two points (Open-Meteo's layout, made-up values).
+    let t0 = leave.timeIntervalSince1970.rounded(.down)
+    func hourly(_ temp: Double, _ rain: Double?, _ gust: Double) -> String {
+        """
+        {"hourly":{"time":[\(t0 - 3600),\(t0),\(t0 + 3600),\(t0 + 7200)],"temperature_2m":[10,\(temp),\(temp + 1),\(temp + 2)],
+        "precipitation_probability":[0,\(rain.map { "\($0)" } ?? "null"),70,80],"wind_speed_10m":[5,12,14,16],
+        "wind_gusts_10m":[9,\(gust),\(gust),\(gust)],"weather_code":[0,3,61,61]}}
+        """
+    }
+    let two = [pts[0], pts[2]]
+    let read = RouteWeather.read(Data("[\(hourly(18, 10, 30)),\(hourly(14, 20, 55))]".utf8), for: two)
+    check(read.count == 2, "a reply for two points gives two forecasts")
+    check(read.first?.temperature == 18 && read.first?.rainChance == 10 && read.first?.code == 3,
+          "the start's forecast is for the hour you leave")
+    check(read.last?.temperature == 16 && read.last?.rainChance == 80 && read.last?.gusts == 55,
+          "the finish's forecast is for two hours later")
+    check(RouteWeather.read(Data(hourly(18, nil, 30).utf8), for: [pts[0]]).isEmpty, "an hour without a forecast is left out")
+    check(RouteWeather.read(Data(hourly(18, 10, 30).utf8), for: [pts[0]]).count == 1, "a reply for one point is read too")
+    let farOff = RouteWeather.Point(spot: pts[0].spot, km: 0, time: leave.addingTimeInterval(86400))
+    check(RouteWeather.read(Data(hourly(18, 10, 30).utf8), for: [farOff]).isEmpty, "a time outside the reply is left out")
+
+    check(RouteWeather.readyDate(leave: now.addingTimeInterval(3 * 86400), now: now) == nil, "a ride this week has its forecast")
+    let ready = RouteWeather.readyDate(leave: now.addingTimeInterval(10 * 86400), now: now)
+    check(ready == Calendar.current.date(byAdding: .day, value: 3, to: Calendar.current.startOfDay(for: now)),
+          "a ride 10 days out says its forecast is ready in 3 days")
+    check(RouteWeather.describe(0).word == "Clear" && RouteWeather.describe(63).word == "Rain" && RouteWeather.describe(95).word == "Storms",
+          "weather codes have words")
 }
 
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")

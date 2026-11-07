@@ -2,7 +2,8 @@ import SwiftUI
 import MapKit
 
 /// The ride's route on its page: a still map of the road route from the meeting place through any stops to the
-/// destination (or from your suburb to a one-place ride), with the distance and riding time. Clicking it opens Route.
+/// destination (or from your suburb to a one-place ride), with the distance and riding time, and the weather along
+/// it. Clicking the map opens Route.
 struct RouteBox: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
@@ -43,6 +44,8 @@ struct RouteBox: View {
                             Text(RoutePlanner.describe(r) + " · " + (Route.link(in: ride.notes) != nil && places.contains { Route.point($0) != nil }
                                                                      ? "the organiser's route" : places.joined(separator: " → ")))
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            Divider()
+                            RouteWeatherView(route: r, ride: ride, places: places, arriving: places.first == model.store.homePlace)
                         }
                     }
                 }

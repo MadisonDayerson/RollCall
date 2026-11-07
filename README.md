@@ -115,7 +115,9 @@ and riding time (click it to open Route). When the organiser shared a Google Map
 it exactly. Otherwise RollCall works out the start, stops and destination from the ride's title
 and description (with Apple Intelligence on the Mac when the wording isn't plain), checks each place with Apple Maps,
 and leaves out ones it can't find. A ride at one place, like a track day or bike night, shows the trip there from
-your suburb.
+your suburb. Under the map is the weather along the way: the temperature, chance of rain and wind at points every
+40 to 50 km, for when you'd reach each one. Likely rain and strong gusts are in orange. Rides more than a week away
+say when their forecast will be ready.
 
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.
@@ -151,7 +153,8 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you, and follows a short Google Maps link (maps.app.goo.gl) in a ride's description once to
   find the route it points to. It asks Apple Maps where a ride's location is, so it can work out the distance, and
-  plans the road route between a ride's places to draw its map. And
+  plans the road route between a ride's places to draw its map. For the weather along a route, the positions of
+  a few points on it (not the ride or anything about you) go to Open-Meteo, a free forecast service. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps, Waze or Kurviger) to plan the route.

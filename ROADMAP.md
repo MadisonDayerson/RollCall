@@ -40,19 +40,25 @@ A still picture of the planned road route under the ride's About box, plus Kurvi
 
 ## Task 2: Weather along the route
 
-**Status: next.**
+**Status: built.** Open-Meteo's BOM ACCESS-G model gives no data at the moment, so RollCall uses Open-Meteo's
+"best match" forecast for each point (credited "Weather data by Open-Meteo.com"). Points are evenly spaced, about
+45 km apart (up to 9), and named after the ride's start and finish or the suburb along the way. Each point is shown
+on two lines (when and where, then the weather) to fit the ride column. A one-place ride counts back from its start
+time, so you arrive on time, and a ride without a time leaves at 9 am.
+
+**Task 3 (road alerts) is next.**
 
 Temperature, chance of rain and wind at points along the route, at the time you'd reach each one.
 
 | Step | What | Resources |
 |---|---|---|
 | 2a | Pick points every 40–50 km along the planned route, each with the time you'd get there | Task 1's route line and riding time. New file `RouteWeather.swift` |
-| 2b | Fetch the hourly forecast for those points (BOM's ACCESS-G model, falling back to the best model) | [Open-Meteo](https://open-meteo.com/) forecast API: free for non-commercial use, no key, one request for all points |
-| 2c | Show it under the map: a short row per point (place, time, temperature, rain chance, wind) | SwiftUI in `RouteBox.swift`; "Forecast from BOM via Open-Meteo" credit |
+| 2b | Fetch the hourly forecast for those points (Open-Meteo's best match; its BOM ACCESS-G model currently has no data) | [Open-Meteo](https://open-meteo.com/) forecast API: free for non-commercial use, no key, one request for all points |
+| 2c | Show it under the map: each point's time and place, then temperature, rain chance and wind | SwiftUI in `RouteWeatherView.swift`, under the map in `RouteBox.swift`; "Weather data by Open-Meteo.com" credit |
 | 2d | Rides more than a week out say when the forecast will be ready | Open-Meteo's 7-day range |
 
 - **Owner provides:** nothing.
-- **Tests:** points along a made-up route, times at each point, reading a saved sample reply.
+- **Tests (done):** points along a made-up route, times at each point, reading a saved sample reply.
 - **Done when:** this week's rides show weather along their route, and later rides say when to check back.
 
 ## Task 3: Road alerts on the route
