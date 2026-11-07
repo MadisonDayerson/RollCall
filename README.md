@@ -107,7 +107,8 @@ can't do anything yet is greyed out and says why). **Remove** takes the ride awa
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to. **Route** opens the organiser's route if the
 description has one, otherwise directions from your suburb through the meeting place and stops, in Apple Maps,
 Google Maps, Waze or Kurviger (choose in Settings). Each ride's page also shows a map of the road route with the distance
-and riding time (click it to open Route). RollCall works out the start, stops and destination from the ride's title
+and riding time (click it to open Route). When the organiser shared a Google Maps or Apple Maps route, the map follows
+it exactly. Otherwise RollCall works out the start, stops and destination from the ride's title
 and description (with Apple Intelligence on the Mac when the wording isn't plain), checks each place with Apple Maps,
 and leaves out ones it can't find. A ride at one place, like a track day or bike night, shows the trip there from
 your suburb.

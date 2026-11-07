@@ -93,6 +93,56 @@ enum Route {
         return out
     }
 
+    /// The route in a Google Maps or Apple Maps directions link, as places in order. Google's links name each stop
+    /// in the path and keep their map points, with any points the route was dragged through, in `data=`; those
+    /// points are used where they're there, so the map follows the organiser's roads. Points are "latitude,longitude".
+    static func linkPlaces(_ link: String) -> [String] {
+        guard let c = URLComponents(string: link) else { return [] }
+        // Links write spaces as "+".
+        let query = Dictionary((c.queryItems ?? []).compactMap { q in q.value.map { (q.name, $0.replacingOccurrences(of: "+", with: " ")) } },
+                               uniquingKeysWith: { a, _ in a })
+        if c.scheme == "maps" || c.host?.hasSuffix("apple.com") == true {
+            return [query["saddr"], query["daddr"]].compactMap { $0 }.filter { !$0.isEmpty }
+        }
+        guard let dir = c.percentEncodedPath.range(of: "/maps/dir/") else { return [] }
+        if query["api"] == "1" {
+            let via = query["waypoints"].map { $0.components(separatedBy: "|") } ?? []
+            return ([query["origin"]] + via + [query["destination"]]).compactMap { $0 }.filter { !$0.isEmpty }
+        }
+        var stops: [String] = [], data = ""
+        for part in c.percentEncodedPath[dir.upperBound...].split(separator: "/") {
+            if part.hasPrefix("data=") { data = String(part); break }
+            if part.hasPrefix("@") { continue }
+            let name = (String(part).replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? String(part))
+                .trimmingCharacters(in: .whitespaces)
+            if !name.isEmpty { stops.append(name) }
+        }
+        // In `data=`, each stop is "!1m0" (none: its path name is used) or "!1m…!1s<id>!2m2!1d<lng>!2d<lat>";
+        // points the route was dragged through are "!3m4!1m2!1d<lng>!2d<lat>" after the stop they follow.
+        let token = #"!1m0(?=!|$)|!1m\d+!1m1!1s[^!]+!2m2!1d(-?[\d.]+)!2d(-?[\d.]+)|!3m\d+!1m2!1d(-?[\d.]+)!2d(-?[\d.]+)"#
+        guard let re = try? NSRegularExpression(pattern: token), let route = data.range(of: "!4m") else { return stops }
+        let text = String(data[route.lowerBound...])
+        var out: [String] = [], stop = 0
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            func group(_ i: Int) -> String? { Range(m.range(at: i), in: text).map { String(text[$0]) } }
+            if let lng = group(3), let lat = group(4) {
+                out.append("\(lat),\(lng)")
+            } else if stop < stops.count {
+                if let lng = group(1), let lat = group(2) { out.append("\(lat),\(lng)") } else { out.append(stops[stop]) }
+                stop += 1
+            }
+        }
+        // Not the shape expected: the stops named in the path are still right.
+        return stop == stops.count ? out : stops
+    }
+
+    /// "-37.8810219,145.1634224" as a map point.
+    static func point(_ place: String) -> (latitude: Double, longitude: Double)? {
+        let parts = place.split(separator: ",").map { Double($0.trimmingCharacters(in: .whitespaces)) }
+        guard parts.count == 2, let lat = parts[0], let lng = parts[1], abs(lat) <= 90, abs(lng) <= 180 else { return nil }
+        return (lat, lng)
+    }
+
     /// The places a ride's title and description suggest, before they're checked on the map: the meeting place
     /// (a labelled line, or the ride's location), any stops, and the destination from a labelled line, a phrase like
     /// "heading to Marysville" or "lunch at Warburton", or a title like "Yarra Glen to Sugarloaf" or "Ride to Lorne".
@@ -176,10 +226,15 @@ enum Route {
 }
 
 extension Store {
-    /// The places a ride's route goes through. Labelled lines in its details win (they're what you typed with
-    /// Edit…, or what the organiser wrote); otherwise the route RollCall found and checked. A ride at one place
-    /// (a track day, a bike night) is the trip there from your suburb.
+    /// The places a ride's route goes through. The organiser's Google or Apple Maps route link wins; then labelled
+    /// lines in its details (what you typed with Edit…, or what the organiser wrote); then the route RollCall found
+    /// and checked. A ride at one place (a track day, a bike night) is the trip there from your suburb.
     func routePlaces(_ ride: RideEvent) -> [String] {
+        // The organiser's own maps link is the route itself.
+        if let link = Route.link(in: ride.notes) {
+            let linked = Route.linkPlaces(link)
+            if linked.count >= 2 { return linked }
+        }
         let written = Route.places(meetingPlace: ride.location, notes: ride.notes)
         if written.count >= 2 { return written }
         let found = state.foundRoutes[ride.id].flatMap { $0.from == Route.fingerprint(ride) ? $0.places : nil } ?? []

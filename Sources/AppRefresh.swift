@@ -58,8 +58,9 @@ extension AppDelegate {
     /// Rides whose details already list them (labelled lines) don't need it.
     func findRoute(for ride: RideEvent) async {
         let from = Route.fingerprint(ride)
-        guard store.state.foundRoutes[ride.id]?.from != from, !findingRoutes.contains(ride.id),
-              Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 else { return }
+        let linked = Route.link(in: ride.notes).map(Route.linkPlaces) ?? []
+        guard store.state.foundRoutes[ride.id]?.from != from, !findingRoutes.contains(ride.id), linked.count < 2,
+              Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 || Route.link(in: ride.notes) != nil else { return }
         findingRoutes.insert(ride.id)
         defer { findingRoutes.remove(ride.id) }
         let s = store.state.settings

@@ -9,6 +9,8 @@ enum RoutePlanner {
         var legs: [MKPolyline]
         /// Where each place was found, in order: start, stops, finish.
         var stops: [CLLocationCoordinate2D]
+        /// Which stops are named places; the rest are map points a route link was dragged through, not stops.
+        var named: [Bool]
         var metres: Double
         var seconds: Double
     }
@@ -24,7 +26,7 @@ enum RoutePlanner {
         if let cached = routes[key] { return cached }
         var result: Planned?
         if let points = await locate(places, near: home) {
-            var planned = Planned(legs: [], stops: points, metres: 0, seconds: 0)
+            var planned = Planned(legs: [], stops: points, named: places.map { Route.point($0) == nil }, metres: 0, seconds: 0)
             for (a, b) in zip(points, points.dropFirst()) {
                 guard let leg = await drive(from: a, to: b) else { planned.legs = []; break }
                 planned.legs.append(leg.polyline)
@@ -49,6 +51,8 @@ enum RoutePlanner {
 
     /// `within` is how wide an area (in metres) the search favours around `home`.
     static func locate(_ place: String, near home: CLLocationCoordinate2D, within: Double = 600_000) async -> CLLocationCoordinate2D? {
+        // A map point from a route link needs no looking up.
+        if let p = Route.point(place) { return CLLocationCoordinate2D(latitude: p.latitude, longitude: p.longitude) }
         let key = "\(place.lowercased())|\(Int(home.latitude * 10)),\(Int(home.longitude * 10))|\(Int(within))"
         if let cached = found[key] { return cached }
         let request = MKLocalSearch.Request()

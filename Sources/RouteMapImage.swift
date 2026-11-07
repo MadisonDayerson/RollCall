@@ -3,7 +3,7 @@ import AppKit
 import CoreImage
 
 /// A still picture of a planned route: Apple's muted map with the road route drawn over it in the text
-/// colour, a filled dot at the start, small dots at stops and a ring at the finish.
+/// colour, a filled dot at the start, small dots at named stops and a ring at the finish.
 @MainActor
 enum RouteMapImage {
     private static var drawn: [String: NSImage] = [:]
@@ -58,7 +58,7 @@ enum RouteMapImage {
                 ink.setStroke()
                 circle.stroke()
             }
-            for stop in route.stops.dropFirst().dropLast() { dot(stop, radius: 3.5, filled: false) }
+            for (stop, named) in zip(route.stops, route.named).dropFirst().dropLast() where named { dot(stop, radius: 3.5, filled: false) }
             if let finish = route.stops.last { dot(finish, radius: 6, filled: false) }
             if let start = route.stops.first { dot(start, radius: 6, filled: true) }
             return true

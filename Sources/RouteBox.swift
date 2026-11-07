@@ -39,7 +39,9 @@ struct RouteBox: View {
                                 .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
                         }
                         if let r = route.value {
-                            Text(RoutePlanner.describe(r) + " · " + places.joined(separator: " → "))
+                            // A route link's stops are map points, so it's described rather than listed.
+                            Text(RoutePlanner.describe(r) + " · " + (Route.link(in: ride.notes) != nil && places.contains { Route.point($0) != nil }
+                                                                     ? "the organiser's route" : places.joined(separator: " → ")))
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                     }

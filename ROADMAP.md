@@ -21,7 +21,8 @@ it can be fixed or taken out without touching the others.
 **Status: built and tried.** The map is greyscale to suit the black-and-white look. Since then (1e): RollCall
 works out each ride's start, stops and destination itself (labelled lines, phrases like "heading to …", titles
 like "A to B", then Apple Intelligence), checks them with Apple Maps (`RouteFinder.swift`), and maps one-place
-rides from your suburb. On the owner's rides, every one with a place now gets a map.
+rides from your suburb. (1f) An organiser's Google or Apple Maps route link wins: its stops and the points the route
+was dragged through are read from the link (short maps.app.goo.gl links are followed once), so the map follows their roads. On the owner's rides, every one with a place now gets a map.
 
 A still picture of the planned road route under the ride's About box, plus Kurviger as a Route choice.
 

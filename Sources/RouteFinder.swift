@@ -15,6 +15,11 @@ enum RouteFinder {
     static let maxKmStartFromLocation = 25.0
 
     static func find(_ ride: RideEvent, home: CLLocationCoordinate2D) async -> [String] {
+        // A short maps.app.goo.gl link hides the organiser's route: follow it to the full link once.
+        if let link = Route.link(in: ride.notes), Route.linkPlaces(link).count < 2,
+           let full = await expand(link), Route.linkPlaces(full).count >= 2 {
+            return Route.linkPlaces(full)
+        }
         let guessed = await checked(Route.guess(title: ride.title, location: ride.location, notes: ride.notes), ride: ride, home: home)
         if guessed.count >= 2 || !AppleModel.available || ride.notes.isEmpty { return guessed }
         let text = [ride.title, ride.location.isEmpty ? "" : "Location: " + ride.location, ride.notes]
@@ -22,6 +27,14 @@ enum RouteFinder {
         guard let d = await RideDetails.extract(RideDetails.input(post: text)) else { return guessed }
         let read = await checked([d.meet ?? ride.location] + d.stops + [d.destination ?? ""], ride: ride, home: home)
         return read.count > guessed.count ? read : guessed
+    }
+
+    /// Where a short link leads, without cookies (see `Net`).
+    static func expand(_ link: String) async -> String? {
+        guard let url = URL(string: link) else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 20)
+        request.setValue(Web.userAgent, forHTTPHeaderField: "User-Agent")
+        return try? await Net.session.data(for: request).1.url?.absoluteString
     }
 
     /// The places Apple Maps can find near home, in order, without repeats of the same spot. Fewer than two

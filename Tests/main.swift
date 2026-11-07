@@ -693,6 +693,15 @@ do {
     check(Route.kurviger(through: [(-37.65, 145.37), (-37.531, 145.341)]) == "https://kurviger.de/?point=-37.65000,145.37000&point=-37.53100,145.34100",
           "Kurviger gets every point in order")
     check(Route.kurviger(through: [(-37.65, 145.37)]) == nil, "one point isn't a route")
+    // The organiser's maps link is the route (made-up places and points).
+    let g = "https://www.google.com/maps/dir/1+Example+St,+Sunshine+VIC/-37.9,145.2/Pretend+Pier,+Port+Example/@-37.8,145.0,16931m/data=!3m1!1e3!4m33!4m32!1m20!1m1!1s0x1:0x2!2m2!1d144.90!2d-37.83!3m4!1m2!1d145.07!2d-37.88!3s0x3:0x4!1m0!1m5!1m1!1s0x5:0x6!2m2!1d144.93!2d-37.84!3e0"
+    check(Route.linkPlaces(g) == ["-37.83,144.90", "-37.88,145.07", "-37.9,145.2", "-37.84,144.93"],
+          "a Google route's stops and dragged-through points, in order")
+    check(Route.linkPlaces("https://www.google.com/maps/dir/Example+Servo/Pretend+Falls/") == ["Example Servo", "Pretend Falls"], "stops named in the path")
+    check(Route.linkPlaces("https://www.google.com/maps/dir/?api=1&origin=A+Town&destination=C+Town&waypoints=B+Town%7CD+Town") == ["A Town", "B Town", "D Town", "C Town"],
+          "a Google route link made by an app")
+    check(Route.linkPlaces("https://maps.apple.com/?saddr=A+Town&daddr=C+Town") == ["A Town", "C Town"], "an Apple Maps route")
+    check(Route.point("-37.9,145.2")! == (-37.9, 145.2) && Route.point("Pretend Falls") == nil, "map points are read as points")
     // Working out a route from a ride's title and description (made-up rides).
     check(Route.guess(title: "Sunday cruise", location: "Example Servo, Sunshine", notes: "Coffee then heading to Pretend Falls for lunch.")
           == ["Example Servo, Sunshine", "Pretend Falls"], "a destination from \"heading to …\"")
