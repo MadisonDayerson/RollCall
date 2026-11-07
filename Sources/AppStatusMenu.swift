@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import MapKit
 
 extension AppDelegate {
     // MARK: - Menu
@@ -175,6 +176,15 @@ extension AppDelegate {
             if let url = URL(string: Route.appleMaps(from: home, to: first)) { NSWorkspace.shared.open(url) }
         case .waze:
             open(Route.waze(to: first))
+        case .kurviger:
+            let s = store.state.settings
+            let home = CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude)
+            Task {
+                let found = await RoutePlanner.locate(places, near: home) ?? []
+                let points = ([home] + found).map { (latitude: $0.latitude, longitude: $0.longitude) }
+                // A place Apple Maps couldn't find: Google Maps can still search for it by name.
+                open(found.isEmpty ? Route.googleMaps(from: s.homeCity?.nilIfEmpty, through: places) : Route.kurviger(through: points))
+            }
         default:
             open(Route.googleMaps(from: home, through: places))
         }

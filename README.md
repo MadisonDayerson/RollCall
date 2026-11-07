@@ -105,7 +105,9 @@ Each ride's page starts with its status, then **About**: when, where, who it's f
 description. Under it, every ride has the same buttons: **Open event**, **Edit…**, **Route** and **Remove** (one that
 can't do anything yet is greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to. **Route** opens the organiser's route if the
-description has one, otherwise directions from your suburb through the meeting place and stops.
+description has one, otherwise directions from your suburb through the meeting place and stops, in Apple Maps,
+Google Maps, Waze or Kurviger (choose in Settings). When a ride names where it starts and where it goes, its page
+also shows a map of the road route with the distance and riding time; click the map to open Route.
 
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.
@@ -138,10 +140,11 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
   on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
-  or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance. And
+  or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance, and
+  plans the road route between a ride's places to draw its map. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
-  (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps or Waze) to plan the route.
+  (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps, Waze or Kurviger) to plan the route.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
   choose. Text from chat messages isn't added.
 

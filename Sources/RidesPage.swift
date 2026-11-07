@@ -100,7 +100,7 @@ struct RideSectionView: View {
                     RideRow(ride: r, model: model)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 6).padding(.horizontal, 8)
-                        .background(selected ? Color.secondary.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                        .background(selected ? Color.accentColor.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
                         .contentShape(Rectangle())
                         .onTapGesture { model.selectedRide = r.id }
                         .padding(.leading, 20)
@@ -210,6 +210,8 @@ struct RideDetail: View {
                     }
                     .help(model.isPast(ride) ? "Remove it from your past rides" : "Remove this ride. It won't come back when its source is checked again.")
                 }
+
+                RouteBox(ride: ride, model: model).id(ride.id)
 
             }
             .padding(20)

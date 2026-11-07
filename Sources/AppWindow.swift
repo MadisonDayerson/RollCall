@@ -77,6 +77,21 @@ extension AppDelegate {
         ui.selectedRide = store.past().first?.id
         await snap("1-past", window)
         if let pastDemo { store.state.events[pastDemo.id] = nil; store.state.decisions[pastDemo.id] = nil }
+        // A ride with a start and a destination, for its route map.
+        ui.rideFilter = .all
+        // A sample one if there isn't a real one (never saved: it's removed straight after).
+        let routeDemo: RideEvent? = (store.upcoming() + store.past()).contains { Route.places(meetingPlace: $0.location, notes: $0.notes).count >= 2 } ? nil : RideEvent(
+            id: "demo:route", title: "Yarra Glen to Sugarloaf Reservoir", start: Date().addingTimeInterval(86400),
+            end: Date().addingTimeInterval(86400 + 3 * 3600), allDay: false, location: "Yarra Glen VIC",
+            notes: "Coffee first, then the twisties.\nStops: Kinglake\nDestination: Sugarloaf Reservoir",
+            url: nil, source: "manual", sourceName: "Added by you", lastSeen: Date())
+        if let routeDemo { store.state.events[routeDemo.id] = routeDemo }
+        if let routed = (store.upcoming() + store.past()).first(where: { Route.places(meetingPlace: $0.location, notes: $0.notes).count >= 2 }) {
+            ui.selectedRide = routed.id
+            try? await Task.sleep(nanoseconds: 4_000_000_000)  // time for Apple Maps to plan it
+            await snap("1-route", window)
+        }
+        if let routeDemo { store.state.events[routeDemo.id] = nil }
         ui.rideFilter = filter
         // Back from another tab: the list must redraw cleanly, with no rows left over from the last one.
         ui.selectedRide = nil

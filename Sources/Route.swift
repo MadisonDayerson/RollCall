@@ -2,7 +2,7 @@ import Foundation
 
 /// Which maps app Route opens.
 enum MapsApp: String, Codable, CaseIterable {
-    case automatic, apple, google, waze
+    case automatic, apple, google, waze, kurviger
 
     var name: String {
         switch self {
@@ -10,11 +10,12 @@ enum MapsApp: String, Codable, CaseIterable {
         case .apple: return "Apple Maps"
         case .google: return "Google Maps"
         case .waze: return "Waze"
+        case .kurviger: return "Kurviger"
         }
     }
 
     /// Apple Maps and Waze links only hold one place, so a route with stops goes to the first one.
-    var holdsStops: Bool { self == .google }
+    var holdsStops: Bool { self == .google || self == .kurviger }
 }
 
 /// Directions for a ride. A route the organiser shared in the description wins. Otherwise it's from home
@@ -103,6 +104,15 @@ enum Route {
         q.append(URLQueryItem(name: "travelmode", value: "driving"))
         c.queryItems = q
         c.percentEncodedQuery = c.percentEncodedQuery?.replacingOccurrences(of: "|", with: "%7C")
+        return c.string
+    }
+
+    /// Kurviger's motorbike route planner in the browser, through every point (latitude, longitude) in order.
+    /// Its links take map points rather than place names, so the places are found with Apple Maps first.
+    static func kurviger(through points: [(latitude: Double, longitude: Double)]) -> String? {
+        guard points.count >= 2 else { return nil }
+        var c = URLComponents(string: "https://kurviger.de/")!
+        c.queryItems = points.map { URLQueryItem(name: "point", value: String(format: "%.5f,%.5f", $0.latitude, $0.longitude)) }
         return c.string
     }
 

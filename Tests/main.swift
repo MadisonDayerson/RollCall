@@ -690,6 +690,9 @@ do {
           "a chat ride is named after where it starts and ends")
     check(RideDetails.routeTitle(from: "12 Example St, Sunshine VIC 3020", to: nil) == "Ride from Sunshine", "a street address gives its suburb")
     check(RideDetails.routeTitle(from: nil, to: "Pretend Falls") == "Ride to Pretend Falls", "only the destination")
+    check(Route.kurviger(through: [(-37.65, 145.37), (-37.531, 145.341)]) == "https://kurviger.de/?point=-37.65000,145.37000&point=-37.53100,145.34100",
+          "Kurviger gets every point in order")
+    check(Route.kurviger(through: [(-37.65, 145.37)]) == nil, "one point isn't a route")
     check(RideDetails.routeTitle(from: nil, to: nil) == nil, "no places, no route name")
     check(RideDetails.parse("Sorry, I can't help with that.", now: now) == nil, "a reply in the wrong shape is ignored")
     check(AppleModel.tidied("Shit yeah, ride Sunday you legends") == "… yeah, ride Sunday you legends", "swearing is left out of what the model reads")
