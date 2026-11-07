@@ -189,6 +189,13 @@ struct Settings: Codable {
     var keepDismissed: Int { keepDismissedDays ?? 7 }
 }
 
+/// A ride's route as RollCall worked it out: places Apple Maps could find, in order. `from` is a fingerprint of
+/// the ride's details when it was worked out, so a changed description is read again. No places means none found.
+struct FoundRoute: Codable, Equatable {
+    var places: [String]
+    var from: String
+}
+
 /// Your own changes to a ride's details. They're kept apart from the ride, so a refresh of its source
 /// doesn't undo them.
 struct RideEdit: Codable, Equatable {
@@ -243,6 +250,8 @@ struct AppState: Codable {
     var rideEdits: [String: RideEdit] = [:]
     /// Ride id -> its start, for rides you removed, so checking the source again doesn't bring them back.
     var removedRides: [String: Date] = [:]
+    /// Ride id -> the start, stops and destination RollCall found for it and Apple Maps could find.
+    var foundRoutes: [String: FoundRoute] = [:]
 
     init() {}
 
@@ -270,6 +279,7 @@ struct AppState: Codable {
         crew = get(.crew, [:])
         rideEdits = get(.rideEdits, [:])
         removedRides = get(.removedRides, [:])
+        foundRoutes = get(.foundRoutes, [:])
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion
@@ -489,6 +499,7 @@ final class Store {
             }
         }
         state.rideEdits = state.rideEdits.filter { state.events[$0.key] != nil }
+        state.foundRoutes = state.foundRoutes.filter { state.events[$0.key] != nil }
         state.removedRides = state.removedRides.filter { $0.value > weekAgo }
         let cutoff = now.addingTimeInterval(-120 * 86400)
         state.seenPosts = state.seenPosts.filter { $0.value > cutoff }

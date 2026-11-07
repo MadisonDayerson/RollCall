@@ -47,13 +47,14 @@ enum RoutePlanner {
         return points
     }
 
-    private static func locate(_ place: String, near home: CLLocationCoordinate2D) async -> CLLocationCoordinate2D? {
-        let key = place.lowercased()
+    /// `within` is how wide an area (in metres) the search favours around `home`.
+    static func locate(_ place: String, near home: CLLocationCoordinate2D, within: Double = 600_000) async -> CLLocationCoordinate2D? {
+        let key = "\(place.lowercased())|\(Int(home.latitude * 10)),\(Int(home.longitude * 10))|\(Int(within))"
         if let cached = found[key] { return cached }
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = place
         // Places in the rider's part of the world first: "Shell Coldstream", not one overseas.
-        request.region = MKCoordinateRegion(center: home, latitudinalMeters: 600_000, longitudinalMeters: 600_000)
+        request.region = MKCoordinateRegion(center: home, latitudinalMeters: within, longitudinalMeters: within)
         let spot = try? await MKLocalSearch(request: request).start().mapItems.first?.placemark.coordinate
         found[key] = spot
         return spot

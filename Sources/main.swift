@@ -21,6 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var timers: [Timer] = []
     /// Source id -> last automatic or manual read, even a failed one, so failing sources wait their turn.
     var lastTried: [String: Date] = [:]
+    /// Rides whose route is being worked out now.
+    var findingRoutes: Set<String> = []
 
     func applicationDidFinishLaunching(_ note: Notification) {
         Net.removeOldCache()

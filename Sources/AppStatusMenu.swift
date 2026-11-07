@@ -164,7 +164,8 @@ extension AppDelegate {
             open(link.replacingOccurrences(of: "http://", with: "https://"))
             return
         }
-        let places = Route.places(meetingPlace: ride.location, notes: ride.notes)
+        // The maps apps already start from your suburb, so it isn't repeated as a stop.
+        let places = Array(store.routePlaces(ride).drop { $0 == store.homePlace })
         guard let first = places.first else { return }
         let home = store.state.settings.homeCity?.nilIfEmpty
         let hasAppleMaps = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps") != nil

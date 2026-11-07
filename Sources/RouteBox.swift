@@ -2,7 +2,7 @@ import SwiftUI
 import MapKit
 
 /// The ride's route on its page: a still map of the road route from the meeting place through any stops to the
-/// destination, with the distance and riding time. Clicking it opens Route. Rides without two places show nothing.
+/// destination (or from your suburb to a one-place ride), with the distance and riding time. Clicking it opens Route.
 struct RouteBox: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
@@ -16,7 +16,10 @@ struct RouteBox: View {
     private static let size = CGSize(width: 480, height: 260)
 
     var body: some View {
-        let places = Route.places(meetingPlace: ride.location, notes: ride.notes)
+        let places = model.store.routePlaces(ride)
+        // Work out the start, stops and destination from the description; the map updates once they're found.
+        Color.clear.frame(height: 0)
+            .task(id: Route.fingerprint(ride)) { await model.app.findRoute(for: ride) }
         if places.count >= 2 {
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {

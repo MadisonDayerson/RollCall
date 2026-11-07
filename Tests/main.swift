@@ -693,6 +693,33 @@ do {
     check(Route.kurviger(through: [(-37.65, 145.37), (-37.531, 145.341)]) == "https://kurviger.de/?point=-37.65000,145.37000&point=-37.53100,145.34100",
           "Kurviger gets every point in order")
     check(Route.kurviger(through: [(-37.65, 145.37)]) == nil, "one point isn't a route")
+    // Working out a route from a ride's title and description (made-up rides).
+    check(Route.guess(title: "Sunday cruise", location: "Example Servo, Sunshine", notes: "Coffee then heading to Pretend Falls for lunch.")
+          == ["Example Servo, Sunshine", "Pretend Falls"], "a destination from \"heading to …\"")
+    check(Route.guess(title: "Hills loop", location: "Make Believe Bakery", notes: "Easy pace, lunch at Lake Imaginary before home.")
+          == ["Make Believe Bakery", "Lake Imaginary"], "a destination from \"lunch at …\"")
+    check(Route.guess(title: "Yarra Glen to Sugarloaf Reservoir", location: "", notes: "") == ["Yarra Glen", "Sugarloaf Reservoir"],
+          "a title like \"A to B\" gives both ends")
+    check(Route.guess(title: "Ride to Pretend Falls", location: "Example Servo", notes: "") == ["Example Servo", "Pretend Falls"],
+          "\"Ride to B\" keeps the meeting place as the start")
+    check(Route.guess(title: "Bike night", location: "Example Waterfront", notes: "Heading to Saturday's show after.") == ["Example Waterfront"],
+          "a day isn't a place")
+    check(Route.guess(title: "Back to the 80s night", location: "Example Hall", notes: "") == ["Example Hall"], "a title that isn't a route")
+    do {
+        let st = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-route-\(UUID().uuidString).json"))
+        let ride = RideEvent(id: "r1", title: "Sunday cruise", start: Date(), end: nil, allDay: false, location: "Example Servo",
+                             notes: "Nice and easy.", url: nil, source: "manual", sourceName: "Added by you", lastSeen: Date())
+        st.state.foundRoutes["r1"] = FoundRoute(places: ["Example Servo", "Pretend Falls"], from: Route.fingerprint(ride))
+        check(st.routePlaces(ride) == ["Example Servo", "Pretend Falls"], "a found route is used for the map")
+        var changed = ride; changed.notes = "Now going somewhere else."
+        st.state.settings.homeName = "Sunshine"; st.state.settings.homeCity = "Sunshine"
+        check(st.routePlaces(changed) == ["Sunshine", "Example Servo"],
+              "a found route is worked out again when the details change; meanwhile a one-place ride starts from your suburb")
+        var nowhere = ride; nowhere.location = ""; nowhere.notes = ""
+        check(st.routePlaces(nowhere).isEmpty, "a ride with no place has no route")
+        var written = ride; written.notes = "Destination: Lake Imaginary"
+        check(st.routePlaces(written) == ["Example Servo", "Lake Imaginary"], "places written in the details win")
+    }
     check(RideDetails.routeTitle(from: nil, to: nil) == nil, "no places, no route name")
     check(RideDetails.parse("Sorry, I can't help with that.", now: now) == nil, "a reply in the wrong shape is ignored")
     check(AppleModel.tidied("Shit yeah, ride Sunday you legends") == "… yeah, ride Sunday you legends", "swearing is left out of what the model reads")

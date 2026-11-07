@@ -106,8 +106,11 @@ description. Under it, every ride has the same buttons: **Open event**, **Editâ€
 can't do anything yet is greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Editâ€¦** changes the name, time, length, place,
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to. **Route** opens the organiser's route if the
 description has one, otherwise directions from your suburb through the meeting place and stops, in Apple Maps,
-Google Maps, Waze or Kurviger (choose in Settings). When a ride names where it starts and where it goes, its page
-also shows a map of the road route with the distance and riding time; click the map to open Route.
+Google Maps, Waze or Kurviger (choose in Settings). Each ride's page also shows a map of the road route with the distance
+and riding time (click it to open Route). RollCall works out the start, stops and destination from the ride's title
+and description (with Apple Intelligence on the Mac when the wording isn't plain), checks each place with Apple Maps,
+and leaves out ones it can't find. A ride at one place, like a track day or bike night, shows the trip there from
+your suburb.
 
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.
