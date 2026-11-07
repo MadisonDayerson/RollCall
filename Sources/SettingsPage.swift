@@ -101,7 +101,7 @@ struct SettingsPage: View {
         .onDisappear(perform: savePlace)
     }
 
-    /// "Footscray, VIC, Australia" once the home area has been found on the map.
+    /// "Sunshine, VIC, Australia" once the home area has been found on the map.
     var foundPlace: String? {
         let st = model.store.state.settings
         let parts = [st.homeCity, st.homeRegion, st.homeCountry].compactMap { $0 }

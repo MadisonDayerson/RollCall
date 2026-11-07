@@ -43,7 +43,7 @@ struct ReviewPage: View {
                         HStack(alignment: .firstTextBaseline) {
                             PatchLabel(text: "Posts that didn't say when", count: posts.count)
                             Spacer()
-                            Button("Mark all read") { model.app.markPostsRead() }
+                            Button("Mark read") { model.app.markPostsRead() }.help("Mark all of these posts as read")
                         }
                         .padding(.top, 4)
                     }

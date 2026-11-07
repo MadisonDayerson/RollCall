@@ -11,9 +11,12 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
   date is one: filled for Going (like the icon), dashed for Maybe, outlined while undecided, faded when
   skipped or past, with a small ? when the date was read from a post.
 - **Short buttons.** One or two words, a verb where it helps ("Open event", "Edit…", "Route", "Remove"). The
-  heading or page already says what it's about, and anything more goes in the tooltip (`.help`).
+  heading or page already says what it's about, and anything more goes in the tooltip (`.help`). Longer only where
+  it's clearer: the setup guide's steps ("I've installed it"), "Not a ride" and "Delete all data…".
 - **Spaced capitals** (`PatchLabel`) for section headings, like "ROLLCALL" under the logo. Titles stay in
   bold sentence case, and everything else is the system font.
+- **Maps in greys.** Route maps use Apple's muted map turned to greys, with the route in the text colour, so they
+  sit in the black and white.
 - **Gothic lettering, sparingly.** Only "Roll Call" at the foot of the sidebar and "RC" on empty pages
   (`Brand.wordmark`, `Brand.monogram`). They're pictures drawn by `make_wordmark.swift`, because the
   font's licence doesn't allow shipping it. Never use it for text people need to read, numbers included.

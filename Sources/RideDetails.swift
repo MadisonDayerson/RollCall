@@ -58,8 +58,8 @@ enum RideDetails {
         }
     }
 
-    /// The name of a place without its street number, state or postcode: "216 Lorimer St, Port Melbourne VIC 3207"
-    /// → "Port Melbourne", "Sugarloaf Reservoir, Christmas Hills" → "Sugarloaf Reservoir".
+    /// The name of a place without its street number, state or postcode: "12 Example St, Sunshine VIC 3020"
+    /// → "Sunshine", "Sugarloaf Reservoir, Christmas Hills" → "Sugarloaf Reservoir".
     static func shortPlace(_ place: String) -> String {
         let parts = place.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         guard var name = parts.first else { return place }

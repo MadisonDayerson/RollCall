@@ -137,7 +137,8 @@ tags in the calendar event rather than showing friends' locations or posting for
   send anything about you, and nobody else using RollCall can see your rides, chats or settings.
 - **Chats stay on your Mac.** They're read through Beeper Desktop on your own Mac, with read-only permission.
   The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
-  Intelligence is on), so messages never go to an online AI. Before the model reads them, swearing is left out, tracking is taken off links and long
+  Intelligence is on), so messages never go to an online AI. The same on-device model reads ride descriptions to
+  find their start, stops and destination. Before the model reads them, swearing is left out, tracking is taken off links and long
   conversations are trimmed to the messages that matter; your messages themselves aren't changed.
 - **Saved rides are private.** They're in `~/Library/Application Support/RollCall`, which only your Mac
   account can open. RollCall keeps no web cache or cookies.
@@ -148,7 +149,8 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
   on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
-  or details about you. It asks Apple Maps where a ride's location is, so it can work out the distance, and
+  or details about you, and follows a short Google Maps link (maps.app.goo.gl) in a ride's description once to
+  find the route it points to. It asks Apple Maps where a ride's location is, so it can work out the distance, and
   plans the road route between a ride's places to draw its map. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb

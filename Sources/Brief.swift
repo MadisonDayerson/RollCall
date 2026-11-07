@@ -41,7 +41,7 @@ enum Brief {
         }
     }
 
-    /// Just the letters and digits, lowercased, so "216 Lorimer St," matches "216 lorimer st".
+    /// Just the letters and digits, lowercased, so "12 Example St," matches "12 example st".
     private static func letters(_ s: String) -> String {
         String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
     }
