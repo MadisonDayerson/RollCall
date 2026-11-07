@@ -18,6 +18,7 @@ extension AppDelegate {
             r.summary = await PlanSummariser.summarise(r, chatName: feed.name)
             // The on-device model read it and found no plan: keep it out of the way.
             if !r.summary.isPlan { r.status = .dismissed }
+            r.dismissed = nil
             if r.status == .dismissed { r.lines = [] }  // keep no more of people's messages than needed
             let wasShowing = old?.status == .open && old?.summary.isPlan == true
             // The same message sent to several chats: one heads-up is enough.
@@ -102,7 +103,8 @@ extension AppDelegate {
         let intro = d != nil ? "Apple Intelligence filled this in from the conversation in \(chatName), on this Mac. Check it before adding."
                              : "From the conversation in \(chatName). Check the time and meeting place."
         guard let ride = Dialogs.manualRide(
-            prefill: .init(title: s.byAI ? s.title : d?.title ?? s.title, start: start, hours: d?.hours ?? 3,
+            // Where it starts and ends names a chat ride better than "Sam's ride".
+            prefill: .init(title: RideDetails.routeTitle(from: d?.meet, to: d?.destination) ?? (s.byAI ? s.title : d?.title ?? s.title), start: start, hours: d?.hours ?? 3,
                            location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", link: link, notes: notes),
             note: intro + (hasTime ? "" : " No time was agreed, so 9am is filled in.")) else { return }
         // Only the summary goes in the ride (and so the calendar): the chat's messages stay in the chat.
@@ -113,7 +115,8 @@ extension AppDelegate {
                             url: ride.link.isEmpty ? nil : ride.link)
         store.merge([item], source: "manual", sourceName: "Chat: " + chatName)
         let rideID = Store.eventID(source: "manual", item: item)
-        for other in crossPosts(r) {
+        // Every chat it was posted in, including copies you'd dismissed.
+        for other in store.state.reviews.values where other.status != .added && CrossPost.samePlan(r, other) {
             store.state.reviews[other.id]?.status = .added
             store.state.reviews[other.id]?.rideID = rideID
         }
@@ -128,15 +131,32 @@ extension AppDelegate {
         }
     }
 
+    /// Not a ride: the plan moves to Reviewed, where it stays for as long as Settings → Privacy says.
     func dismissReview(_ id: String) {
-        for other in store.state.reviews[id].map(crossPosts) ?? [] {
+        let now = Date()
+        for other in (store.state.reviews[id].map(crossPosts) ?? []) + [store.state.reviews[id]].compactMap({ $0 }) {
             store.state.reviews[other.id]?.status = .dismissed
-            store.state.reviews[other.id]?.lines = []
+            store.state.reviews[other.id]?.dismissed = now
         }
-        store.state.reviews[id]?.status = .dismissed
-        store.state.reviews[id]?.lines = []
+        store.forgetDismissedMessages(now: now)
         store.save()
         updateBadge()
+    }
+
+    /// Puts a dismissed plan back under Possible plans.
+    func restoreReview(_ id: String) {
+        guard let r = store.state.reviews[id] else { return }
+        for other in store.reviewedPlans() where other.id == id || CrossPost.samePlan(r, other) {
+            store.state.reviews[other.id]?.status = .open
+            store.state.reviews[other.id]?.dismissed = nil
+        }
+        store.save()
+        updateBadge()
+    }
+
+    /// Plans you dismissed, once each, for the Reviewed section.
+    func reviewedPlans() -> [PlanReview] {
+        CrossPost.groups(store.reviewedPlans(), same: CrossPost.samePlan).map { $0[0] }
     }
 
     /// "Check now" for a single source.

@@ -9,6 +9,8 @@ struct ReviewPage: View {
     var body: some View {
         let plans = model.app.openReviews()
         let posts = model.app.postsToLookAt()
+        let reviewed = model.app.reviewedPlans()
+        let keep = model.store.state.settings.keepDismissed
         ScrollViewReader { scroller in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -25,6 +27,24 @@ struct ReviewPage: View {
                     }
                     ForEach(plans, id: \.id) { r in
                         PlanCard(review: r, model: model).id(r.id)
+                    }
+                    if keep > 0 {
+                        DisclosureGroup {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Plans you marked Not a ride, kept for \(keep == 1 ? "a day" : keep == 7 ? "a week" : "\(keep) days") in case you change your mind. Change how long in Settings → Privacy.")
+                                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                if reviewed.isEmpty {
+                                    Text("Nothing here.").foregroundStyle(.secondary)
+                                }
+                                ForEach(reviewed, id: \.id) { r in
+                                    PlanCard(review: r, model: model).id(r.id)
+                                }
+                            }
+                            .padding(.top, 8)
+                        } label: {
+                            PatchLabel(text: "Reviewed", count: reviewed.count)
+                        }
+                        .padding(.top, 4)
                     }
 
                     Divider().padding(.vertical, 6)
@@ -113,7 +133,13 @@ struct PlanCard: View {
                     .disabled(model.readingReview != nil)
                 Button("Open chat") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
                 Spacer()
-                Button("Not a ride") { app.dismissReview(review.id) }
+                if review.status == .dismissed {
+                    Button("Back to review") { app.restoreReview(review.id) }
+                        .help("Put it back under Possible plans")
+                } else {
+                    Button("Not a ride") { app.dismissReview(review.id) }
+                        .help("Move it to Reviewed")
+                }
             }
         }
         .padding(14)

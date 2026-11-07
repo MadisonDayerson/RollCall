@@ -182,8 +182,11 @@ struct Settings: Codable {
     var skippedVersion: String? = nil
     /// Which maps app Route opens (nil means automatic).
     var mapsApp: MapsApp? = nil
+    /// Days to keep the messages of plans you dismissed, so you can bring one back (nil means 7; 0 keeps none).
+    var keepDismissedDays: Int? = nil
 
     var crew: Together { together ?? Together() }
+    var keepDismissed: Int { keepDismissedDays ?? 7 }
 }
 
 /// Your own changes to a ride's details. They're kept apart from the ride, so a refresh of its source
@@ -493,8 +496,24 @@ final class Store {
         state.reviews = state.reviews.filter { _, r in
             r.updated > now.addingTimeInterval(-14 * 86400) && (r.summary.start.map { $0 > now.addingTimeInterval(-86400) } ?? true)
         }
-        // A dismissed conversation only needs its summary; people's messages aren't kept.
-        for (id, r) in state.reviews where r.status == .dismissed && !r.lines.isEmpty { state.reviews[id]?.lines = [] }
+        forgetDismissedMessages(now: now)
+    }
+
+    /// A dismissed conversation only needs its summary. People's messages stay only for plans you dismissed
+    /// yourself, and only as long as Settings → Privacy says.
+    func forgetDismissedMessages(now: Date = Date()) {
+        let since = now.addingTimeInterval(-Double(state.settings.keepDismissed) * 86400)
+        for (id, r) in state.reviews where r.status == .dismissed && !r.lines.isEmpty {
+            if (r.dismissed ?? .distantPast) <= since { state.reviews[id]?.lines = [] }
+        }
+    }
+
+    /// Plans you dismissed that can still be brought back, newest first.
+    func reviewedPlans(now: Date = Date()) -> [PlanReview] {
+        let since = now.addingTimeInterval(-Double(state.settings.keepDismissed) * 86400)
+        return state.reviews.values
+            .filter { $0.status == .dismissed && !$0.lines.isEmpty && ($0.dismissed ?? .distantPast) > since }
+            .sorted { $0.dismissed! > $1.dismissed! || ($0.dismissed == $1.dismissed && $0.id < $1.id) }
     }
 }
 

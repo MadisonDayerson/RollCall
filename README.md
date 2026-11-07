@@ -44,7 +44,8 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP) and
   the route. A ? on the date means it was read from a post, so double-check it.
   Rides you went on move to **Past** once they're over.
-- **To review:** possible ride plans from your chats, plus ride posts that didn't say when.
+- **To review:** possible ride plans from your chats, plus ride posts that didn't say when. Plans you mark
+  **Not a ride** wait under **Reviewed** for a week, in case you change your mind.
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
   any of them with **Check for new rides** (right-click a heading to change a whole group).
@@ -94,7 +95,8 @@ through each step below in plain language and checks each one for you.
 3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
-where, who's in) and asks you to review it. A message sent to several of your chats shows once. **Add ride…** has Apple Intelligence read the conversation and fill in the name, start, length, meeting place, link and notes (destination and stops) for you to check. Summaries use
+where, who's in) and asks you to review it. Rides are named after where they start and end when the chat says,
+like "Yarra Glen to Sugarloaf Reservoir". A message sent to several of your chats shows once. **Add ride…** has Apple Intelligence read the conversation and fill in the name, start, length, meeting place, link and notes (destination and stops) for you to check. Summaries use
 Apple Intelligence on your Mac where available. Beeper needs to be open for chats to be checked.
 
 ## Riding with friends
@@ -130,7 +132,8 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **Saved rides are private.** They're in `~/Library/Application Support/RollCall`, which only your Mac
   account can open. RollCall keeps no web cache or cookies.
 - **Only what's needed is kept.** Your home area is saved as just the suburb and a rough spot (about 1 km).
-  Messages from conversations you dismiss aren't kept, removing a chat removes what was kept from it, and
+  Messages from plans you mark Not a ride are deleted after a week (or straight away, or after a day or two
+  weeks: choose in Settings → Privacy), removing a chat removes what was kept from it, and
   past rides you didn't go to are removed after a week.
 - **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
   on your Mac and disconnects Beeper.

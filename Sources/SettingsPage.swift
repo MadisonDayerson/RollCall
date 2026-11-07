@@ -69,6 +69,16 @@ struct SettingsPage: View {
             Section("Privacy") {
                 Text("Your rides, chats and settings stay on this Mac, readable only by you. RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Picker("Keep dismissed plans", selection: Binding(
+                    get: { model.store.state.settings.keepDismissed },
+                    set: { model.store.state.settings.keepDismissedDays = $0; model.store.forgetDismissedMessages(); model.store.save() })) {
+                    Text("Don't keep").tag(0)
+                    Text("1 day").tag(1)
+                    Text("1 week").tag(7)
+                    Text("2 weeks").tag(14)
+                }
+                Text("Plans you mark Not a ride wait under Reviewed on the To review page, with their messages, so you can still add one. After this long, the messages are deleted.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button("Privacy details") { app.open("https://github.com/MadisonDayerson/RollCall#your-privacy") }
                     Button("Delete all data…", role: .destructive) { model.later { app.deleteAllData() } }

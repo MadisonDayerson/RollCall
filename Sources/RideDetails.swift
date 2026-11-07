@@ -36,7 +36,7 @@ enum RideDetails {
         confirmed it describes a ride. Use the time each message was sent to work out what "tomorrow" or "Sunday" meant. \
         Only use what the text says. Never invent a place, time or link: write unknown instead. \
         Reply in exactly this format, one item per line:
-        TITLE: a short, clear name for the ride or event in 2 to 7 words, in normal capitals (not all capitals), without dates
+        TITLE: a short, clear name for the ride or event in 2 to 7 words, in normal capitals (not all capitals), without dates, never named after a person
         START: when it starts or when people meet, as YYYY-MM-DD HH:MM in 24-hour time, or YYYY-MM-DD if no time was given, or unknown
         END: when it finishes, as YYYY-MM-DD HH:MM, or unknown
         MEET: the meeting point or starting address, or unknown
@@ -45,6 +45,27 @@ enum RideDetails {
         LINK: a web link for the event or route that appears in the text, or unknown
         DETAILS: one to three plain sentences a rider needs: what it is, what to bring, cost, rules. No names of people.
         """
+    }
+
+    /// A chat ride named after where it goes: "Yarra Glen to Sugarloaf Reservoir", "Ride to Sugarloaf Reservoir"
+    /// or "Ride from Yarra Glen". Nil when the messages named neither end.
+    static func routeTitle(from meet: String?, to destination: String?) -> String? {
+        switch (meet.map(shortPlace), destination.map(shortPlace)) {
+        case let (a?, b?) where a.lowercased() != b.lowercased(): return "\(a) to \(b)"
+        case let (_, b?): return "Ride to \(b)"
+        case let (a?, nil): return "Ride from \(a)"
+        default: return nil
+        }
+    }
+
+    /// The name of a place without its street number, state or postcode: "216 Lorimer St, Port Melbourne VIC 3207"
+    /// → "Port Melbourne", "Sugarloaf Reservoir, Christmas Hills" → "Sugarloaf Reservoir".
+    static func shortPlace(_ place: String) -> String {
+        let parts = place.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        guard var name = parts.first else { return place }
+        if name.first?.isNumber == true, parts.count > 1 { name = parts[1] }
+        name = name.replacingOccurrences(of: #"\s+(VIC|NSW|QLD|SA|WA|TAS|NT|ACT)\b.*$|\s+\d{4}$"#, with: "", options: .regularExpression)
+        return name.isEmpty ? place : name
     }
 
     /// The text to read: a conversation's messages with when each was sent, or a post as it is.

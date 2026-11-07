@@ -112,6 +112,8 @@ struct DateBadge: View {
                     .offset(x: 5 * scale, y: -5 * scale)
             }
         }
+        // Fade the patch as one piece, so a filled patch's frame fades with it instead of showing darker.
+        .compositingGroup()
         .opacity(decision == .skip ? 0.5 : past ? 0.7 : 1)
         .accessibilityHidden(true)
     }

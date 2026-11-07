@@ -53,6 +53,9 @@ struct PlanReview: Codable, Equatable {
     var created: Date
     var updated: Date
     var rideID: String?
+    /// When you dismissed it with Not a ride. Its messages are kept for a while after (Settings → Privacy),
+    /// so it can be brought back; nil when RollCall itself found no plan in it.
+    var dismissed: Date? = nil
 
     /// The message to jump to in Beeper: the latest one that mentioned when.
     var keyMessage: ChatLine? { lines.last(where: \.mentionsWhen) ?? lines.last }
@@ -230,7 +233,7 @@ enum PlanSummariser {
         if the messages don't name a meeting point or destination, WHERE is unknown, and a vague area such as \
         "in the west" is not a place. Reply in exactly this format, one item per line:
         PLAN: yes or no (yes if people are arranging or announcing a ride, meetup or motorbike event)
-        TITLE: a short name for the ride, meetup or event
+        TITLE: a short name for the ride, meetup or event. If the messages say where it starts or where it goes, name it after those places, like "Yarra Glen to Sugarloaf Reservoir" or "Ride to Marysville". Never name it after a person
         WHEN: the agreed or proposed day and time in plain words (say "afternoon" or "evening" if no exact time was given), or unknown
         DATE: the start as YYYY-MM-DD HH:MM in 24-hour time only if someone gave an exact time, otherwise YYYY-MM-DD, or unknown
         WHERE: the meeting point or destination, or unknown

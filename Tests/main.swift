@@ -552,7 +552,19 @@ do {
     }
     st.prune(refreshedSources: [], refreshStarted: Date())
     check(st.state.reviews["a"]?.lines.isEmpty == true && st.state.reviews["b"]?.lines.count == 1,
-          "dismissed conversations don't keep people's messages")
+          "conversations RollCall dismissed itself don't keep people's messages")
+    // Ones you dismissed wait under Reviewed for as long as Settings says.
+    for (id, daysAgo) in [("c", 2.0), ("d", 9.0)] {
+        st.state.reviews[id] = PlanReview(id: id, feedID: "beeper-x", chatID: id, lines: lines, summary: PlanFinder.guess(lines, now: Date()),
+                                          status: .dismissed, created: Date(), updated: Date(), rideID: nil,
+                                          dismissed: Date().addingTimeInterval(-daysAgo * 86400))
+    }
+    st.prune(refreshedSources: [], refreshStarted: Date())
+    check(st.reviewedPlans().map(\.id) == ["c"] && st.state.reviews["d"]?.lines.isEmpty == true,
+          "a plan you dismissed keeps its messages for a week, then they're deleted")
+    st.state.settings.keepDismissedDays = 0
+    st.forgetDismissedMessages()
+    check(st.reviewedPlans().isEmpty && st.state.reviews["c"]?.lines.isEmpty == true, "Don't keep deletes them straight away")
 }
 do {
     let st = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-home-\(UUID().uuidString).json"))
@@ -674,6 +686,11 @@ do {
           "Route follows the filled-in stops")
     let vague = RideDetails.parse("TITLE: Night ride\nSTART: 2030-01-01\nMEET: the west\nLINK: www.example.com", now: now)
     check(vague?.start == nil && vague?.meet == nil && vague?.link == nil, "far-off dates, vague areas and half links are left out")
+    check(RideDetails.routeTitle(from: "Yarra Glen", to: "Sugarloaf Reservoir, Christmas Hills VIC 3775") == "Yarra Glen to Sugarloaf Reservoir",
+          "a chat ride is named after where it starts and ends")
+    check(RideDetails.routeTitle(from: "12 Example St, Sunshine VIC 3020", to: nil) == "Ride from Sunshine", "a street address gives its suburb")
+    check(RideDetails.routeTitle(from: nil, to: "Pretend Falls") == "Ride to Pretend Falls", "only the destination")
+    check(RideDetails.routeTitle(from: nil, to: nil) == nil, "no places, no route name")
     check(RideDetails.parse("Sorry, I can't help with that.", now: now) == nil, "a reply in the wrong shape is ignored")
     check(AppleModel.tidied("Shit yeah, ride Sunday you legends") == "… yeah, ride Sunday you legends", "swearing is left out of what the model reads")
     check(AppleModel.tidied("Meet at Shitake Cafe? Scunthorpe") == "Meet at … Cafe? Scunthorpe", "words that only start like one may be hidden too, which only affects what the model reads")
