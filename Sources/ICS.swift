@@ -12,6 +12,8 @@ struct ICSEvent {
     var url: String?
     var latitude: Double?
     var longitude: Double?
+    /// Your own reply, where the calendar says (Facebook's: Going or Interested).
+    var response: Decision? = nil
 }
 
 /// A small iCalendar reader: enough for Meetup, Facebook, Google Calendar and WordPress
@@ -158,7 +160,7 @@ enum ICSParser {
         }
 
         let uid = first("UID")?.value ?? "\(first("SUMMARY")?.value ?? "event")-\(ds.value)"
-        let base = ICSEvent(
+        var base = ICSEvent(
             uid: uid,
             title: unescape(first("SUMMARY")?.value ?? "Untitled event"),
             start: start,
@@ -170,6 +172,11 @@ enum ICSParser {
             latitude: lat,
             longitude: lon
         )
+        switch first("PARTSTAT")?.value.uppercased() {
+        case "ACCEPTED": base.response = .attending
+        case "TENTATIVE": base.response = .maybe
+        default: break
+        }
 
         guard let rrule = first("RRULE")?.value else { return [base] }
         let exdates = Set(props.filter { $0.name == "EXDATE" }.flatMap { p in

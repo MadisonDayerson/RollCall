@@ -295,7 +295,7 @@ struct FacebookCalendarBox: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Your Facebook events").font(.headline)
             if connected {
-                Label("Connected. Bike events you're Going or Interested in on Facebook come in by themselves.",
+                Label("Connected. Bike events you're Going or Interested in on Facebook come in by themselves, as Going or Maybe.",
                       systemImage: "checkmark.circle.fill")
                     .fixedSize(horizontal: false, vertical: true)
                 // The field has its own line, so its hint is never cut short by the buttons.

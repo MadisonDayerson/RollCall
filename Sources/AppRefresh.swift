@@ -76,6 +76,10 @@ extension AppDelegate {
             let r = try await SourceReader.read(feed, store: store)
             var changed = store.merge(r.events, source: feed.id, sourceName: feed.name)
             changed += store.merge(r.guessed, source: feed.id, sourceName: feed.name, needsCheck: true)
+            if feed.id == FeedLinks.facebookCalendarID {
+                // Only your own Facebook calendar's replies are yours; other calendars' are someone else's.
+                for id in store.carryResponses(r.events, source: feed.id) where calendar.authorised { syncCalendar(id) }
+            }
             addRecentPosts(r.undated, feed: feed)
             await keepReviews(r.reviews, feed: feed)
             store.state.feedErrors[feed.id] = nil

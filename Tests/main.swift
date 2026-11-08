@@ -849,6 +849,36 @@ do {
     check(store.upcoming(now: day.addingTimeInterval(12 * 3600)).count == 1, "an all-day ride still shows at midday on the day")
 }
 
+// Your Facebook replies: Going and Interested carry over, unless you've chosen yourself in RollCall.
+do {
+    let file = FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-replies-\(UUID().uuidString).json")
+    let s = Store(file: file)
+    func event(_ n: Int, _ partstat: String?) -> String {
+        "BEGIN:VEVENT\r\nDTSTART:20261120T223000Z\r\nUID:e10000000\(n)@facebook.com\r\nSUMMARY:Made-up ride \(n)\r\n"
+            + "URL:https://www.facebook.com/events/10000000\(n)/\r\n" + (partstat.map { "PARTSTAT:\($0)\r\n" } ?? "") + "END:VEVENT\r\n"
+    }
+    func calendar(_ replies: [String?]) -> [ICSEvent] {
+        ICSParser.parse("BEGIN:VCALENDAR\r\n" + replies.enumerated().map { event($0.offset, $0.element) }.joined() + "END:VCALENDAR\r\n", now: now)
+    }
+    let first = calendar(["ACCEPTED", "TENTATIVE", nil, "ACCEPTED"])
+    check(first.map(\.response) == [.attending, .maybe, nil, .attending], "Facebook's Going and Interested are read from the calendar")
+    let src = FeedLinks.facebookCalendarID
+    s.merge(first, source: src, sourceName: "Your Facebook events", now: now)
+    let id = { (n: Int) in Store.eventID(source: src, item: first[n]) }
+    s.state.decisions[id(3)] = .skip   // you skipped this one in RollCall before the calendar was read
+    let changed = s.carryResponses(first, source: src)
+    check(Set(changed) == [id(0), id(1)], "replies carry over to undecided rides")
+    check(s.decision(id(0)) == .attending && s.decision(id(1)) == .maybe && s.decision(id(2)) == .undecided,
+          "Going becomes Going and Interested becomes Maybe")
+    check(s.decision(id(3)) == .skip, "your own choice in RollCall isn't undone")
+    // Interested becomes Going on Facebook; you choose Skip in RollCall for ride 0.
+    s.state.decisions[id(0)] = .skip
+    let second = calendar(["TENTATIVE", "ACCEPTED", nil, "ACCEPTED"])
+    check(s.carryResponses(second, source: src) == [id(1)], "a changed reply on Facebook carries over")
+    check(s.decision(id(1)) == .attending, "Interested to Going on Facebook becomes Going here")
+    check(s.decision(id(0)) == .skip, "a ride you changed yourself keeps your choice")
+}
+
 // Weather along the route: a made-up straight route of about 100 km due north, ridden in 2 hours.
 do {
     let line = (0...100).map { CLLocationCoordinate2D(latitude: -38.0 + Double($0) * 0.009, longitude: 145.0) }

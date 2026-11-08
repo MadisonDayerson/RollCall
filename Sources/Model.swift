@@ -252,6 +252,8 @@ struct AppState: Codable {
     var removedRides: [String: Date] = [:]
     /// Ride id -> the start, stops and destination RollCall found for it and Apple Maps could find.
     var foundRoutes: [String: FoundRoute] = [:]
+    /// Ride id -> the reply on Facebook that RollCall last carried over, so a choice you make yourself isn't undone.
+    var responses: [String: Decision] = [:]
 
     init() {}
 
@@ -280,6 +282,7 @@ struct AppState: Codable {
         rideEdits = get(.rideEdits, [:])
         removedRides = get(.removedRides, [:])
         foundRoutes = get(.foundRoutes, [:])
+        responses = get(.responses, [:])
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion
@@ -437,6 +440,21 @@ final class Store {
         return changed
     }
 
+    /// Your Going or Interested on Facebook becomes Going or Maybe here, for rides you haven't decided on yourself
+    /// (still Undecided, or as Facebook last set them). Returns the rides whose choice changed.
+    func carryResponses(_ items: [ICSEvent], source: String) -> [String] {
+        var changed: [String] = []
+        for item in items {
+            let id = Store.eventID(source: source, item: item)
+            guard let reply = item.response, state.events[id] != nil else { continue }
+            let current = decision(id)
+            guard current == .undecided || current == state.responses[id] else { continue }
+            if current != reply { state.decisions[id] = reply; changed.append(id) }
+            state.responses[id] = reply
+        }
+        return changed
+    }
+
     static let userAdded: Set<String> = ["manual", "file", "facebook", "instagram"]
 
     /// Facebook events get the same id however they arrive, so a re-import updates instead of duplicating.
@@ -500,6 +518,7 @@ final class Store {
         }
         state.rideEdits = state.rideEdits.filter { state.events[$0.key] != nil }
         state.foundRoutes = state.foundRoutes.filter { state.events[$0.key] != nil }
+        state.responses = state.responses.filter { state.events[$0.key] != nil }
         state.removedRides = state.removedRides.filter { $0.value > weekAgo }
         let cutoff = now.addingTimeInterval(-120 * 86400)
         state.seenPosts = state.seenPosts.filter { $0.value > cutoff }

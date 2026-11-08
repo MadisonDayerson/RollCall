@@ -74,6 +74,10 @@ or disconnect it), or under **Sources → Facebook events**:
 1. Click **Open Facebook Events**, find **Add to calendar**, right-click it and choose **Copy Link**.
 2. Paste the link into RollCall and click **Connect**. Bike events you respond to then come in by themselves.
 
+Your reply comes with them: Going on Facebook makes the ride Going in RollCall (and adds it to your calendar),
+and Interested makes it Maybe. If you change your reply on Facebook, RollCall follows, unless you've chosen
+something else for that ride in RollCall yourself, which always wins.
+
 Keep that link to yourself: anyone who has it can see your events.
 
 **One Facebook event at a time** (events you haven't responded to, or if the calendar link stops working):
