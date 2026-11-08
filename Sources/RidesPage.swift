@@ -104,7 +104,7 @@ struct RideSectionView: View {
                         .contentShape(Rectangle())
                         .onTapGesture { model.selectedRide = r.id }
                         .padding(.leading, 20)
-                    Divider().padding(.leading, 28)
+                    Divider().padding(.leading, 20)
                 }
             }
         }
