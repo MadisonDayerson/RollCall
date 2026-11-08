@@ -114,6 +114,36 @@ enum CLGeocoderShim {
     }
 }
 
+// For checking the road alerts feeds: `RollCall --check-roads` prints how many alerts each feed gave, a few of
+// them as read, and how many are on each upcoming ride's route. It never prints the key.
+if CommandLine.arguments.contains("--check-roads") {
+    Task { @MainActor in
+        do {
+            let all = try await RoadAlerts.fetchLive() + RoadAlerts.fetchBooked()
+            print("\(all.filter { !$0.planned }.count) alerts now, \(all.filter(\.planned).count) booked works")
+            for a in all.filter({ !$0.planned }).prefix(3) + all.filter(\.planned).prefix(3) {
+                print("  \(a.planned ? "booked" : "now   ") \(a.impact) · \(a.kind) · \(a.road), \(a.place) · \(a.start.map { "\($0)" } ?? "-") to \(a.end.map { "\($0)" } ?? "-") · \(a.times.count) weekly times · \(a.spots.count) spots")
+            }
+            let store = Store()
+            let home = CLLocationCoordinate2D(latitude: store.state.settings.homeLatitude, longitude: store.state.settings.homeLongitude)
+            for ride in store.state.events.values where ride.finish > Date() {
+                let (places, avoid) = store.route(ride)
+                guard places.count >= 2, let r = await RoutePlanner.plan(places, near: home, avoidHighways: avoid) else { continue }
+                let line = r.legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
+                let window = RoadAlerts.riding(ride, seconds: r.seconds, arriving: places.first == store.homePlace)
+                let on = RoadAlerts.on(line, from: window.from, to: window.to, alerts: all)
+                let roads = RoadAlerts.byRoad(on)
+                print("\(ride.title.prefix(50)) (\(window.from) to \(window.to)): \(on.count) alerts on \(roads.count) roads"
+                      + roads.map { "\n    \($0.planned ? "booked" : "now") \($0.impact) · \($0.kind) · \($0.name) · \($0.places.joined(separator: ", ")) (\($0.alerts.count))" }.joined())
+            }
+        } catch {
+            print("Couldn't load road alerts: \(error)")
+        }
+        exit(0)
+    }
+    RunLoop.main.run()
+}
+
 // For tuning: `RollCall --check-chats` prints the conversations in the chosen chats that would be
 // raised for review, with their summaries, without changing anything. Add `--all` to treat every
 // message as new and include plans that are already over.

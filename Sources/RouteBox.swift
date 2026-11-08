@@ -2,8 +2,8 @@ import SwiftUI
 import MapKit
 
 /// The ride's route on its page: a still map of the road route from the meeting place through any stops to the
-/// destination (or from your suburb to a one-place ride), with the distance and riding time, and the weather along
-/// it. Clicking the map opens Route.
+/// destination (or from your suburb to a one-place ride), with the distance and riding time, the weather along
+/// it and road alerts on it. Clicking the map opens Route.
 struct RouteBox: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
@@ -46,6 +46,8 @@ struct RouteBox: View {
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             Divider()
                             RouteWeatherView(route: r, ride: ride, places: places, arriving: places.first == model.store.homePlace)
+                            Divider()
+                            RoadAlertsView(route: r, ride: ride, arriving: places.first == model.store.homePlace)
                         }
                     }
                 }

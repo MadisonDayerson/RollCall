@@ -53,7 +53,7 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
   any of them with **Check for new rides** (right-click a heading to change a whole group).
   Instagram and Facebook you check yourself.
-- **Settings:** home area, chats, your Facebook events link, calendar, riding together and updates.
+- **Settings:** home area, chats, your Facebook events link, calendar, riding together, road alerts and updates.
 
 ## Adding rides and sources
 
@@ -121,7 +121,18 @@ and description (with Apple Intelligence on the Mac when the wording isn't plain
 and leaves out ones it can't find. A ride at one place, like a track day or bike night, shows the trip there from
 your suburb. Under the map is the weather along the way: the temperature, chance of rain and wind at points every
 40 to 50 km, for when you'd reach each one. Likely rain and strong gusts are in orange. Rides more than a week away
-say when their forecast will be ready.
+say when their forecast will be ready. Below that are **road alerts** in Victoria: crashes, closures, hazards and
+roadworks on the roads you'd ride, at the time you'd be riding them, one line per road with closures first (in
+orange). Alerts happening now show for rides within a day; booked roadworks take a minute or two to download the
+first time. They need a free key of your own (see **Road alerts** below).
+
+**Road alerts.** The alerts come from the Department of Transport and Planning's open data. To turn them on:
+1. Go to the [Transport Victoria Open Data Portal](https://opendata.transport.vic.gov.au/), click **Login**, then
+   **Sign up**. Enter your details, then the code they email you.
+2. The portal asks you to set up an authenticator app on your phone (any one works, such as Google Authenticator
+   or Microsoft Authenticator): scan the QR code and enter the code it shows.
+3. Log in, click **My Account → Profile**, then **API tokens**, and copy your key.
+4. In RollCall, paste it into **Settings → Road alerts** and click **Save**.
 
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.
@@ -158,7 +169,9 @@ tags in the calendar event rather than showing friends' locations or posting for
   or details about you, and follows a short Google Maps link (maps.app.goo.gl) in a ride's description once to
   find the route it points to. It asks Apple Maps where a ride's location is, so it can work out the distance, and
   plans the road route between a ride's places to draw its map. For the weather along a route, the positions of
-  a few points on it (not the ride or anything about you) go to Open-Meteo, a free forecast service. And
+  a few points on it (not the ride or anything about you) go to Open-Meteo, a free forecast service. With a road
+  alerts key, RollCall downloads all of Victoria's road alerts from the Department of Transport and Planning (your
+  key is kept in your keychain) and matches them to the route on your Mac, so the route isn't sent. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps, Waze or Kurviger) to plan the route.

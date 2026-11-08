@@ -935,5 +935,111 @@ do {
           "weather codes have words")
 }
 
+
+// Road alerts: made-up alerts near a made-up route heading east from (-37.80, 144.90) to (-37.80, 145.00).
+do {
+    let route = (0...10).map { CLLocationCoordinate2D(latitude: -37.80, longitude: 144.90 + Double($0) * 0.01) }
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    let rideFrom = now.addingTimeInterval(3 * 3600), rideTo = now.addingTimeInterval(6 * 3600)
+    func iso(_ d: Date) -> String { ISO8601DateFormatter().string(from: d) }
+    let unplanned = """
+    {"meta": {"total_records": 3, "total_pages": 2, "page": 1, "limit": 500, "count": 3},
+     "data": {"type": "FeatureCollection", "features": [
+      {"type": "Feature", "geometry": {"type": "Point", "coordinates": [144.951, -37.8003]},
+       "properties": {"id": "1", "status": "Active", "eventLocationStatus": "Active", "eventType": "Crash",
+        "eventSubType": "Vehicle Collision", "closedRoadName": "Example Road", "description": "Made-up crash",
+        "created": "\(iso(now))", "endTime": "\(iso(now.addingTimeInterval(7200)))",
+        "impact": {"direction": "Both directions", "impactType": "Road closed"},
+        "reference": {"startIntersectionLocality": "SAMPLEVILLE"}}},
+      {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[145.30, -37.60], [145.31, -37.61]]},
+       "properties": {"id": "2", "status": "Active", "eventType": "Hazard", "impact": {"impactType": "Lanes closed"}}},
+      {"type": "Feature", "geometry": {"type": "Point", "coordinates": [144.95, -37.80]},
+       "properties": {"id": "3", "status": "Inactive", "eventType": "Hazard"}}
+     ]}, "links": []}
+    """
+    let u = RoadAlerts.readUnplanned(Data(unplanned.utf8))
+    check(u?.pages == 2 && u?.alerts.count == 2, "unplanned alerts are read and finished ones left out")
+    let crash = u?.alerts.first
+    check(crash?.road == "Example Road" && crash?.place == "Sampleville" && crash?.closesRoad == true && crash?.planned == false
+          && crash?.spots.first?.latitude == -37.8003, "an alert's road, place, closure and spot are read")
+
+    let planned = """
+    {"type": "FeatureCollection", "nextPageDetails": {"nextPageToken": "abc", "hasMoreRecords": true}, "features": [
+      {"type": "Feature", "geometry": {"type": "GeometryCollection", "geometries": [
+         {"type": "LineString", "coordinates": [[144.92, -37.799], [144.93, -37.799]]}]},
+       "properties": {"id": "p1", "status": "Active", "eventType": "Roadworks", "closedRoadName": "Sample Street",
+        "duration": {"start": "\(iso(now.addingTimeInterval(86400)))", "end": "\(iso(now.addingTimeInterval(2 * 86400)))"},
+        "impact": {"impactType": "Lanes closed"}}},
+      {"type": "Feature", "geometry": {"type": "GeometryCollection", "geometries": [{"type": "Point", "coordinates": [144.97, -37.8002]}]},
+       "properties": {"id": "p2", "status": "Active", "eventType": "Roadworks",
+        "duration": {"start": "\(iso(now))", "end": "\(iso(now.addingTimeInterval(86400)))"}}}
+    ]}
+    """
+    let p = RoadAlerts.readPlanned(Data(planned.utf8))
+    check(p?.next == "abc" && p?.alerts.count == 2 && p?.alerts.first?.spots.count == 2, "booked works and the next page are read")
+
+    let all = (u?.alerts ?? []) + (p?.alerts ?? [])
+    let found = RoadAlerts.on(route, from: rideFrom, to: rideTo, alerts: all, now: now).map(\.id)
+    check(found.contains("1"), "a closure on the route shows")
+    check(!found.contains("2"), "an alert in another suburb doesn't")
+    check(found.contains("p2") && !found.contains("p1"), "booked works show only if they overlap the ride")
+    let nextWeek = RoadAlerts.on(route, from: rideFrom.addingTimeInterval(7 * 86400), to: rideTo.addingTimeInterval(7 * 86400), alerts: all, now: now)
+    check(nextWeek.isEmpty, "alerts happening now don't show on a ride next week")
+    func alert(_ spots: [(Double, Double)]) -> RoadAlerts.Alert {
+        RoadAlerts.Alert(id: "x", planned: false, kind: "", impact: "", road: "", place: "", details: "", start: nil, end: nil,
+                         spots: spots.map { CLLocationCoordinate2D(latitude: $0.0, longitude: $0.1) })
+    }
+    func shows(_ a: RoadAlerts.Alert) -> Bool { !RoadAlerts.on(route, from: rideFrom, to: rideTo, alerts: [a], now: now).isEmpty }
+    check(!shows(alert([(-37.801, 144.95)])), "an alert on a side street 110 m off the route doesn't show")
+    check(!shows(alert([(-37.79, 144.95), (-37.80, 144.95), (-37.81, 144.95)])), "a closure on a road the route only crosses doesn't show")
+    check(shows(alert([(-37.80, 144.94), (-37.80, 144.945), (-37.80, 144.95)])), "a closure along the route shows")
+    check(shows(alert([(-37.80, 144.99), (-37.80, 145.03)])), "a long straight closure the route rides the start of shows")
+    check(RoadAlerts.readUnplanned(Data("not json".utf8)) == nil, "a broken reply isn't read")
+
+    let roads = RoadAlerts.byRoad([
+        RoadAlerts.Alert(id: "a", planned: true, kind: "Planned roadworks", impact: "Lanes blocked", road: "Sample Freeway", place: "Northtown", details: "", start: nil, end: nil, spots: []),
+        RoadAlerts.Alert(id: "b", planned: true, kind: "Planned roadworks", impact: "Lanes blocked", road: "Sample Freeway", place: "Southtown", details: "", start: nil, end: nil, spots: []),
+        RoadAlerts.Alert(id: "c", planned: true, kind: "Planned roadworks", impact: "Closures", road: "Example Street", place: "Northtown", details: "", start: nil, end: nil, spots: []),
+        RoadAlerts.Alert(id: "d", planned: true, kind: "Planned roadworks", impact: "Closures", road: "Sample Freeway", place: "Northtown", details: "", start: nil, end: nil, spots: []),
+        RoadAlerts.Alert(id: "e", planned: true, kind: "Planned roadworks", impact: "Lanes blocked", road: "Sample Out-Example Ramp Of", place: "Northtown", details: "", start: nil, end: nil, spots: []),
+        RoadAlerts.Alert(id: "f", planned: true, kind: "Planned roadworks", impact: "Lanes blocked", road: "Example-Sample In Ramp On", place: "Southtown", details: "", start: nil, end: nil, spots: []),
+    ])
+    check(roads.count == 3 && roads[0].name == "Sample Freeway" && roads[0].places == ["Northtown", "Southtown"] && roads[0].closesRoad,
+          "alerts are grouped by road, showing the worst, closures first")
+    check(roads.last?.name == "On and off ramps" && roads.last?.alerts.count == 2, "ramps are shown together")
+
+    // Feed times are Victorian, with no time zone; booked works can run at set weekly times.
+    let vic = RoadAlerts.calendar
+    func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {   // November 2026: the 9th is a Monday
+        vic.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
+    }
+    check(RoadAlerts.date("2026-11-10T18:30:00") == at(10, 18, 30), "feed times are read as Victorian time")
+    check(RoadAlerts.seconds("PT6H") == 21600 && RoadAlerts.seconds("P1DT2H30M") == 95400 && RoadAlerts.seconds("PT-14H-30M") == -52200
+          && RoadAlerts.seconds("soon") == nil, "lengths like PT6H and PT-14H-30M are read")
+    check(RoadAlerts.minutes("9:30 PM") == 1290 && RoadAlerts.minutes("12:00 AM") == 0 && RoadAlerts.minutes("12:15 PM") == 735
+          && RoadAlerts.minutes("21:30") == 1290, "times of day like 9:30 PM are read")
+    let weekdays = """
+    {"type": "FeatureCollection", "features": [
+      {"type": "Feature", "geometry": {"type": "GeometryCollection", "geometries": [{"type": "Point", "coordinates": [144.95, -37.80]}]},
+       "properties": {"id": "w", "status": "Pending", "impactType": "x", "impact": {"impactType": "Closures"},
+        "duration": {"start": "2026-11-01T00:00:00", "end": "2026-11-30T00:00:00", "recurrences": [
+          {"startDay": "Monday", "daysDuration": 1, "startTime": "8:00 PM", "duration": "PT-15H0M", "allDay": false},
+          {"startDay": "Saturday", "daysDuration": 1, "startTime": "00:00", "duration": "PT24H", "allDay": true}]}}},
+      {"type": "Feature", "geometry": {"type": "Point", "coordinates": [144.95, -37.80]},
+       "properties": {"id": "old", "status": "Pending", "duration": {"start": "2024-02-01T00:00:00", "end": "2025-06-30T00:00:00"}}}
+    ]}
+    """
+    let w = RoadAlerts.readPlanned(Data(weekdays.utf8), now: at(8, 12))
+    check(w?.alerts.count == 1 && w?.alerts.first?.closesRoad == true, "works already over are dropped, and Closures count as closed roads")
+    if let works = w?.alerts.first {
+        check(works.times.count == 2 && works.end == at(30, 0).addingTimeInterval(86400), "weekly times are read, and a midnight end lasts that day")
+        check(RoadAlerts.isOn(works, from: at(9, 21), to: at(9, 23)), "Monday night works are on during a Monday night ride")
+        check(RoadAlerts.isOn(works, from: at(10, 3), to: at(10, 4)), "overnight works are still on early Tuesday")
+        check(!RoadAlerts.isOn(works, from: at(10, 10), to: at(10, 14)), "they're off during a Tuesday daytime ride")
+        check(RoadAlerts.isOn(works, from: at(14, 15), to: at(14, 16)), "all-day Saturday works are on all Saturday")
+        check(!RoadAlerts.isOn(works, from: at(30, 23).addingTimeInterval(7200), to: at(30, 23).addingTimeInterval(10000)), "they're off once the dates end")
+    }
+}
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

@@ -111,6 +111,13 @@ enum RouteWeather {
         return forecasts
     }
 
+    /// When you'd leave the route's first place: the ride's start, or earlier by the riding time when the route
+    /// takes you to a one-place ride. A ride without a time is taken to start at 9 am.
+    static func leave(_ ride: RideEvent, seconds: Double, arriving: Bool) -> Date {
+        let start = ride.allDay ? Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: ride.start) ?? ride.start : ride.start
+        return arriving ? start.addingTimeInterval(-seconds) : start
+    }
+
     /// When a ride is too far off for the forecast: the day it's first ready.
     static func readyDate(leave: Date, now: Date) -> Date? {
         let lastDay = Calendar.current.date(byAdding: .day, value: forecastDays - 1, to: Calendar.current.startOfDay(for: now)) ?? now

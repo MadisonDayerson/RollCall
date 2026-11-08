@@ -38,8 +38,8 @@ struct SettingsPage: View {
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Section("Chats") {
-                LabeledContent("Beeper", value: Keychain.read() == nil ? "Not connected" : "Connected (read only)")
-                Button(Keychain.read() == nil ? "Connect Beeper…" : "Change chats…") {
+                LabeledContent("Beeper", value: Keychain.beeper.read() == nil ? "Not connected" : "Connected (read only)")
+                Button(Keychain.beeper.read() == nil ? "Connect Beeper…" : "Change chats…") {
                     model.later { Task { await app.setUpBeeper() } }
                 }
             }
@@ -50,6 +50,9 @@ struct SettingsPage: View {
             }
             Section("Riding together") {
                 TogetherForm(app: app)
+            }
+            Section("Road alerts") {
+                RoadAlertsKeyBox()
             }
             Section("General") {
                 Toggle("Open RollCall when you log in", isOn: Binding(
@@ -137,6 +140,41 @@ struct SettingsPage: View {
 
 
 /// Location sharing, voice chat, Discord and tags, used in setup and Settings. Saves by itself.
+/// Where the road alerts key is pasted. It's the rider's own free key from the Transport Victoria Open Data
+/// Portal, kept in the keychain.
+struct RoadAlertsKeyBox: View {
+    @StateObject private var key = Box("")
+    @StateObject private var saved = Box(Keychain.roads.read() != nil)
+
+    var body: some View {
+        Text("See crashes, closures and roadworks on each ride's route in Victoria. It needs a free key: sign up at the Transport Victoria Open Data Portal, then find the key under My Account → Profile → API tokens.")
+            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        if saved.value {
+            LabeledContent("Key", value: "Saved in your keychain")
+            Button("Remove key") {
+                Keychain.roads.delete()
+                RoadAlerts.forget()
+                saved.value = false
+            }
+        } else {
+            HStack {
+                SecureField("Paste your key", text: $key.value).onSubmit(save)
+                Button("Save", action: save).disabled(key.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            Button("Open the Open Data Portal") { NSWorkspace.shared.open(URL(string: RoadAlerts.signUpPage)!) }
+        }
+    }
+
+    private func save() {
+        let k = key.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !k.isEmpty else { return }
+        Keychain.roads.save(k)
+        RoadAlerts.forget()
+        key.value = ""
+        saved.value = true
+    }
+}
+
 struct TogetherForm: View {
     let app: AppDelegate
     @StateObject private var t = Box(Together())

@@ -77,7 +77,7 @@ final class SetupModel: ObservableObject {
             beeper = .notInstalled
         } else if !(await Beeper.isRunning()) {
             beeper = .closed
-        } else if Keychain.read() == nil {
+        } else if Keychain.beeper.read() == nil {
             beeper = .notConnected
         } else {
             beeper = .connected(watching: watching)
@@ -119,7 +119,7 @@ final class SetupModel: ObservableObject {
             await lookAtBeeper()
             // Start at the first thing not done yet.
             guide = !beeperInstalled ? .download : !beeperOpen ? .open : !apiOn ? .accounts
-                : (Keychain.read() == nil || watchingChats == 0) ? .connect : .done
+                : (Keychain.beeper.read() == nil || watchingChats == 0) ? .connect : .done
             watchBeeper()
         }
     }
@@ -147,7 +147,7 @@ final class SetupModel: ObservableObject {
                 await lookAtBeeper()
                 if guide == .download, beeperInstalled { guide = .open }
                 if guide == .api, apiOn { guide = .connect }
-                if guide == .connect, Keychain.read() != nil, watchingChats > 0 { guide = .done }
+                if guide == .connect, Keychain.beeper.read() != nil, watchingChats > 0 { guide = .done }
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
         }
@@ -170,7 +170,7 @@ final class SetupModel: ObservableObject {
             Task {
                 await self.app.setUpBeeper()
                 await self.checkBeeper()
-                if Keychain.read() != nil, self.watchingChats > 0 { self.guide = .done }
+                if Keychain.beeper.read() != nil, self.watchingChats > 0 { self.guide = .done }
             }
         }
     }

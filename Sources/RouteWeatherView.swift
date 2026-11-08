@@ -13,11 +13,7 @@ struct RouteWeatherView: View {
 
     enum Loading { case loading, over, later(Date), failed, done([(forecast: RouteWeather.Forecast, place: String)]) }
 
-    /// When you'd leave the first place. A ride without a time is taken to leave at 9 am.
-    private var leave: Date {
-        let start = ride.allDay ? Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: ride.start) ?? ride.start : ride.start
-        return arriving ? start.addingTimeInterval(-route.seconds) : start
-    }
+    private var leave: Date { RouteWeather.leave(ride, seconds: route.seconds, arriving: arriving) }
 
     var body: some View {
         Group {

@@ -46,7 +46,6 @@ A still picture of the planned road route under the ride's About box, plus Kurvi
 on two lines (when and where, then the weather) to fit the ride column. A one-place ride counts back from its start
 time, so you arrive on time, and a ride without a time leaves at 9 am.
 
-**Task 3 (road alerts) is next.**
 
 Temperature, chance of rain and wind at points along the route, at the time you'd reach each one.
 
@@ -63,13 +62,22 @@ Temperature, chance of rain and wind at points along the route, at the time you'
 
 ## Task 3: Road alerts on the route
 
+**Status: built and tried on the owner's rides.** The whole state's alerts (unplanned v3, planned v1) are downloaded
+with the rider's key in a `KeyID` header (`RoadAlerts.swift`, `RoadAlertsView.swift`). Booked works are about 10,000
+records over ~20 pages of 500, fetched 3.2 s apart (about 90 s), only ones not yet over kept, in memory for 6 hours;
+alerts happening now are one page, kept 10 minutes and shown for rides within a day. Feed times come with or without
+"Z" (no zone means Victorian time); weekly slots read "9:00 PM" with "PT-16H" meaning until 5 am. An alert counts when
+it's within 50 m of the route and, for works along a road, at least 200 m of it follows the route, so roads you only
+cross and side streets don't. Alerts are shown one line per road (on and off ramps together), closures first, five
+before Show all. `RollCall --check-roads` prints what the feeds gave and what's on each upcoming ride's route.
+
 Crashes, closures, hazards and roadworks near the route, from the Victorian Department of Transport and Planning.
 
 | Step | What | Resources |
 |---|---|---|
 | 3a | Get a free key (owner, with step-by-step guidance) and add a Settings box to paste it | [Data Exchange Platform](https://opendata.transport.vic.gov.au/organization/disruptions?tags=road) sign-up; key in the keychain like the Beeper key |
 | 3b | Download Victoria's unplanned and planned road disruptions | DTP Open Data API v3 (`api.opendata.transport.vic.gov.au`), CC BY 4.0, 20 calls a minute. New file `RoadAlerts.swift` |
-| 3c | Keep the alerts within about 500 m of the route, and planned works that overlap the ride's time | Task 1's route line, worked out on the Mac (the route isn't sent anywhere) |
+| 3c | Keep the alerts on the roads the route follows, and planned works on at the ride's time | Task 1's route line, worked out on the Mac (the route isn't sent anywhere) |
 | 3d | Show them under the weather: what, where, how long | SwiftUI in `RouteBox.swift`, warnings in orange |
 
 - **Owner provides:** a free DTP key (friends who want alerts paste their own).

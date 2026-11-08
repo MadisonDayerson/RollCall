@@ -75,7 +75,7 @@ enum Beeper {
     static let connectionMessages: Set<String> = Set([BeeperError.notRunning, .notConnected, .cancelled].compactMap(\.errorDescription))
 
     static func connectionProblem() async -> BeeperError? {
-        guard Keychain.read() != nil else { return .notConnected }
+        guard Keychain.beeper.read() != nil else { return .notConnected }
         guard await isRunning() else { return .notRunning }
         do { _ = try await send("/v1/chats", query: ["limit": "1"]); return nil }
         catch let e as BeeperError { return e }
@@ -83,7 +83,7 @@ enum Beeper {
     }
 
     private static func send(_ path: String, query: [String: String] = [:], method: String = "GET", json: [String: String]? = nil) async throws -> Data {
-        guard let token = Keychain.read() else { throw BeeperError.notConnected }
+        guard let token = Keychain.beeper.read() else { throw BeeperError.notConnected }
         var comps = URLComponents(string: base + path)
         if !query.isEmpty { comps?.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) } }
         guard let url = comps?.url else { throw URLError(.badURL) }
@@ -211,7 +211,7 @@ enum Beeper {
               let token = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["access_token"] as? String else {
             throw BeeperError.badReply
         }
-        Keychain.save(token)
+        Keychain.beeper.save(token)
     }
 
     static func randomString(_ bytes: Int) -> String {
@@ -306,53 +306,5 @@ final class LoopbackServer: @unchecked Sendable {
             c.send(content: Data(reply.utf8), completion: .contentProcessed { _ in c.cancel() })
             if let query { self.finish(.success(query)) }
         }
-    }
-}
-
-/// Keeps the Beeper access token in the login keychain rather than a plain file. It's read from the keychain
-/// once and then remembered, so drawing Settings or reading a chat never waits on a keychain prompt again.
-enum Keychain {
-    static let service = "au.madiday.motorides.beeper"
-    static let account = "beeper-desktop-api"
-    /// nil until the keychain has been read; then the token, or .some(nil) when there isn't one.
-    nonisolated(unsafe) private static var remembered: String??
-
-    static func save(_ token: String) {
-        delete()
-        remembered = token
-        let item: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-            kSecValueData as String: Data(token.utf8),
-        ]
-        SecItemAdd(item as CFDictionary, nil)
-    }
-
-    static func read() -> String? {
-        if let remembered { return remembered }
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var out: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &out)
-        let token = status == errSecSuccess ? (out as? Data).flatMap { String(data: $0, encoding: .utf8) } : nil
-        // A denied or cancelled keychain prompt isn't remembered, so the next read can ask again.
-        if status == errSecSuccess || status == errSecItemNotFound { remembered = .some(token) }
-        return token
-    }
-
-    static func delete() {
-        remembered = .some(nil)
-        SecItemDelete([
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ] as CFDictionary)
     }
 }

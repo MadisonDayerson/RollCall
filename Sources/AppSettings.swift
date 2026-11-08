@@ -172,7 +172,8 @@ extension AppDelegate {
                               "This removes your saved rides, chat excerpts, sources and settings from this Mac, disconnects Beeper, and quits RollCall. It can't be undone.\n\nThe RollCall calendar stays in Calendar. You can delete it there if you like.",
                               ok: "Delete and Quit") else { return }
         setOpensAtLogin(false)
-        Keychain.delete()
+        Keychain.beeper.delete()
+        Keychain.roads.delete()
         try? FileManager.default.removeItem(at: Store.folder)
         if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: id) }
         Net.removeOldCache()

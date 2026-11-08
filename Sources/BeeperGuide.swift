@@ -113,7 +113,7 @@ struct BeeperGuide: View {
                           "A Beeper page opens in your browser. Then switch to Beeper and click **Allow**.",
                           "Back in RollCall, tick the group chats where people post rides, and click **Check these chats**."]) {
             Button("Connect RollCall") { model.connectFromGuide() }.buttonStyle(.borderedProminent).brandFill()
-            Status(done: Keychain.read() != nil && model.watchingChats > 0,
+            Status(done: Keychain.beeper.read() != nil && model.watchingChats > 0,
                    waiting: "Waiting for you to connect and choose chats…", finished: "Connected")
         }
     }
