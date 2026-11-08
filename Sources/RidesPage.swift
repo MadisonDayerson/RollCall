@@ -100,7 +100,7 @@ struct RideSectionView: View {
                     RideRow(ride: r, model: model)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 6).padding(.horizontal, 8)
-                        .background(selected ? Color.accentColor.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                        .background(selected ? Color.primary.opacity(0.1) : Color.clear)
                         .contentShape(Rectangle())
                         .onTapGesture { model.selectedRide = r.id }
                         .padding(.leading, 20)

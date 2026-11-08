@@ -6,12 +6,39 @@ import UniformTypeIdentifiers
 enum Dialogs {
     static func bringForward() { NSApp.activate(ignoringOtherApps: true) }
 
+    /// Shows an alert with RollCall's gothic "Roll Call" in place of the app icon. Mac alerts give the icon a small
+    /// square, so its picture is widened to the lettering's own shape, centred in that square's height.
+    static func run(_ a: NSAlert) -> NSApplication.ModalResponse {
+        if let mark = Brand.wordmark {
+            let height: CGFloat = 34, width = mark.size.width / mark.size.height * height
+            a.icon = NSImage(size: NSSize(width: width, height: height), flipped: false) { r in
+                mark.draw(in: r)
+                NSColor.secondaryLabelColor.set()
+                r.fill(using: .sourceAtop)
+                return true
+            }
+            a.layout()
+            if let spot = a.window.contentView.flatMap(imageView) {
+                spot.imageScaling = .scaleProportionallyUpOrDown
+                spot.frame = NSRect(x: spot.frame.minX, y: spot.frame.midY - height / 2, width: width, height: height)
+            }
+        }
+        return a.runModal()
+    }
+
+    private static func imageView(in view: NSView) -> NSImageView? {
+        for v in view.subviews {
+            if let found = v as? NSImageView ?? imageView(in: v) { return found }
+        }
+        return nil
+    }
+
     static func info(_ title: String, _ text: String) {
         bringForward()
         let a = NSAlert()
         a.messageText = title
         a.informativeText = text
-        a.runModal()
+        _ = run(a)
     }
 
     static func confirm(_ title: String, _ text: String, ok: String) -> Bool {
@@ -21,7 +48,7 @@ enum Dialogs {
         a.informativeText = text
         a.addButton(withTitle: ok)
         a.addButton(withTitle: "Cancel")
-        return a.runModal() == .alertFirstButtonReturn
+        return run(a) == .alertFirstButtonReturn
     }
 
     /// Asks for one or more lines of text. Returns nil on Cancel.
@@ -50,7 +77,7 @@ enum Dialogs {
         stack.frame = NSRect(x: 0, y: 0, width: width, height: stack.fittingSize.height)
         a.accessoryView = stack
         a.window.initialFirstResponder = inputs.first
-        guard a.runModal() == .alertFirstButtonReturn else { return nil }
+        guard run(a) == .alertFirstButtonReturn else { return nil }
         return inputs.map { $0.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
@@ -120,7 +147,7 @@ enum Dialogs {
         stack.frame = NSRect(x: 0, y: 0, width: width, height: stack.fittingSize.height)
         a.accessoryView = stack
         a.window.initialFirstResponder = title
-        guard a.runModal() == .alertFirstButtonReturn else { return nil }
+        guard run(a) == .alertFirstButtonReturn else { return nil }
         let name = title.stringValue.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return nil }
         return ManualRide(title: name, start: picker.dateValue,
@@ -173,7 +200,7 @@ enum Dialogs {
         stack.frame = NSRect(x: 0, y: 0, width: width, height: stack.fittingSize.height)
         a.accessoryView = stack
         a.window.initialFirstResponder = clipText.isEmpty ? tv : link
-        guard a.runModal() == .alertFirstButtonReturn else { return nil }
+        guard run(a) == .alertFirstButtonReturn else { return nil }
         return (link.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
                 tv.string.trimmingCharacters(in: .whitespacesAndNewlines))
     }
@@ -209,7 +236,7 @@ enum Dialogs {
         scroll.contentView.scroll(to: NSPoint(x: 0, y: max(0, doc.frame.height - scroll.contentSize.height)))
         scroll.reflectScrolledClipView(scroll.contentView)
         a.accessoryView = scroll
-        guard a.runModal() == .alertFirstButtonReturn else { return nil }
+        guard run(a) == .alertFirstButtonReturn else { return nil }
         return Set(boxes.filter { $0.0.state == .on }.map(\.1))
     }
 

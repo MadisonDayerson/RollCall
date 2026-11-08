@@ -79,7 +79,7 @@ extension AppDelegate {
         a.addButton(withTitle: "Open event page")
         a.addButton(withTitle: "Type details instead")
         a.addButton(withTitle: "Cancel")
-        switch a.runModal() {
+        switch Dialogs.run(a) {
         case .alertFirstButtonReturn:
             if !store.state.settings.watchDownloads {
                 store.state.settings.watchDownloads = true

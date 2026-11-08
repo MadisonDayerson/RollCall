@@ -50,7 +50,7 @@ extension AppDelegate {
         a.addButton(withTitle: "Update now")
         a.addButton(withTitle: "Later")
         a.addButton(withTitle: "Skip this version")
-        switch a.runModal() {
+        switch Dialogs.run(a) {
         case .alertFirstButtonReturn:
             Task {
                 do { try await Updater.install(r) } catch {
