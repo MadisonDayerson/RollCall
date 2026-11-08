@@ -14,12 +14,18 @@ enum RouteFinder {
     /// for a Geelong event), so the location is used instead.
     static let maxKmStartFromLocation = 25.0
 
-    static func find(_ ride: RideEvent, home: CLLocationCoordinate2D) async -> [String] {
+    static func find(_ ride: RideEvent, home: CLLocationCoordinate2D) async -> FoundRoute {
+        let from = Route.fingerprint(ride)
         // A short maps.app.goo.gl link hides the organiser's route: follow it to the full link once.
         if let link = Route.link(in: ride.notes), Route.linkPlaces(link).count < 2,
            let full = await expand(link), Route.linkPlaces(full).count >= 2 {
-            return Route.linkPlaces(full)
+            return FoundRoute(places: Route.linkPlaces(full), from: from, avoidHighways: Route.linkAvoidsHighways(full))
         }
+        return FoundRoute(places: await read(ride, home: home), from: from)
+    }
+
+    /// The places from the ride's title and description, or as Apple Intelligence reads them.
+    private static func read(_ ride: RideEvent, home: CLLocationCoordinate2D) async -> [String] {
         let guessed = await checked(Route.guess(title: ride.title, location: ride.location, notes: ride.notes), ride: ride, home: home)
         if guessed.count >= 2 || !AppleModel.available || ride.notes.isEmpty { return guessed }
         let text = [ride.title, ride.location.isEmpty ? "" : "Location: " + ride.location, ride.notes]

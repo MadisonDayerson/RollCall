@@ -64,8 +64,7 @@ extension AppDelegate {
         findingRoutes.insert(ride.id)
         defer { findingRoutes.remove(ride.id) }
         let s = store.state.settings
-        let places = await RouteFinder.find(ride, home: CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude))
-        store.state.foundRoutes[ride.id] = FoundRoute(places: places, from: from)
+        store.state.foundRoutes[ride.id] = await RouteFinder.find(ride, home: CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude))
         store.save()
     }
 

@@ -194,6 +194,8 @@ struct Settings: Codable {
 struct FoundRoute: Codable, Equatable {
     var places: [String]
     var from: String
+    /// The organiser's maps link was planned avoiding highways.
+    var avoidHighways: Bool? = nil
 }
 
 /// Your own changes to a ride's details. They're kept apart from the ride, so a refresh of its source

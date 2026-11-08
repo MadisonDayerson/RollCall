@@ -104,36 +104,88 @@ enum Route {
         if c.scheme == "maps" || c.host?.hasSuffix("apple.com") == true {
             return [query["saddr"], query["daddr"]].compactMap { $0 }.filter { !$0.isEmpty }
         }
-        guard let dir = c.percentEncodedPath.range(of: "/maps/dir/") else { return [] }
+        guard c.percentEncodedPath.contains("/maps/dir/") else { return [] }
         if query["api"] == "1" {
             let via = query["waypoints"].map { $0.components(separatedBy: "|") } ?? []
             return ([query["origin"]] + via + [query["destination"]]).compactMap { $0 }.filter { !$0.isEmpty }
         }
-        var stops: [String] = [], data = ""
+        let (stops, data) = pathStops(c)
+        guard let steps = directions(data) else { return stops }
+        // Each stop is its own spot when Google gives one (or the path's name or point when not), followed by
+        // the points the route was dragged through on the way to the next stop.
+        guard steps.stops.count == stops.count else { return stops }  // not the shape expected: the path is still right
+        return zip(stops, steps.stops).flatMap { name, step in [step.spot ?? name] + step.via }
+    }
+
+    /// The organiser's Google route was planned avoiding motorways ("Avoid highways" in Google Maps).
+    static func linkAvoidsHighways(_ link: String) -> Bool {
+        guard let c = URLComponents(string: link), c.percentEncodedPath.contains("/maps/dir/") else { return false }
+        return directions(pathStops(c).data)?.avoidHighways ?? false
+    }
+
+    /// The stops written in a /maps/dir/ path, and its `data=` part.
+    private static func pathStops(_ c: URLComponents) -> (stops: [String], data: String) {
+        guard let dir = c.percentEncodedPath.range(of: "/maps/dir/") else { return ([], "") }
+        var stops: [String] = []
         for part in c.percentEncodedPath[dir.upperBound...].split(separator: "/") {
-            if part.hasPrefix("data=") { data = String(part); break }
+            if part.hasPrefix("data=") { return (stops, String(part.dropFirst(5))) }
             if part.hasPrefix("@") { continue }
             let name = (String(part).replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? String(part))
                 .trimmingCharacters(in: .whitespaces)
             if !name.isEmpty { stops.append(name) }
         }
-        // In `data=`, each stop is "!1m0" (none: its path name is used) or "!1m…!1s<id>!2m2!1d<lng>!2d<lat>";
-        // points the route was dragged through are "!3m4!1m2!1d<lng>!2d<lat>" after the stop they follow.
-        let token = #"!1m0(?=!|$)|!1m\d+!1m1!1s[^!]+!2m2!1d(-?[\d.]+)!2d(-?[\d.]+)|!3m\d+!1m2!1d(-?[\d.]+)!2d(-?[\d.]+)"#
-        guard let re = try? NSRegularExpression(pattern: token), let route = data.range(of: "!4m") else { return stops }
-        let text = String(data[route.lowerBound...])
-        var out: [String] = [], stop = 0
-        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
-            func group(_ i: Int) -> String? { Range(m.range(at: i), in: text).map { String(text[$0]) } }
-            if let lng = group(3), let lat = group(4) {
-                out.append("\(lat),\(lng)")
-            } else if stop < stops.count {
-                if let lng = group(1), let lat = group(2) { out.append("\(lat),\(lng)") } else { out.append(stops[stop]) }
-                stop += 1
+        return (stops, "")
+    }
+
+    /// Google's `data=` is a nested list: "!1m5" opens a group of the next 5 items (groups inside it included).
+    /// The directions are the group "!4m…!4m…". In it, each stop is a "!1m…" group: its own spot is
+    /// "!2m2!1d<lng>!2d<lat>" (missing when the path gives the stop, as in "!1m0"), and each point the route was
+    /// dragged through after it is a "!3m4!1m2!1d<lng>!2d<lat>…" group. The options group "!2m…" holds "!1b1"
+    /// for avoiding highways.
+    private static func directions(_ data: String) -> (stops: [(spot: String?, via: [String])], avoidHighways: Bool)? {
+        let items = data.split(separator: "!").map(String.init)
+        // "1m5" -> (field 1, 5 items in the group); "1d144.9" isn't a group.
+        func group(_ item: String) -> (field: Int, size: Int)? {
+            let parts = item.split(separator: "m", maxSplits: 1)
+            guard parts.count == 2, let f = Int(parts[0]), let n = Int(parts[1]) else { return nil }
+            return (f, n)
+        }
+        // The top-level items of a list, each with the items inside it.
+        func children(_ list: ArraySlice<String>) -> [(item: String, inside: ArraySlice<String>)] {
+            var out: [(String, ArraySlice<String>)] = [], i = list.startIndex
+            while i < list.endIndex {
+                let n = min(group(list[i])?.size ?? 0, list.endIndex - i - 1)
+                out.append((list[i], list[(i + 1)..<(i + 1 + n)]))
+                i += 1 + n
+            }
+            return out
+        }
+        func spot(_ list: ArraySlice<String>) -> String? {
+            guard let lng = list.first(where: { $0.hasPrefix("1d") })?.dropFirst(2),
+                  let lat = list.first(where: { $0.hasPrefix("2d") })?.dropFirst(2), Double(lng) != nil, Double(lat) != nil else { return nil }
+            return "\(lat),\(lng)"
+        }
+        guard let start = items.indices.first(where: { i in
+            group(items[i])?.field == 4 && i + 1 < items.count && group(items[i + 1])?.field == 4
+        }) else { return nil }
+        guard let route = children(items[(start + 1)...]).first?.inside else { return nil }
+        var stops: [(spot: String?, via: [String])] = [], avoid = false
+        for part in children(route) {
+            switch group(part.item) {
+            case (1, _)?:
+                var stop: (spot: String?, via: [String]) = (nil, [])
+                for inner in children(part.inside) {
+                    if inner.item == "2m2" { stop.spot = spot(inner.inside) }
+                    if group(inner.item)?.field == 3, let p = spot(inner.inside) { stop.via.append(p) }
+                }
+                stops.append(stop)
+            case (2, _)?:
+                avoid = part.inside.contains("1b1")
+            default:
+                break
             }
         }
-        // Not the shape expected: the stops named in the path are still right.
-        return stop == stops.count ? out : stops
+        return (stops, avoid)
     }
 
     /// "-37.8810219,145.1634224" as a map point.
@@ -229,18 +281,21 @@ extension Store {
     /// The places a ride's route goes through. The organiser's Google or Apple Maps route link wins; then labelled
     /// lines in its details (what you typed with Edit…, or what the organiser wrote); then the route RollCall found
     /// and checked. A ride at one place (a track day, a bike night) is the trip there from your suburb.
-    func routePlaces(_ ride: RideEvent) -> [String] {
+    func routePlaces(_ ride: RideEvent) -> [String] { route(ride).places }
+
+    /// The route's places, and whether the organiser planned it avoiding highways (so it's planned that way here too).
+    func route(_ ride: RideEvent) -> (places: [String], avoidHighways: Bool) {
         // The organiser's own maps link is the route itself.
         if let link = Route.link(in: ride.notes) {
             let linked = Route.linkPlaces(link)
-            if linked.count >= 2 { return linked }
+            if linked.count >= 2 { return (linked, Route.linkAvoidsHighways(link)) }
         }
         let written = Route.places(meetingPlace: ride.location, notes: ride.notes)
-        if written.count >= 2 { return written }
-        let found = state.foundRoutes[ride.id].flatMap { $0.from == Route.fingerprint(ride) ? $0.places : nil } ?? []
-        if found.count >= 2 { return found }
-        guard let venue = found.first ?? written.first else { return [] }
-        return [homePlace, venue]
+        if written.count >= 2 { return (written, false) }
+        let found = state.foundRoutes[ride.id].flatMap { $0.from == Route.fingerprint(ride) ? $0 : nil }
+        if let found, found.places.count >= 2 { return (found.places, found.avoidHighways ?? false) }
+        guard let venue = found?.places.first ?? written.first else { return ([], false) }
+        return ([homePlace, venue], false)
     }
 
     /// Your suburb, as a place to plan from (never your street).
@@ -248,6 +303,11 @@ extension Store {
 }
 
 extension Route {
-    /// What a found route was worked out from, so it's worked out again when the ride's details change.
-    static func fingerprint(_ ride: RideEvent) -> String { stableHash(ride.title + "\n" + ride.location + "\n" + ride.notes) }
+    /// What a found route was worked out from, so it's worked out again when the ride's details change, or when
+    /// RollCall gets better at it (raise `finderVersion`).
+    static func fingerprint(_ ride: RideEvent) -> String {
+        stableHash("\(finderVersion)\n" + ride.title + "\n" + ride.location + "\n" + ride.notes)
+    }
+    /// 2: Google links' dragged-through points on stops given only in the path, and "Avoid highways".
+    static let finderVersion = 2
 }

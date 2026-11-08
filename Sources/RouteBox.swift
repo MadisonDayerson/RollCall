@@ -17,7 +17,7 @@ struct RouteBox: View {
     private static let size = CGSize(width: 480, height: 260)
 
     var body: some View {
-        let places = model.store.routePlaces(ride)
+        let (places, avoidHighways) = model.store.route(ride)
         // Work out the start, stops and destination from the description; the map updates once they're found.
         Color.clear.frame(height: 0)
             .task(id: Route.fingerprint(ride)) { await model.app.findRoute(for: ride) }
@@ -54,15 +54,17 @@ struct RouteBox: View {
             } label: {
                 Label("Route", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
             }
-            .task(id: places.joined(separator: "\n") + (scheme == .dark ? "|dark" : "|light")) { await load(places) }
+            .task(id: places.joined(separator: "\n") + (avoidHighways ? "|no highways" : "") + (scheme == .dark ? "|dark" : "|light")) {
+                await load(places, avoidHighways: avoidHighways)
+            }
         }
     }
 
-    private func load(_ places: [String]) async {
+    private func load(_ places: [String], avoidHighways: Bool) async {
         let s = model.store.state.settings
         let home = CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude)
         if route.value == nil { state.value = .planning }
-        guard let planned = await RoutePlanner.plan(places, near: home),
+        guard let planned = await RoutePlanner.plan(places, near: home, avoidHighways: avoidHighways),
               let img = await RouteMapImage.draw(planned, size: Self.size, dark: scheme == .dark) else {
             state.value = .failed
             return

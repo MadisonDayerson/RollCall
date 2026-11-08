@@ -735,9 +735,17 @@ do {
           "Kurviger gets every point in order")
     check(Route.kurviger(through: [(-37.65, 145.37)]) == nil, "one point isn't a route")
     // The organiser's maps link is the route (made-up places and points).
-    let g = "https://www.google.com/maps/dir/1+Example+St,+Sunshine+VIC/-37.9,145.2/Pretend+Pier,+Port+Example/@-37.8,145.0,16931m/data=!3m1!1e3!4m33!4m32!1m20!1m1!1s0x1:0x2!2m2!1d144.90!2d-37.83!3m4!1m2!1d145.07!2d-37.88!3s0x3:0x4!1m0!1m5!1m1!1s0x5:0x6!2m2!1d144.93!2d-37.84!3e0"
+    let g = "https://www.google.com/maps/dir/1+Example+St,+Sunshine+VIC/-37.9,145.2/Pretend+Pier,+Port+Example/@-37.8,145.0,16931m/data=!3m1!1e3!4m20!4m19!1m10!1m1!1s0x1:0x2!2m2!1d144.90!2d-37.83!3m4!1m2!1d145.07!2d-37.88!3s0x3:0x4!1m0!1m5!1m1!1s0x5:0x6!2m2!1d144.93!2d-37.84!3e0"
     check(Route.linkPlaces(g) == ["-37.83,144.90", "-37.88,145.07", "-37.9,145.2", "-37.84,144.93"],
           "a Google route's stops and dragged-through points, in order")
+    check(!Route.linkAvoidsHighways(g), "a route that may use highways")
+    // Shaped like a real organiser's link: a point dragged through on the way from a stop given only in the path,
+    // and "Avoid highways" (made-up places and points).
+    let h = "https://www.google.com/maps/dir/1+Example+St,+Sunshine+VIC/-37.86,144.88/Pretend+Hall/@-37.8,144.9,10075m/data=!3m1!1e3!4m22!4m21"
+        + "!1m5!1m1!1s0x1:0x2!2m2!1d144.90!2d-37.82!1m5!3m4!1m2!1d144.91!2d-37.80!3s0x3:0x4!1m5!1m1!1s0x5:0x6!2m2!1d144.96!2d-37.80!2m1!1b1!3e0"
+    check(Route.linkPlaces(h) == ["-37.82,144.90", "-37.86,144.88", "-37.80,144.91", "-37.80,144.96"],
+          "a point dragged through after a stop that's only in the path is kept")
+    check(Route.linkAvoidsHighways(h), "a Google route planned avoiding highways")
     check(Route.linkPlaces("https://www.google.com/maps/dir/Example+Servo/Pretend+Falls/") == ["Example Servo", "Pretend Falls"], "stops named in the path")
     check(Route.linkPlaces("https://www.google.com/maps/dir/?api=1&origin=A+Town&destination=C+Town&waypoints=B+Town%7CD+Town") == ["A Town", "B Town", "D Town", "C Town"],
           "a Google route link made by an app")

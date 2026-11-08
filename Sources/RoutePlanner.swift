@@ -20,15 +20,15 @@ enum RoutePlanner {
     private static var found: [String: CLLocationCoordinate2D] = [:]
 
     /// The route through the places, or nil when there aren't two places or one couldn't be found.
-    static func plan(_ places: [String], near home: CLLocationCoordinate2D) async -> Planned? {
+    static func plan(_ places: [String], near home: CLLocationCoordinate2D, avoidHighways: Bool = false) async -> Planned? {
         guard places.count >= 2 else { return nil }
-        let key = places.joined(separator: "\n").lowercased()
+        let key = places.joined(separator: "\n").lowercased() + (avoidHighways ? "|no highways" : "")
         if let cached = routes[key] { return cached }
         var result: Planned?
         if let points = await locate(places, near: home) {
             var planned = Planned(legs: [], stops: points, named: places.map { Route.point($0) == nil }, metres: 0, seconds: 0)
             for (a, b) in zip(points, points.dropFirst()) {
-                guard let leg = await drive(from: a, to: b) else { planned.legs = []; break }
+                guard let leg = await drive(from: a, to: b, avoidHighways: avoidHighways) else { planned.legs = []; break }
                 planned.legs.append(leg.polyline)
                 planned.metres += leg.distance
                 planned.seconds += leg.expectedTravelTime
@@ -64,11 +64,12 @@ enum RoutePlanner {
         return spot
     }
 
-    private static func drive(from a: CLLocationCoordinate2D, to b: CLLocationCoordinate2D) async -> MKRoute? {
+    private static func drive(from a: CLLocationCoordinate2D, to b: CLLocationCoordinate2D, avoidHighways: Bool) async -> MKRoute? {
         let request = MKDirections.Request()
         request.source = MKMapItem(placemark: MKPlacemark(coordinate: a))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: b))
         request.transportType = .automobile
+        if avoidHighways { request.highwayPreference = .avoid }
         return try? await MKDirections(request: request).calculate().routes.first
     }
 
