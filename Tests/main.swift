@@ -981,6 +981,9 @@ do {
     let all = (u?.alerts ?? []) + (p?.alerts ?? [])
     let found = RoadAlerts.on(route, from: rideFrom, to: rideTo, alerts: all, now: now).map(\.id)
     check(found.contains("1"), "a closure on the route shows")
+    let marked = RoadAlerts.on(route, from: rideFrom, to: rideTo, alerts: all, now: now).first { $0.id == "1" }?.mark
+    check(marked.map { abs($0.latitude + 37.8003) < 0.0001 && abs($0.longitude - 144.951) < 0.0001 } == true,
+          "a matched alert knows where it is on the route, for the map")
     check(!found.contains("2"), "an alert in another suburb doesn't")
     check(found.contains("p2") && !found.contains("p1"), "booked works show only if they overlap the ride")
     let nextWeek = RoadAlerts.on(route, from: rideFrom.addingTimeInterval(7 * 86400), to: rideTo.addingTimeInterval(7 * 86400), alerts: all, now: now)

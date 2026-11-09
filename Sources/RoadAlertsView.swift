@@ -3,12 +3,13 @@ import MapKit
 
 /// Road alerts on a ride's route, under the weather: closures, crashes, hazards and roadworks on the roads you
 /// ride, at the time you'd ride them. Road closures are in orange. Alerts happening now show first; booked
-/// works follow once they've downloaded.
+/// works follow once they've downloaded. The map marks the same alerts.
 struct RoadAlertsView: View {
     let route: RoutePlanner.Planned
     let ride: RideEvent
     let arriving: Bool
-    @StateObject private var state = Box(Loading.loading)
+    /// Shared with the map, which marks the same alerts.
+    @ObservedObject var state: Box<Loading>
     @StateObject private var showAll = Box(false)
 
     enum Loading { case loading, over, noKey, badKey, failed, found([RoadAlerts.Road], stillBooking: Bool) }
@@ -78,6 +79,7 @@ struct RoadAlertsView: View {
     private func load() async {
         let (from, to) = window
         guard to > Date() else { state.value = .over; return }
+        state.value = .loading
         let line = route.legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
         func matching(_ alerts: [RoadAlerts.Alert]) -> [RoadAlerts.Road] {
             RoadAlerts.byRoad(RoadAlerts.on(line, from: from, to: to, alerts: alerts))

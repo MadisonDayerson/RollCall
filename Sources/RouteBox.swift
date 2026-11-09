@@ -3,13 +3,14 @@ import MapKit
 
 /// The ride's route on its page: a still map of the road route from the meeting place through any stops to the
 /// destination (or from your suburb to a one-place ride), with the distance and riding time, the weather along
-/// it and road alerts on it. Clicking the map opens Route.
+/// it and road alerts on it (marked on the map too). Clicking the map opens Route.
 struct RouteBox: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
     @Environment(\.colorScheme) private var scheme
     @StateObject private var route = Box<RoutePlanner.Planned?>(nil)
-    @StateObject private var image = Box<NSImage?>(nil)
+    @StateObject private var image = Box<RouteMapImage.Drawn?>(nil)
+    @StateObject private var alerts = Box(RoadAlertsView.Loading.loading)
     @StateObject private var state = Box(Loading.planning)
 
     enum Loading { case planning, done, failed }
@@ -32,12 +33,17 @@ struct RouteBox: View {
                         Text("Apple Maps couldn't find a road route between \(places.joined(separator: ", ")). Check the places with Edit….")
                             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     case .done:
-                        if let img = image.value {
-                            Image(nsImage: img).resizable().scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        if let map = image.value {
+                            Image(nsImage: map.image).resizable().scaledToFit()
                                 .onTapGesture { model.app.openRoute(ride) }
                                 .help("Open the route in your maps app")
                                 .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
+                                .overlay {
+                                    if case .found(let roads, _) = alerts.value {
+                                        RoadAlertMarks(alerts: roads.flatMap(\.alerts), map: map, size: Self.size)
+                                    }
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                         if let r = route.value {
                             // A route link's stops are map points, so it's described rather than listed.
@@ -47,7 +53,7 @@ struct RouteBox: View {
                             Divider()
                             RouteWeatherView(route: r, ride: ride, places: places, arriving: places.first == model.store.homePlace)
                             Divider()
-                            RoadAlertsView(route: r, ride: ride, arriving: places.first == model.store.homePlace)
+                            RoadAlertsView(route: r, ride: ride, arriving: places.first == model.store.homePlace, state: alerts)
                         }
                     }
                 }
@@ -67,12 +73,12 @@ struct RouteBox: View {
         let home = CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude)
         if route.value == nil { state.value = .planning }
         guard let planned = await RoutePlanner.plan(places, near: home, avoidHighways: avoidHighways),
-              let img = await RouteMapImage.draw(planned, size: Self.size, dark: scheme == .dark) else {
+              let map = await RouteMapImage.draw(planned, size: Self.size, dark: scheme == .dark) else {
             state.value = .failed
             return
         }
         route.value = planned
-        image.value = img
+        image.value = map
         state.value = .done
     }
 }

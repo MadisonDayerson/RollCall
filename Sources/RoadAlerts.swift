@@ -19,6 +19,14 @@ enum RoadAlerts {
         /// When booked works are on, if only at set times (say, weeknights 8 pm for 9 hours).
         var times: [Times] = []
         var spots: [CLLocationCoordinate2D]
+        /// Where it's on the route, once matched: for marking on the map.
+        var mark: CLLocationCoordinate2D? = nil
+
+        /// "Closures · Planned roadworks · Hume Freeway, Wallan".
+        var summary: String {
+            [impact == "N/A" ? "" : impact, kind, [road, place].filter { !$0.isEmpty }.joined(separator: ", ")]
+                .filter { !$0.isEmpty }.joined(separator: " · ")
+        }
 
         /// Worth a second look on a bike, so shown in orange.
         var closesRoad: Bool {
@@ -310,12 +318,15 @@ enum RoadAlerts {
                 }
             } + [last]
         }
-        return alerts.filter { a in
+        return alerts.compactMap { a in
             guard a.planned ? isOn(a, from: from, to: to) : live,
                   a.spots.map(\.latitude).max()! >= south, a.spots.map(\.latitude).min()! <= north,
-                  a.spots.map(\.longitude).max()! >= west, a.spots.map(\.longitude).min()! <= east else { return false }
+                  a.spots.map(\.longitude).max()! >= west, a.spots.map(\.longitude).min()! <= east else { return nil }
             let close = filled(a.spots).filter(near)
-            return !close.isEmpty && span(close) >= min(alongMetres, span(a.spots) * 0.8)
+            guard !close.isEmpty, span(close) >= min(alongMetres, span(a.spots) * 0.8) else { return nil }
+            var matched = a
+            matched.mark = close[close.count / 2]
+            return matched
         }
     }
 

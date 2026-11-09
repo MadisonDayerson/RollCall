@@ -6,9 +6,15 @@ import CoreImage
 /// colour, a filled dot at the start, small dots at named stops and a ring at the finish.
 @MainActor
 enum RouteMapImage {
-    private static var drawn: [String: NSImage] = [:]
+    /// The picture, and where a place falls on it (in points from the top left).
+    struct Drawn {
+        var image: NSImage
+        var spot: (CLLocationCoordinate2D) -> CGPoint
+    }
 
-    static func draw(_ route: RoutePlanner.Planned, size: CGSize, dark: Bool) async -> NSImage? {
+    private static var drawn: [String: Drawn] = [:]
+
+    static func draw(_ route: RoutePlanner.Planned, size: CGSize, dark: Bool) async -> Drawn? {
         let key = "\(route.stops.map { "\($0.latitude),\($0.longitude)" }.joined(separator: ";"))|\(size.width)x\(size.height)|\(dark)"
         if let img = drawn[key] { return img }
         let options = MKMapSnapshotter.Options()
@@ -63,8 +69,12 @@ enum RouteMapImage {
             if let start = route.stops.first { dot(start, radius: 6, filled: true) }
             return true
         }
-        drawn[key] = image
-        return image
+        let result = Drawn(image: image) { c in
+            let p = snapshot.point(for: c)
+            return CGPoint(x: p.x, y: size.height - p.y)
+        }
+        drawn[key] = result
+        return result
     }
 
     /// The map in greys, to match RollCall's black and white.
