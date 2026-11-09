@@ -39,8 +39,8 @@ struct RouteBox: View {
                                 .help("Open the route in your maps app")
                                 .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
                                 .overlay {
-                                    if case .found(let roads, _) = alerts.value {
-                                        RoadAlertMarks(alerts: roads.flatMap(\.alerts), map: map, size: Self.size)
+                                    if case .found(let roads, _) = alerts.value, let r = route.value {
+                                        RoadAlertMarks(alerts: roads.flatMap(\.alerts), route: r.line, map: map, size: Self.size)
                                     }
                                 }
                                 .clipShape(RoundedRectangle(cornerRadius: 6))

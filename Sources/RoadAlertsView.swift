@@ -80,7 +80,7 @@ struct RoadAlertsView: View {
         let (from, to) = window
         guard to > Date() else { state.value = .over; return }
         state.value = .loading
-        let line = route.legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
+        let line = route.line
         func matching(_ alerts: [RoadAlerts.Alert]) -> [RoadAlerts.Road] {
             RoadAlerts.byRoad(RoadAlerts.on(line, from: from, to: to, alerts: alerts))
         }

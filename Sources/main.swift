@@ -129,9 +129,8 @@ if CommandLine.arguments.contains("--check-roads") {
             for ride in store.state.events.values where ride.finish > Date() {
                 let (places, avoid) = store.route(ride)
                 guard places.count >= 2, let r = await RoutePlanner.plan(places, near: home, avoidHighways: avoid) else { continue }
-                let line = r.legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
                 let window = RoadAlerts.riding(ride, seconds: r.seconds, arriving: places.first == store.homePlace)
-                let on = RoadAlerts.on(line, from: window.from, to: window.to, alerts: all)
+                let on = RoadAlerts.on(r.line, from: window.from, to: window.to, alerts: all)
                 let roads = RoadAlerts.byRoad(on)
                 print("\(ride.title.prefix(50)) (\(window.from) to \(window.to)): \(on.count) alerts on \(roads.count) roads"
                       + roads.map { "\n    \($0.planned ? "booked" : "now") \($0.impact) · \($0.kind) · \($0.name) · \($0.places.joined(separator: ", ")) (\($0.alerts.count))" }.joined())

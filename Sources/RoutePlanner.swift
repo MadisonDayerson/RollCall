@@ -13,6 +13,11 @@ enum RoutePlanner {
         var named: [Bool]
         var metres: Double
         var seconds: Double
+
+        /// The whole road route as one line of spots.
+        var line: [CLLocationCoordinate2D] {
+            legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
+        }
     }
 
     // Only what was found is remembered, so a place missed while offline is tried again next time.
