@@ -34,14 +34,8 @@ struct RoadAlertsView: View {
                     if roads.isEmpty && !stillBooking {
                         Label("No road alerts on the route.", systemImage: "checkmark.circle")
                     } else if !roads.isEmpty {
-                        DisclosureGroup(isExpanded: $open.value) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(roads.indices, id: \.self) { i in row(roads[i]) }
-                            }
-                            .padding(.top, 6)
-                        } label: {
-                            heading(roads)
-                        }
+                        heading(roads)
+                        if open.value { ForEach(roads.indices, id: \.self) { i in row(roads[i]) } }
                     }
                     if stillBooking { waiting("Downloading booked roadworks (about a minute the first time)…") }
                     Text(LocalizedStringKey("Road data from the [Department of Transport and Planning](https://opendata.transport.vic.gov.au/) (CC BY 4.0)"))
@@ -58,32 +52,42 @@ struct RoadAlertsView: View {
         HStack(spacing: 8) { ProgressView().controlSize(.small); Text(text).foregroundStyle(.secondary) }
     }
 
-    /// "Road alerts on 6 roads · 2 closed", with closures in orange.
+    /// "Road alerts on 6 roads · 2 closed", with closures in orange: click to open or close the list. Its own
+    /// chevron rather than a DisclosureGroup, whose deep indent pushed the list across the narrow column.
     private func heading(_ roads: [RoadAlerts.Road]) -> some View {
         let closed = roads.filter(\.closesRoad).count
-        return HStack(spacing: 4) {
-            Text("Road alerts on \(roads.count) \(roads.count == 1 ? "road" : "roads")")
-            if closed > 0 { Text("· \(closed) closed").foregroundStyle(.orange) }
+        return Button { open.value.toggle() } label: {
+            HStack(spacing: 4) {
+                Image(systemName: open.value ? "chevron.down" : "chevron.right")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(width: Self.iconWidth)
+                Text("Road alerts on \(roads.count) \(roads.count == 1 ? "road" : "roads")")
+                if closed > 0 { Text("· \(closed) closed").foregroundStyle(.orange) }
+            }
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-        .onTapGesture { open.value.toggle() }
+        .buttonStyle(.plain)
+        .accessibilityHint(open.value ? "Hides the list" : "Shows the list")
     }
 
-    /// What it is and which road, then the suburbs, then when.
+    /// The chevron and each road's icon share a width, so the text lines up.
+    private static let iconWidth: CGFloat = 16
+
+    /// What it is and which road, then the suburbs. Each sits under the heading's text, its icon under the chevron.
+    /// Being listed already means it's on at the time of the ride, so that isn't repeated.
     private func row(_ r: RoadAlerts.Road) -> some View {
         let what = [r.impact, r.kind].filter { !$0.isEmpty }.joined(separator: " · ")
         let places = r.places.count > 3 ? r.places.prefix(2).joined(separator: ", ") + " + \(r.places.count - 2) more"
                                          : r.places.joined(separator: ", ")
-        return Label {
-            VStack(alignment: .leading, spacing: 2) {
-                Text((what.isEmpty ? "" : what + " · ") + r.name).foregroundStyle(r.closesRoad ? Color.orange : Color.primary)
-                if !places.isEmpty { Text(places).lineLimit(2) }
-                Text(r.planned ? "Booked for the time of your ride" : "Happening now").foregroundStyle(.secondary)
-            }
-        } icon: {
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
             Image(systemName: r.closesRoad ? "xmark.octagon" : r.planned ? "cone" : "exclamationmark.triangle")
                 .foregroundStyle(r.closesRoad ? Color.orange : Color.primary)
+                .frame(width: Self.iconWidth)
+            VStack(alignment: .leading, spacing: 2) {
+                Text((what.isEmpty ? "" : what + " · ") + r.name).foregroundStyle(r.closesRoad ? Color.orange : Color.primary)
+                if !places.isEmpty { Text(places).foregroundStyle(.secondary).lineLimit(2) }
+            }
         }
+        .accessibilityElement(children: .combine)
         .help(r.details)
     }
 
