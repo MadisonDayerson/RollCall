@@ -3,9 +3,10 @@ import CoreLocation
 
 /// Crashes, closures, hazards and roadworks on a ride's route, from the Victorian Department of Transport and
 /// Planning's open data (CC BY 4.0). The whole state's alerts are downloaded with the rider's own free key and
-/// matched to the route on the Mac, so the route itself never goes online. Nothing is saved to disk.
+/// matched to the route on the Mac, so the route itself never goes online. Booked works are kept on disk (public
+/// road data only), so they show straight away after a restart.
 enum RoadAlerts {
-    struct Alert {
+    struct Alert: Codable {
         var id: String
         /// Booked works (roadworks, events) rather than something happening now.
         var planned: Bool
@@ -78,7 +79,7 @@ enum RoadAlerts {
     }
 
     /// One weekly slot of booked works: from a time on a weekday, for a while.
-    struct Times {
+    struct Times: Codable {
         /// 1 is Sunday, as in Calendar.
         var weekday: Int
         var minutes: Int
@@ -365,8 +366,16 @@ enum RoadAlerts {
     // MARK: Downloading
 
     private static var live: (at: Date, alerts: [Alert])?
-    private static var booked: (at: Date, alerts: [Alert])?
+    private static var booked: Saved?
     private static var downloadingBooked: Task<[Alert], Error>?
+
+    /// Booked works as downloaded, kept on disk.
+    private struct Saved: Codable { var at: Date; var alerts: [Alert] }
+    static let bookedFile = Store.folder.appendingPathComponent("roadworks.json")
+    /// Booked works older than this are downloaded again.
+    static let bookedHours = 6.0
+    /// Saved booked works younger than this are shown while new ones download; older ones are waited for.
+    static let staleHours = 48.0
 
     /// Alerts happening now in Victoria: one download, kept in memory for 10 minutes.
     @MainActor
@@ -385,30 +394,46 @@ enum RoadAlerts {
         return alerts
     }
 
-    /// Victoria's booked works that aren't over: about 20 pages, fetched a few seconds apart to keep within the
-    /// feed's limit, so it takes a minute or two. Kept in memory for 6 hours; one download at a time.
+    /// Victoria's booked works that aren't over. Downloading them is about 20 pages, a few seconds apart to keep
+    /// within the feed's limit, so it takes a minute or so: they're kept on disk and downloaded again after 6
+    /// hours, with the saved ones shown meanwhile. One download at a time.
     @MainActor
     static func fetchBooked(now: Date = Date()) async throws -> [Alert] {
         let key = try savedKey()
-        if let kept = booked, now.timeIntervalSince(kept.at) < 6 * 3600 { return kept.alerts }
-        if let running = downloadingBooked { return try await running.value }
-        let task = Task { @MainActor () throws -> [Alert] in
-            var alerts: [Alert] = []
-            var token: String? = nil
-            for page in 0..<40 {
-                if page > 0 { try await Task.sleep(for: .seconds(3.2)) }
-                guard let reply = readPlanned(try await get(plannedURL + "?format=GeoJson", key: key, next: token), now: now)
-                else { throw Failure.failed }
-                alerts += reply.alerts
-                token = reply.next
-                if token == nil { break }
-            }
+        if booked == nil {
+            // About a third of a second to read, so it's read away from the window.
+            let file = bookedFile
+            booked = await Task.detached { try? JSONDecoder().decode(Saved.self, from: Data(contentsOf: file)) }.value
+        }
+        let age = booked.map { now.timeIntervalSince($0.at) / 3600 } ?? .infinity
+        if age < bookedHours, let kept = booked { return kept.alerts }
+        let task = downloadingBooked ?? Task { @MainActor () throws -> [Alert] in
+            defer { downloadingBooked = nil }
+            let alerts = try await downloadBooked(key: key, now: now)
+            booked = Saved(at: now, alerts: alerts)
+            if let data = try? JSONEncoder().encode(booked) { try? data.write(to: bookedFile, options: .atomic) }
             return alerts
         }
         downloadingBooked = task
-        defer { downloadingBooked = nil }
-        let alerts = try await task.value
-        booked = (now, alerts)
+        if age < staleHours, let kept = booked { return kept.alerts.filter { ($0.end ?? .distantFuture) > now } }
+        return try await task.value
+    }
+
+    @MainActor
+    private static func downloadBooked(key: String, now: Date) async throws -> [Alert] {
+        var alerts: [Alert] = []
+        var token: String? = nil
+        var asked = ContinuousClock.now
+        for page in 0..<40 {
+            // The feed allows 20 requests a minute: the next starts 3.2 seconds after the last one did.
+            if page > 0 { try await Task.sleep(until: asked + .seconds(3.2)) }
+            asked = .now
+            guard let reply = readPlanned(try await get(plannedURL + "?format=GeoJson", key: key, next: token), now: now)
+            else { throw Failure.failed }
+            alerts += reply.alerts
+            token = reply.next
+            if token == nil { break }
+        }
         return alerts
     }
 
@@ -436,5 +461,19 @@ enum RoadAlerts {
     @MainActor static func forget() {
         live = nil
         booked = nil
+        try? FileManager.default.removeItem(at: bookedFile)
+    }
+}
+
+/// Saved as [latitude, longitude], for keeping booked works on disk.
+extension CLLocationCoordinate2D: @retroactive Codable {
+    public init(from decoder: Decoder) throws {
+        let pair = try decoder.singleValueContainer().decode([Double].self)
+        guard pair.count == 2 else { throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Not a spot")) }
+        self.init(latitude: pair[0], longitude: pair[1])
+    }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode([latitude, longitude])
     }
 }

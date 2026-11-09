@@ -45,6 +45,8 @@ extension AppDelegate {
         for id in changed where store.decision(id) == .attending { syncCalendar(id) }
         store.save()
         await findRoutes()
+        // Booked roadworks take a minute to download: fetched now, so a ride's road alerts are ready when opened.
+        Task { _ = try? await RoadAlerts.fetchBooked() }
     }
 
     // MARK: - Routes

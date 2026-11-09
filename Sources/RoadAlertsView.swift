@@ -43,7 +43,7 @@ struct RoadAlertsView: View {
                         Button(showAll.value ? "Show fewer" : "Show all \(roads.count) roads") { showAll.value.toggle() }
                             .buttonStyle(.link)
                     }
-                    if stillBooking { waiting("Downloading booked roadworks (a minute or two the first time)…") }
+                    if stillBooking { waiting("Downloading booked roadworks (about a minute the first time)…") }
                     Text(LocalizedStringKey("Road data from the [Department of Transport and Planning](https://opendata.transport.vic.gov.au/) (CC BY 4.0)"))
                         .font(.caption).foregroundStyle(.secondary).tint(.secondary)
                 }

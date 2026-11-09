@@ -12,7 +12,7 @@ it can be fixed or taken out without touching the others.
   which Route already uses. Nothing new is read from chats or posts.
 - **No new accounts or tracking.** Only Task 3 needs a key, and it's the user's own, kept in the keychain.
 - **Privacy:** each task adds its line to the README's "What goes online", and nothing it fetches is saved
-  to disk except what the ride already holds.
+  to disk except what the ride already holds, and Task 3's booked roadworks (public road data, nothing personal).
 
 ---
 
@@ -64,7 +64,9 @@ Temperature, chance of rain and wind at points along the route, at the time you'
 
 **Status: built and tried on the owner's rides.** The whole state's alerts (unplanned v3, planned v1) are downloaded
 with the rider's key in a `KeyID` header (`RoadAlerts.swift`, `RoadAlertsView.swift`). Booked works are about 10,000
-records over ~20 pages of 500, fetched 3.2 s apart (about 90 s), only ones not yet over kept, in memory for 6 hours;
+records over ~20 pages of 500, each request starting 3.2 s after the last (about 70 s), only ones not yet over kept.
+They're saved to `roadworks.json` in RollCall's folder and downloaded again after 6 hours, in the background after each
+source check; saved ones under 2 days old show meanwhile, so after the first download a ride's alerts show in seconds;
 alerts happening now are one page, kept 10 minutes and shown for rides within a day. Feed times come with or without
 "Z" (no zone means Victorian time); weekly slots read "9:00 PM" with "PT-16H" meaning until 5 am. An alert counts when
 it's within 50 m of the route and, for works along a road, at least 200 m of it follows the route, so roads you only

@@ -123,8 +123,9 @@ your suburb. Under the map is the weather along the way: the temperature, chance
 40 to 50 km, for when you'd reach each one. Likely rain and strong gusts are in orange. Rides more than a week away
 say when their forecast will be ready. Below that are **road alerts** in Victoria: crashes, closures, hazards and
 roadworks on the roads you'd ride, at the time you'd be riding them, one line per road with closures first (in
-orange). They're marked on the map too, beside the route on little stalks: hold the pointer over an icon to see what it is. Alerts happening now show for rides within a day; booked roadworks take a minute or two to download the
-first time. They need a free key of your own (see **Road alerts** below).
+orange). They're marked on the map too, beside the route on little stalks: hold the pointer over an icon to see what it is. Alerts happening now show for rides within a day; booked roadworks take about a minute to download the
+first time, then show straight away (RollCall keeps them on your Mac and fetches new ones in the background every
+six hours). They need a free key of your own (see **Road alerts** below).
 
 **Road alerts.** The alerts come from the Department of Transport and Planning's open data. To turn them on:
 1. Go to the [Transport Victoria Open Data Portal](https://opendata.transport.vic.gov.au/), click **Login**, then
@@ -171,7 +172,8 @@ tags in the calendar event rather than showing friends' locations or posting for
   plans the road route between a ride's places to draw its map. For the weather along a route, the positions of
   a few points on it (not the ride or anything about you) go to Open-Meteo, a free forecast service. With a road
   alerts key, RollCall downloads all of Victoria's road alerts from the Department of Transport and Planning (your
-  key is kept in your keychain) and matches them to the route on your Mac, so the route isn't sent. And
+  key is kept in your keychain) and matches them to the route on your Mac, so the route isn't sent. Booked roadworks
+  are kept on your Mac between downloads; they're public road data, nothing about you. And
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed. When you click **Route**, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps, Waze or Kurviger) to plan the route.

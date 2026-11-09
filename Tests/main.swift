@@ -977,6 +977,9 @@ do {
     """
     let p = RoadAlerts.readPlanned(Data(planned.utf8))
     check(p?.next == "abc" && p?.alerts.count == 2 && p?.alerts.first?.spots.count == 2, "booked works and the next page are read")
+    let kept = (try? JSONEncoder().encode(p?.alerts ?? [])).flatMap { try? JSONDecoder().decode([RoadAlerts.Alert].self, from: $0) }
+    check(kept?.map(\.id) == p?.alerts.map(\.id) && kept?.first?.spots.first?.latitude == p?.alerts.first?.spots.first?.latitude
+          && kept?.first?.spots.first?.longitude == p?.alerts.first?.spots.first?.longitude, "booked works saved to disk read back the same")
 
     let all = (u?.alerts ?? []) + (p?.alerts ?? [])
     let found = RoadAlerts.on(route, from: rideFrom, to: rideTo, alerts: all, now: now).map(\.id)
