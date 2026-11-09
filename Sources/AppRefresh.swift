@@ -7,7 +7,7 @@ extension AppDelegate {
 
     /// Reads every source, or with `dueOnly` just those whose interval has passed.
     func refresh(dueOnly: Bool = false) async {
-        guard !refreshing else { return }
+        guard !refreshing, !Store.picturesOnly else { return }
         let feeds = dueOnly
             ? store.state.feeds.filter { !checking.contains($0.id) && $0.due(lastChecked: store.state.lastChecked[$0.id], lastTried: lastTried[$0.id]) }
             : store.state.feeds

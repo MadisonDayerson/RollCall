@@ -46,14 +46,15 @@ struct RouteBox: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                         if let r = route.value {
+                            let arriving = places.first == model.store.homePlace
                             // A route link's stops are map points, so it's described rather than listed.
                             Text(RoutePlanner.describe(r) + " · " + (Route.link(in: ride.notes) != nil && places.contains { Route.point($0) != nil }
                                                                      ? "the organiser's route" : places.joined(separator: " → ")))
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             Divider()
-                            RouteWeatherView(route: r, ride: ride, places: places, arriving: places.first == model.store.homePlace)
+                            RouteWeatherView(route: r, ride: ride, places: places, arriving: arriving)
                             Divider()
-                            RoadAlertsView(route: r, ride: ride, arriving: places.first == model.store.homePlace, state: alerts)
+                            RoadAlertsView(route: r, ride: ride, arriving: arriving, state: alerts)
                         }
                     }
                 }

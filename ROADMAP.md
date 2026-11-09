@@ -63,7 +63,8 @@ Temperature, chance of rain and wind at points along the route, at the time you'
 ## Task 3: Road alerts on the route
 
 **Status: built and tried on the owner's rides.** The whole state's alerts (unplanned v3, planned v1) are downloaded
-with the rider's key in a `KeyID` header (`RoadAlerts.swift`, `RoadAlertsView.swift`). Booked works are about 10,000
+with the rider's key in a `KeyID` header (`RoadAlerts.swift` reads the feeds, `RoadAlertMatching.swift` matches them
+to the route, `RoadAlertDownloads.swift` downloads and keeps them, `RoadAlertsView.swift` shows them). Booked works are about 10,000
 records over ~20 pages of 500, each request starting 3.2 s after the last (about 70 s), only ones not yet over kept.
 They're saved to `roadworks.json` in RollCall's folder and downloaded again after 6 hours, in the background after each
 source check; saved ones under 2 days old show meanwhile, so after the first download a ride's alerts show in seconds;

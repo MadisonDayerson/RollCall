@@ -298,6 +298,10 @@ struct AppState: Codable {
 }
 
 final class Store {
+    /// Taking pictures of the window (`--snapshots`) uses your saved rides but never changes them: a sample ride
+    /// may be added for the pictures, so nothing is saved and no sources are checked.
+    static let picturesOnly = CommandLine.arguments.contains("--snapshots")
+
     static let folder: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let dir = base.appendingPathComponent("RollCall", isDirectory: true)
@@ -328,9 +332,10 @@ final class Store {
     }
 
     func save() {
-        guard let data = try? Store.encoder.encode(state) else { return }
-        try? data.write(to: file, options: .atomic)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        if !Store.picturesOnly, let data = try? Store.encoder.encode(state) {
+            try? data.write(to: file, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        }
         NotificationCenter.default.post(name: Store.changed, object: nil)
     }
 

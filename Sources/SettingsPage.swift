@@ -161,7 +161,8 @@ struct RoadAlertsKeyBox: View {
                 SecureField("Paste your key", text: $key.value).onSubmit(save)
                 Button("Save", action: save).disabled(key.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            Button("Open the Open Data Portal") { NSWorkspace.shared.open(URL(string: RoadAlerts.signUpPage)!) }
+            Button("Get a key") { NSWorkspace.shared.open(URL(string: RoadAlerts.signUpPage)!) }
+                .help("Open the Transport Victoria Open Data Portal to sign up for a free key")
         }
     }
 
