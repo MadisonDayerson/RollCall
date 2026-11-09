@@ -70,11 +70,14 @@ source check; saved ones under 2 days old show meanwhile, so after the first dow
 alerts happening now are one page, kept 10 minutes and shown for rides within a day. Feed times come with or without
 "Z" (no zone means Victorian time); weekly slots read "9:00 PM" with "PT-16H" meaning until 5 am. An alert counts when
 it's within 50 m of the route and, for works along a road, at least 200 m of it follows the route, so roads you only
-cross and side streets don't. Alerts are shown one line per road (on and off ramps together), closures first, five
-before Show all. They're also marked on the route map (`RoadAlertMarks.swift`): each icon sits on a stalk at least 34 pt out from the route,
+cross and side streets don't. Alerts are shown one line per road (on and off ramps together), closures first. They're also marked on the route map (`RoadAlertMarks.swift`): each icon sits on a stalk at least 34 pt out from the route,
 preferably on the side away from the route's middle, turned or moved further out until it's clear of the whole route line
 and the other icons. Hovering over an icon shows a small label (the Mac's own tooltips didn't show over the map) with
-what it is and where, plus the feed's description when the icon is one hazard; the hover area is the icon only; alerts closer than 18 pt share one icon. `RollCall --check-roads` prints what the feeds gave and what's on each upcoming ride's route.
+a brief summary from Apple's on-device model (`AlertSummary.swift`), written in the background when the map shows; the
+feed's dates, times and set phrases are cut from what it reads, and a reply that's long or copies the alert gives way to
+a plain "Lanes blocked on Montague Street, South Melbourne" line, as when Apple Intelligence is off. The hover area is the
+icon only. Under the weather, the list sits in a drop-down that starts closed ("Road alerts on 6 roads · 2 closed"), all
+roads shown when opened; alerts closer than 18 pt share one icon. `RollCall --check-roads` prints what the feeds gave and what's on each upcoming ride's route.
 
 Crashes, closures, hazards and roadworks near the route, from the Victorian Department of Transport and Planning.
 

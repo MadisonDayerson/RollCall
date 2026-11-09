@@ -3,13 +3,16 @@ import MapKit
 
 /// Road alerts marked on the route map: an icon set off to the side of the route, on a stalk pointing to where the
 /// alert is, so the route stays clear. Holding the pointer over an icon shows what it is. Icons that would overlap
-/// are shown as one, listing them all. Road closures are in orange.
+/// are shown as one. The label is a brief summary from Apple's on-device model, written in the background when the
+/// map shows. Road closures are in orange.
 struct RoadAlertMarks: View {
     let alerts: [RoadAlerts.Alert]
     let route: [CLLocationCoordinate2D]
     let map: RouteMapImage.Drawn
     let size: CGSize
     @StateObject private var hovered = Box<Int?>(nil)
+    /// Summaries written so far, by the alerts they cover.
+    @StateObject private var summaries = Box<[String: String]>([:])
 
     /// Alerts closer than this on the picture are shown as one.
     private static let apart: CGFloat = 18
@@ -18,8 +21,6 @@ struct RoadAlertMarks: View {
     /// Room kept between an icon's edge and the route line.
     private static let clearance: CGFloat = 4
     private static let iconSize: CGFloat = 18
-    /// Lines shown when hovering, before "and n more".
-    private static let lines = 6
 
     private struct Mark {
         /// Where the alert is on the route, and where its icon goes.
@@ -54,6 +55,15 @@ struct RoadAlertMarks: View {
                     callout(marks[i], at: scaled(marks[i].icon, scale), in: g.size)
                 }
             }
+        }
+        .task(id: marks.map { AlertSummary.key($0.alerts) }) { await summarise() }
+    }
+
+    /// Writes each icon's summary in turn, keeping ones already written.
+    private func summarise() async {
+        for m in marks {
+            if let done = await AlertSummary.write(m.alerts) { summaries.value[AlertSummary.key(m.alerts)] = done }
+            if Task.isCancelled { return }
         }
     }
 
@@ -133,15 +143,9 @@ struct RoadAlertMarks: View {
             .accessibilityLabel(a.summary)
     }
 
-    /// What's at the icon, beside it and kept inside the picture.
+    /// What's at the icon, briefly, beside it and kept inside the picture.
     private func callout(_ m: Mark, at p: CGPoint, in area: CGSize) -> some View {
-        let all = Array(Set(m.alerts.map(\.summary))).sorted()
-        var text = all.prefix(Self.lines).joined(separator: "\n") + (all.count > Self.lines ? "\nand \(all.count - Self.lines) more" : "")
-        // One hazard: what's going on there too, in the feed's words.
-        let details = Set(m.alerts.map { $0.details.trimmingCharacters(in: .whitespacesAndNewlines) }).filter { !$0.isEmpty }
-        if all.count == 1, details.count == 1, let d = details.first {
-            text += "\n" + (d.count > 160 ? d.prefix(157).trimmingCharacters(in: .whitespaces) + "…" : d)
-        }
+        let text = summaries.value[AlertSummary.key(m.alerts)] ?? AlertSummary.plain(m.alerts)
         let left = p.x < area.width / 2, top = p.y < area.height / 2
         let gap = Self.iconSize / 2 + 4
         return Text(text)
@@ -150,7 +154,7 @@ struct RoadAlertMarks: View {
             .padding(.horizontal, 7).padding(.vertical, 5)
             .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.25), lineWidth: 1))
-            .frame(maxWidth: max(80, left ? area.width - p.x - gap - 4 : p.x - gap - 4), alignment: left ? .leading : .trailing)
+            .frame(maxWidth: min(240, max(80, left ? area.width - p.x - gap - 4 : p.x - gap - 4)), alignment: left ? .leading : .trailing)
             .padding(left ? .leading : .trailing, left ? p.x + gap : area.width - p.x + gap)
             .padding(top ? .top : .bottom, max(4, top ? p.y - 10 : area.height - p.y - 10))
             .frame(width: area.width, height: area.height, alignment: top ? (left ? .topLeading : .topTrailing) : (left ? .bottomLeading : .bottomTrailing))

@@ -1001,6 +1001,12 @@ do {
     check(shows(alert([(-37.80, 144.94), (-37.80, 144.945), (-37.80, 144.95)])), "a closure along the route shows")
     check(shows(alert([(-37.80, 144.99), (-37.80, 145.03)])), "a long straight closure the route rides the start of shows")
     check(RoadAlerts.readUnplanned(Data("not json".utf8)) == nil, "a broken reply isn't read")
+    check(AlertSummary.trimmed("Road Program activities occurring between 02/09/2026 and 31/03/2027 during the following times: Weekdays 7:00 PM to 5:00 AM. Impact to traffic will be lanes closed southbound. Altered speed limit during operation will be 40 and the traffic delay is expected to be 0 to 5 min.")
+          == "Road Program. lanes closed southbound. 40 km/h, delays 0 to 5 min.", "the model reads alerts without dates, times or set phrases")
+    var blocked = alert([(-37.80, 144.95)]); blocked.impact = "Lanes blocked"; blocked.road = "Made Up Street"; blocked.place = "Testville"
+    var other = blocked; other.id = "y"; other.road = "Another Road"
+    check(AlertSummary.plain([blocked]) == "Lanes blocked on Made Up Street, Testville", "the plain label says what and where")
+    check(AlertSummary.plain([blocked, other]) == "Lanes blocked on Made Up Street, Testville (and 1 more)", "the plain label counts the others")
 
     let roads = RoadAlerts.byRoad([
         RoadAlerts.Alert(id: "a", planned: true, kind: "Planned roadworks", impact: "Lanes blocked", road: "Sample Freeway", place: "Northtown", details: "", start: nil, end: nil, spots: []),

@@ -2,20 +2,17 @@ import SwiftUI
 import MapKit
 
 /// Road alerts on a ride's route, under the weather: closures, crashes, hazards and roadworks on the roads you
-/// ride, at the time you'd ride them. Road closures are in orange. Alerts happening now show first; booked
-/// works follow once they've downloaded. The map marks the same alerts.
+/// ride, at the time you'd ride them, in a drop-down that starts closed. Road closures are in orange. Alerts
+/// happening now show first; booked works follow once they've downloaded. The map marks the same alerts.
 struct RoadAlertsView: View {
     let route: RoutePlanner.Planned
     let ride: RideEvent
     let arriving: Bool
     /// Shared with the map, which marks the same alerts.
     @ObservedObject var state: Box<Loading>
-    @StateObject private var showAll = Box(false)
+    @StateObject private var open = Box(false)
 
     enum Loading { case loading, over, noKey, badKey, failed, found([RoadAlerts.Road], stillBooking: Bool) }
-
-    /// Roads shown before Show all.
-    private static let first = 5
 
     private var window: (from: Date, to: Date) { RoadAlerts.riding(ride, seconds: route.seconds, arriving: arriving) }
 
@@ -36,12 +33,15 @@ struct RoadAlertsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     if roads.isEmpty && !stillBooking {
                         Label("No road alerts on the route.", systemImage: "checkmark.circle")
-                    }
-                    let shown = showAll.value ? roads : Array(roads.prefix(Self.first))
-                    ForEach(shown.indices, id: \.self) { i in row(shown[i]) }
-                    if roads.count > Self.first {
-                        Button(showAll.value ? "Show fewer" : "Show all \(roads.count) roads") { showAll.value.toggle() }
-                            .buttonStyle(.link)
+                    } else if !roads.isEmpty {
+                        DisclosureGroup(isExpanded: $open.value) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(roads.indices, id: \.self) { i in row(roads[i]) }
+                            }
+                            .padding(.top, 6)
+                        } label: {
+                            heading(roads)
+                        }
                     }
                     if stillBooking { waiting("Downloading booked roadworks (about a minute the first time)…") }
                     Text(LocalizedStringKey("Road data from the [Department of Transport and Planning](https://opendata.transport.vic.gov.au/) (CC BY 4.0)"))
@@ -56,6 +56,17 @@ struct RoadAlertsView: View {
 
     private func waiting(_ text: String) -> some View {
         HStack(spacing: 8) { ProgressView().controlSize(.small); Text(text).foregroundStyle(.secondary) }
+    }
+
+    /// "Road alerts on 6 roads · 2 closed", with closures in orange.
+    private func heading(_ roads: [RoadAlerts.Road]) -> some View {
+        let closed = roads.filter(\.closesRoad).count
+        return HStack(spacing: 4) {
+            Text("Road alerts on \(roads.count) \(roads.count == 1 ? "road" : "roads")")
+            if closed > 0 { Text("· \(closed) closed").foregroundStyle(.orange) }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { open.value.toggle() }
     }
 
     /// What it is and which road, then the suburbs, then when.

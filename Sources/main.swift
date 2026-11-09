@@ -134,6 +134,7 @@ if CommandLine.arguments.contains("--check-roads") {
                 let roads = RoadAlerts.byRoad(on)
                 print("\(ride.title.prefix(50)) (\(window.from) to \(window.to)): \(on.count) alerts on \(roads.count) roads"
                       + roads.map { "\n    \($0.planned ? "booked" : "now") \($0.impact) · \($0.kind) · \($0.name) · \($0.places.joined(separator: ", ")) (\($0.alerts.count))" }.joined())
+                for road in roads { print("    summary: \(await AlertSummary.write(road.alerts) ?? "(plain) " + AlertSummary.plain(road.alerts))") }
             }
         } catch {
             print("Couldn't load road alerts: \(error)")

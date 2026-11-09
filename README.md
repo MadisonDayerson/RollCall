@@ -123,7 +123,8 @@ your suburb. Under the map is the weather along the way: the temperature, chance
 40 to 50 km, for when you'd reach each one. Likely rain and strong gusts are in orange. Rides more than a week away
 say when their forecast will be ready. Below that are **road alerts** in Victoria: crashes, closures, hazards and
 roadworks on the roads you'd ride, at the time you'd be riding them, one line per road with closures first (in
-orange). They're marked on the map too, beside the route on little stalks: hold the pointer over an icon to see what it is. Alerts happening now show for rides within a day; booked roadworks take about a minute to download the
+orange). They're marked on the map too, beside the route on little stalks: hold the pointer over an icon for a brief summary
+of it, written on your Mac by Apple Intelligence when it's on. The list itself is under **Road alerts on N roads**: click it to open. Alerts happening now show for rides within a day; booked roadworks take about a minute to download the
 first time, then show straight away (RollCall keeps them on your Mac and fetches new ones in the background every
 six hours). They need a free key of your own (see **Road alerts** below).
 
