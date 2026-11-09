@@ -13,8 +13,10 @@ struct RoadAlertMarks: View {
 
     /// Alerts closer than this on the picture are shown as one.
     private static let apart: CGFloat = 18
-    /// How far the icon sits from the route.
+    /// How far the icon sits from the route, at least.
     private static let stalk: CGFloat = 34
+    /// Room kept between an icon's edge and the route line.
+    private static let clearance: CGFloat = 4
     private static let iconSize: CGFloat = 18
     /// Lines shown when hovering, before "and n more".
     private static let lines = 6
@@ -41,11 +43,12 @@ struct RoadAlertMarks: View {
                 .stroke(Color.primary.opacity(0.7), lineWidth: 1)
                 ForEach(marks.indices, id: \.self) { i in
                     Circle().fill(Color.primary).frame(width: 4, height: 4).position(scaled(marks[i].at, scale))
+                    // Hover is set before placing the icon, so it covers only the icon and not the whole map.
                     icon(marks[i].worst)
-                        .position(scaled(marks[i].icon, scale))
                         .onHover { inside in
                             if inside { hovered.value = i } else if hovered.value == i { hovered.value = nil }
                         }
+                        .position(scaled(marks[i].icon, scale))
                 }
                 if let i = hovered.value, marks.indices.contains(i) {
                     callout(marks[i], at: scaled(marks[i].icon, scale), in: g.size)
@@ -57,9 +60,11 @@ struct RoadAlertMarks: View {
     private func scaled(_ p: CGPoint, _ scale: CGFloat) -> CGPoint { CGPoint(x: p.x * scale, y: p.y * scale) }
 
     /// The alerts on the picture, worst first so a closure's icon is the one kept where they meet, each with its
-    /// icon moved out from the route.
+    /// icon moved out to a clear spot beside the route.
     private var marks: [Mark] {
-        let line = route.map(map.spot)
+        // The route on the picture, with points closer than 3 pt dropped: plenty to keep icons off it.
+        var line: [CGPoint] = []
+        for p in route.map(map.spot) where line.last.map({ hypot($0.x - p.x, $0.y - p.y) >= 3 }) ?? true { line.append(p) }
         var marks: [Mark] = []
         for a in alerts.sorted(by: { RoadAlerts.rank($0) < RoadAlerts.rank($1) }) {
             guard let spot = a.mark else { continue }
@@ -71,29 +76,50 @@ struct RoadAlertMarks: View {
                 marks.append(Mark(at: p, alerts: [a]))
             }
         }
-        for i in marks.indices { marks[i].icon = iconSpot(for: marks[i].at, line: line) }
+        for i in marks.indices { marks[i].icon = iconSpot(for: marks[i].at, line: line, taken: marks[..<i].map(\.icon)) }
         return marks
     }
 
-    /// Out from the route at right angles, on the side away from the middle of the route, kept inside the picture.
-    private func iconSpot(for p: CGPoint, line: [CGPoint]) -> CGPoint {
-        let half = Self.iconSize / 2 + 1
-        func inside(_ q: CGPoint) -> CGPoint {
-            CGPoint(x: min(max(q.x, half), size.width - half), y: min(max(q.y, half), size.height - half))
+    /// A spot for the icon that's clear of the whole route line and the icons already placed, inside the picture:
+    /// straight out from the route on the side away from its middle if that's clear, otherwise turned further
+    /// round or further out. If nowhere is clear, the spot furthest from the route.
+    private func iconSpot(for p: CGPoint, line: [CGPoint], taken: [CGPoint]) -> CGPoint {
+        let half = Self.iconSize / 2
+        // Which way the route runs here, and which side is away from its middle.
+        let i = line.indices.min { hypot(line[$0].x - p.x, line[$0].y - p.y) < hypot(line[$1].x - p.x, line[$1].y - p.y) }
+        var out = CGVector(dx: 0, dy: -1)
+        if let i, line.count >= 2 {
+            let a = line[max(0, i - 2)], b = line[min(line.count - 1, i + 2)]
+            let length = hypot(b.x - a.x, b.y - a.y)
+            if length > 0 { out = CGVector(dx: -(b.y - a.y) / length, dy: (b.x - a.x) / length) }
+            let middle = CGPoint(x: line.map(\.x).reduce(0, +) / CGFloat(line.count), y: line.map(\.y).reduce(0, +) / CGFloat(line.count))
+            if out.dx * (p.x - middle.x) + out.dy * (p.y - middle.y) < 0 { out = CGVector(dx: -out.dx, dy: -out.dy) }
         }
-        guard line.count >= 2, let i = line.indices.min(by: { hypot(line[$0].x - p.x, line[$0].y - p.y) < hypot(line[$1].x - p.x, line[$1].y - p.y) })
-        else { return inside(CGPoint(x: p.x, y: p.y - Self.stalk)) }
-        let a = line[max(0, i - 3)], b = line[min(line.count - 1, i + 3)]
-        var dx = b.x - a.x, dy = b.y - a.y
-        let length = hypot(dx, dy)
-        if length == 0 { (dx, dy) = (1, 0) } else { (dx, dy) = (dx / length, dy / length) }
-        var normal = CGPoint(x: -dy, y: dx)
-        let middle = CGPoint(x: line.map(\.x).reduce(0, +) / CGFloat(line.count), y: line.map(\.y).reduce(0, +) / CGFloat(line.count))
-        if normal.x * (p.x - middle.x) + normal.y * (p.y - middle.y) < 0 { normal = CGPoint(x: -normal.x, y: -normal.y) }
-        let out = CGPoint(x: p.x + normal.x * Self.stalk, y: p.y + normal.y * Self.stalk)
-        // Near the edge, go the other way rather than squash the stalk.
-        let back = CGPoint(x: p.x - normal.x * Self.stalk, y: p.y - normal.y * Self.stalk)
-        return inside(out) == out || inside(back) != back ? inside(out) : back
+        var best: (spot: CGPoint, room: CGFloat)? = nil
+        for length in [Self.stalk, Self.stalk * 1.4, Self.stalk * 1.8] {
+            for turn in [0, 25, -25, 50, -50, 75, -75, 100, -100, 125, -125, 150, -150, 180] as [CGFloat] {
+                let r = turn * .pi / 180
+                let d = CGVector(dx: out.dx * cos(r) - out.dy * sin(r), dy: out.dx * sin(r) + out.dy * cos(r))
+                let q = CGPoint(x: p.x + d.dx * length, y: p.y + d.dy * length)
+                guard q.x >= half + 1, q.x <= size.width - half - 1, q.y >= half + 1, q.y <= size.height - half - 1,
+                      !taken.contains(where: { hypot($0.x - q.x, $0.y - q.y) < Self.iconSize + 2 }) else { continue }
+                let room = distance(from: q, to: line) - half
+                if room >= Self.clearance { return q }
+                if room > best?.room ?? -.infinity { best = (q, room) }
+            }
+        }
+        return best?.spot ?? CGPoint(x: min(max(p.x, half), size.width - half), y: min(max(p.y - Self.stalk, half), size.height - half))
+    }
+
+    /// How far a point is from the nearest part of the route line.
+    private func distance(from p: CGPoint, to line: [CGPoint]) -> CGFloat {
+        guard let first = line.first else { return .infinity }
+        if line.count == 1 { return hypot(p.x - first.x, p.y - first.y) }
+        return zip(line, line.dropFirst()).map { a, b in
+            let dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy
+            let t = length == 0 ? 0 : max(0, min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / length))
+            return hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
+        }.min()!
     }
 
     private func icon(_ a: RoadAlerts.Alert) -> some View {
@@ -110,7 +136,12 @@ struct RoadAlertMarks: View {
     /// What's at the icon, beside it and kept inside the picture.
     private func callout(_ m: Mark, at p: CGPoint, in area: CGSize) -> some View {
         let all = Array(Set(m.alerts.map(\.summary))).sorted()
-        let text = all.prefix(Self.lines).joined(separator: "\n") + (all.count > Self.lines ? "\nand \(all.count - Self.lines) more" : "")
+        var text = all.prefix(Self.lines).joined(separator: "\n") + (all.count > Self.lines ? "\nand \(all.count - Self.lines) more" : "")
+        // One hazard: what's going on there too, in the feed's words.
+        let details = Set(m.alerts.map { $0.details.trimmingCharacters(in: .whitespacesAndNewlines) }).filter { !$0.isEmpty }
+        if all.count == 1, details.count == 1, let d = details.first {
+            text += "\n" + (d.count > 160 ? d.prefix(157).trimmingCharacters(in: .whitespaces) + "…" : d)
+        }
         let left = p.x < area.width / 2, top = p.y < area.height / 2
         let gap = Self.iconSize / 2 + 4
         return Text(text)

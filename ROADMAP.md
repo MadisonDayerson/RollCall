@@ -71,9 +71,10 @@ alerts happening now are one page, kept 10 minutes and shown for rides within a 
 "Z" (no zone means Victorian time); weekly slots read "9:00 PM" with "PT-16H" meaning until 5 am. An alert counts when
 it's within 50 m of the route and, for works along a road, at least 200 m of it follows the route, so roads you only
 cross and side streets don't. Alerts are shown one line per road (on and off ramps together), closures first, five
-before Show all. They're also marked on the route map (`RoadAlertMarks.swift`): each icon sits 34 pt out from the route on a
-stalk, on the side away from the route's middle, and shows what it is in a small label on hover (the Mac's own
-tooltips didn't show over the map); alerts closer than 18 pt share one icon. `RollCall --check-roads` prints what the feeds gave and what's on each upcoming ride's route.
+before Show all. They're also marked on the route map (`RoadAlertMarks.swift`): each icon sits on a stalk at least 34 pt out from the route,
+preferably on the side away from the route's middle, turned or moved further out until it's clear of the whole route line
+and the other icons. Hovering over an icon shows a small label (the Mac's own tooltips didn't show over the map) with
+what it is and where, plus the feed's description when the icon is one hazard; the hover area is the icon only; alerts closer than 18 pt share one icon. `RollCall --check-roads` prints what the feeds gave and what's on each upcoming ride's route.
 
 Crashes, closures, hazards and roadworks near the route, from the Victorian Department of Transport and Planning.
 
