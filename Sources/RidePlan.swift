@@ -17,7 +17,8 @@ enum RidePlan {
     }
 
     // Talking about riding, bikes or a bike event.
-    static let rideWords = #"\b(ride|rides|riding|rideout|ride out|run|cruise|blat|spin|twisties|loop|group ride|bike|bikes|motorbike|motorbikes|motorcycle|motorcycles|bike night|bike show|track day|meet ?up|meet|head(ing)? (out|off|up|down)|go(ing)? (out )?for a (ride|spin|blat|cruise|lap|run)|brekkie|breakfast|coffee)\b"#
+    // "Meet" counts unless it's meeting someone ("going to meet him tonight").
+    static let rideWords = #"\b(ride|rides|riding|rideout|ride out|run|cruise|blat|spin|twisties|loop|group ride|bike|bikes|motorbike|motorbikes|motorcycle|motorcycles|bike night|bike show|track day|meet ?up|meet(?! (him|her|them|my|his|their)\b)|head(ing)? (out|off|up|down)|go(ing)? (out )?for a (ride|spin|blat|cruise|lap|run)|brekkie|breakfast|coffee)\b"#
 
     // Inviting people or announcing a plan.
     static let intentWords = #"\b(anyone|any ?1|anybody) (out|keen|want|wanna|up for|interested|coming|joining|free|riding|going|heading|around|else)|\bwho('?s| is)? (keen|in|coming|up for|joining|free|around|going)\b|\bkeen (for|to|on)\b|\b(thinking|planning|plan) (about |of |on |to )?(going|heading|riding|doing|a ride|a run|a blat|a cruise|head|go|ride)|\blet'?s (go|ride|do|head|meet|get)\b|\bwe('re| are| will|'ll) (be )?(heading|going|riding|meeting|leaving|doing|head|go|ride|meet|leave)\b|\bi('m| am|'ll| will) (be )?(heading|going|riding|leaving|head|go|ride|leave) (out|for|to|up|down|off)\b|\bjoin (us|me|in)\b|\bcome (along|join)\b|\b(all|everyone|anyone) (is )?welcome\b|\bmeet(ing)? (at|@|up at|point|spot|place|location)\b|\bkick ?stands? up\b|\bksu\b|\bleaving (at|from)\b|\bdepart(ing|ure|s)?\b|\broll(ing)? out\b|\brsvp\b|\broute\b|\bride('?s| is) on\b|\bcould meet\b|\bwanna (ride|go|head)\b|\bwant to (ride|go|head|join)\b|\bupcoming\b"#

@@ -355,6 +355,8 @@ check(judge("Anyone keen for a ride soon?").kind == .maybe, "invite with no day 
 check(judge("Ride Sunday, meet at Shell Coldstream 9am", sent: sentAt(25, 9)).kind == .no, "\"Sunday\" in last week's message is over")
 let laterOn = judge("A couple of us were thinking about heading out a bit later on, could meet somewhere?", sent: sentAt(1, 8))
 check(laterOn.kind == .ride && laterOn.hasTime && laterOn.start.map { comps($0).hour == 10 } == true, "\"a bit later\" means a couple of hours after the message")
+check(judge("So nervous! We're going to meet him tonight, he's a 1 year old pup").kind == .no, "meeting someone isn't a ride")
+check(judge("We're going to meet at the servo tonight, 7pm").kind == .ride, "meeting at a place still is")
 check(RidePlan.judge("heading out a bit later on, could meet somewhere?", sent: sentAt(1, 8), now: sentAt(1, 20), calendar: planCal).kind == .no,
       "\"a bit later\" ride is over by the evening")
 
