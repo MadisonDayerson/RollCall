@@ -13,8 +13,9 @@ struct MainView: View {
                 Label("Rides", systemImage: "motorcycle")
                     .badge(model.undecidedCount)
                     .tag(UIModel.Page.rides)
+                // Every ride on the page, settled or still being arranged.
                 Label("To review", systemImage: "tray")
-                    .badge(model.app.possiblePlans().count)
+                    .badge(model.app.possiblePlans().count + model.app.partialPlans().count)
                     .tag(UIModel.Page.review)
                 Label("Sources", systemImage: "antenna.radiowaves.left.and.right").tag(UIModel.Page.sources)
                 Label("Settings", systemImage: "gearshape").tag(UIModel.Page.settings)
