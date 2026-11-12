@@ -165,8 +165,15 @@ enum PlanFinder {
         return found
     }
 
-    /// How long a conversation under review keeps collecting replies as people settle the details.
+    /// How long a conversation under review with no day yet keeps collecting replies as people settle the details.
     static let followFor: TimeInterval = 4 * 86400
+
+    /// A plan (or the ride added from it, going, skipped or not decided yet) takes in replies until the ride is
+    /// over, so a change of time or place a few days later still reaches it; one with no day yet, for `followFor`.
+    static func following(_ r: PlanReview, now: Date) -> Bool {
+        guard let start = r.summary.start else { return now.timeIntervalSince(r.updated) <= followFor }
+        return start.addingTimeInterval(r.summary.hasTime ? 3 * 3600 : 86400) > now
+    }
 
     /// Conversations already under review (or added as rides) with new messages that add to them: the time, day or
     /// place, ride talk, people saying they're in, or quick replies. A newly found conversation in the same chat
@@ -174,7 +181,7 @@ enum PlanFinder {
     static func followUps(_ lines: [ChatLine], newIDs: Set<String>, found: inout [PlanReview], existing: [PlanReview], now: Date) -> [PlanReview] {
         var grown: [PlanReview] = []
         let sorted = lines.sorted { $0.sent < $1.sent }
-        for var r in existing where now.timeIntervalSince(r.updated) <= followFor {
+        for var r in existing where following(r, now: now) {
             guard let lastSent = r.lines.last?.sent else { continue }
             var adding: [ChatLine] = []
             var previous = lastSent

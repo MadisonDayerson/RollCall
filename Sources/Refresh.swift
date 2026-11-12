@@ -53,8 +53,13 @@ enum SourceReader {
         // Listings often give only the date; the event's own page has the time and place.
         var fetched = 0
         for (i, e) in events.enumerated() where e.allDay || e.location.isEmpty {
-            guard fetched < detailPagesPerRefresh, let url = e.url, url != feed.url,
-                  store.state.events[Store.eventID(source: feed.id, item: e)] == nil else { continue }
+            let id = Store.eventID(source: feed.id, item: e)
+            if let old = store.state.events[id] {
+                // Its own page was read before: keep what it added, so the listing's fewer details don't replace it.
+                if store.state.rideEdits[id] == nil { events[i] = keepingDetails(e, from: old) }
+                continue
+            }
+            guard fetched < detailPagesPerRefresh, let url = e.url, url != feed.url else { continue }
             fetched += 1
             guard let detail = try? await Web.get(url),
                   let full = Web.jsonLDEvents(detail.text, base: detail.finalURL).first else { continue }
@@ -64,6 +69,18 @@ enum SourceReader {
             try? await Task.sleep(nanoseconds: 800_000_000)
         }
         return SourceResult(events: events)
+    }
+
+    /// A listing's event with the time (while it's still on the same day), place and notes an earlier read of its
+    /// own page found. A listing that gives a new day, a time or a place is newer, so it wins.
+    nonisolated static func keepingDetails(_ e: ICSEvent, from old: RideEvent) -> ICSEvent {
+        var e = e
+        if e.allDay, !old.allDay, Calendar.current.isDate(old.start, inSameDayAs: e.start) {
+            e.start = old.start; e.end = old.end; e.allDay = false
+        }
+        if e.location.isEmpty { e.location = old.location }
+        if e.notes.count < old.notes.count { e.notes = old.notes }
+        return e
     }
 
     // MARK: RSS / Atom
@@ -125,18 +142,24 @@ enum SourceReader {
 
     // MARK: Beeper chats (WhatsApp and others)
 
-    /// Two weeks of messages are read: older chat is no longer relevant, and its rides have likely happened.
-    /// Each message only raises a review the first time it's seen.
+    /// Two weeks of messages are read the first time: older chat is no longer relevant, and its rides have likely
+    /// happened. Each message only raises a review the first time it's seen.
     nonisolated static let chatLookBackDays = Double(Store.maxKeepDays)
+
+    /// Where reading a chat starts: after the first time, just the messages since the last check, and a quiet gap's
+    /// worth before them so a new message still has the start of its conversation.
+    nonisolated static func chatReadFrom(lastChecked: Date?, now: Date) -> Date {
+        max(now.addingTimeInterval(-chatLookBackDays * 86400), (lastChecked ?? .distantPast).addingTimeInterval(-PlanFinder.gap))
+    }
 
     static func readChat(_ feed: Feed, store: Store, now: Date) async throws -> SourceResult {
         let chatID = Beeper.chatID(of: feed)
-        let since = now.addingTimeInterval(-chatLookBackDays * 86400)
+        let since = chatReadFrom(lastChecked: store.state.lastChecked[feed.id], now: now)
         var result = SourceResult()
         var lines: [ChatLine] = []
         var posts: [String: PostItem] = [:]
         var newIDs = Set<String>()
-        // Every recent message is kept for context; only new ones can raise a review.
+        // Every message read is kept for context; only new ones can raise a review.
         for m in try await Beeper.messages(chatID: chatID, since: since) {
             guard let post = chatPost(m, chatID: chatID) else { continue }
             lines.append(PlanFinder.line(from: post, sender: chatSender(m)))

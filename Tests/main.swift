@@ -437,9 +437,40 @@ do {
     check(grown.first?.lines.map(\.id) == ["f1", "f2", "f4", "f5"], "the meeting place and time join the plan; unrelated chat doesn't")
     check(newlyFound.isEmpty, "the same plan isn't raised twice")
     check(grown.first?.summary.place?.contains("Example Servo") == true && grown.first?.summary.hasTime == true, "the plan now has its place and time")
-    var stale = r; stale.updated = monday.addingTimeInterval(-10 * 86400)
+    var quiet = r; quiet.updated = monday.addingTimeInterval(-10 * 86400)
     var none: [PlanReview] = []
-    check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [stale], now: wed).isEmpty, "old conversations stop collecting")
+    check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [quiet], now: wed).count == 1,
+          "a plan quiet for days still takes a new time or place until its ride is over")
+    var stale = quiet; stale.summary.start = nil
+    check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [stale], now: wed).isEmpty,
+          "old conversations with no day stop collecting")
+    let monday9th = cal.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 12))!
+    check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [quiet], now: monday9th).isEmpty,
+          "a plan whose ride is over stops collecting")
+}
+
+// Chats are read from just before the last check, or two weeks back the first time.
+do {
+    let now = Date()
+    check(SourceReader.chatReadFrom(lastChecked: nil, now: now) == now.addingTimeInterval(-14 * 86400), "first read goes back two weeks")
+    check(SourceReader.chatReadFrom(lastChecked: now.addingTimeInterval(-3600), now: now) == now.addingTimeInterval(-4 * 3600),
+          "later reads start a quiet gap before the last check")
+    check(SourceReader.chatReadFrom(lastChecked: now.addingTimeInterval(-30 * 86400), now: now) == now.addingTimeInterval(-14 * 86400),
+          "never more than two weeks back")
+}
+
+// A web listing that gives only the day keeps the time and place its event page gave (made-up event).
+do {
+    let day = cal.date(from: DateComponents(year: 2026, month: 11, day: 21))!
+    let listed = ICSEvent(uid: "w1", title: "Example run", start: day, end: nil, allDay: true, location: "", notes: "", url: nil)
+    var old = ride("Example run", "Full details from the event page")
+    old.start = cal.date(from: DateComponents(year: 2026, month: 11, day: 21, hour: 9))!; old.allDay = false
+    old.location = "Example Park"
+    let kept = SourceReader.keepingDetails(listed, from: old)
+    check(!kept.allDay && kept.start == old.start && kept.location == "Example Park" && kept.notes == old.notes,
+          "a known event keeps its page's time, place and notes")
+    var moved = listed; moved.start = cal.date(byAdding: .day, value: 1, to: day)!
+    check(SourceReader.keepingDetails(moved, from: old).allDay, "a listing that moves to a new day wins")
 }
 
 let fallback = plan!

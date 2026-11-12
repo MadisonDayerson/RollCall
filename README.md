@@ -48,8 +48,9 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   Rides you went on move to **Past** once they're over, and are deleted after a week (up to two: Settings → Privacy).
 - **To review:** ride plans from your chats, in two groups. **Possible plans** meet every test: a ride or bike
   event on a day still to come, with a time and a place. **Partial plans** are still missing one of those, along
-  with ride posts that didn't say when. RollCall keeps reading each conversation for four days as the details
-  are settled, and a partial plan moves up (with a notification) once it's complete. Plans you mark
+  with ride posts that didn't say when. RollCall keeps reading each conversation as the details are settled, until
+  the ride is over (or for four days while there's no day yet): a partial plan moves up (with a notification) once
+  it's complete, and a ride added from a plan takes a new time or place, whether you're going or not. Plans you mark
   **Not a ride** wait under **Reviewed** for a week, in case you change your mind.
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
@@ -157,8 +158,8 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **No accounts, no tracking, no AI services.** RollCall has no server of its own. It doesn't collect or
   send anything about you, and nobody else using RollCall can see your rides, chats or settings.
 - **Chats stay on your Mac.** They're read through Beeper Desktop on your own Mac, with read-only permission.
-  Only the last two weeks of messages are read (older chat is no longer relevant), and forums and news feeds are
-  read back two weeks too. The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
+  Only the last two weeks of messages are read (older chat is no longer relevant), and after the first time
+  just the messages since the last check; forums and news feeds are read back two weeks too. The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
   Intelligence is on), so messages never go to an online AI. The same on-device model reads ride descriptions to
   find their start, stops and destination. Before the model reads them, swearing is left out, tracking is taken off links and long
   conversations are trimmed to the messages that matter; your messages themselves aren't changed.
