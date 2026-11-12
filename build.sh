@@ -32,7 +32,11 @@ cp Design/MenuIcon.png "$APP/Contents/Resources/MenuIcon.png"
 cp Design/Wordmark.png "$APP/Contents/Resources/Wordmark.png"
 cp Design/Monogram.png "$APP/Contents/Resources/Monogram.png"
 
-codesign --force --sign - "$APP"
+# Signed with RollCall's own certificate when this Mac has it (./make_signing_key.sh makes it once), so macOS
+# sees every version as the same app and keeps its permissions over updates; otherwise ad-hoc, for trying out.
+SIGN=-
+security find-certificate -c "RollCall Signing" >/dev/null 2>&1 && SIGN="RollCall Signing"
+codesign --force --sign "$SIGN" "$APP"
 
 case "${1:-}" in
   --install)

@@ -7,6 +7,9 @@ VERSION=${1:?Usage: ./release.sh <version, e.g. 1.1> "what's new"}
 NOTES=${2:-}
 REPO=MadisonDayerson/rollcall
 
+# Every release is signed with the same certificate, so people's permissions carry over the update.
+security find-certificate -c "RollCall Signing" >/dev/null 2>&1 || { echo "Run ./make_signing_key.sh once first."; exit 1; }
+
 # Tests first, so a broken build never reaches anyone.
 ./test.sh | tail -1 | grep -q "All tests passed" || { echo "Tests failed; not releasing."; exit 1; }
 

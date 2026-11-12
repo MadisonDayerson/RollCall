@@ -21,6 +21,9 @@ You only need to do this once. RollCall then opens its setup, which walks you th
   • the clubs, groups, forums and Instagram accounts you follow
   • Apple Calendar or Google Calendar for the rides you're going to
 
+macOS asks once for each thing RollCall uses (your calendar and notifications).
+Updates keep those answers, so it doesn't ask again.
+
 RollCall lives in the menu bar at the top of the screen (the gothic RC).
 Everything stays on your Mac: RollCall never posts, sends messages or RSVPs for you.
 

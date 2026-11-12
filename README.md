@@ -16,7 +16,9 @@ Needs macOS 14 or newer (Apple silicon or Intel).
 3. Open RollCall. The first time, your Mac blocks it because it isn't from the App Store:
    go to **System Settings → Privacy & Security**, click **Open Anyway**, and enter your password.
 
-RollCall updates itself: when a new version is out, choose **Update now** in the menu.
+Setup asks for each permission once, at the step that needs it: your calendar, and notifications for plans
+found in chats. RollCall updates itself (choose **Update now**
+in the menu) and keeps those permissions over updates.
 
 ## Set up
 
@@ -204,5 +206,7 @@ Run the tests:
   login keychain.
 - `--snapshots <folder>` saves a picture of every page; `--check-chats` shows how chat messages are read.
 - The logo is drawn by `Design/make_icon.swift` (see `Design/fonts/bosieh/ABOUT.txt` for the font).
-- The app isn't signed with an Apple Developer ID, which is why first opens need **Open Anyway** and
-  macOS may ask for calendar access again after an update.
+- The app isn't signed with an Apple Developer ID, which is why the first open needs **Open Anyway**.
+  Releases are signed with RollCall's own certificate instead (run `./make_signing_key.sh` once on the Mac
+  that makes releases; `release.sh` won't run without it), so macOS treats every update as the same app and
+  doesn't ask for keychain, calendar or Downloads access again. Without it, `build.sh` signs ad-hoc.
