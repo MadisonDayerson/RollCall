@@ -47,8 +47,8 @@ extension AppDelegate {
     /// For checking the design: saves a picture of each page of the window.
     func saveSnapshots(to folder: URL) async {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        // `--dark` checks how everything looks in dark mode.
-        if CommandLine.arguments.contains("--dark") { NSApp.appearance = NSAppearance(named: .darkAqua) }
+        // Light, or with `--dark` dark, whatever the Mac is set to.
+        NSApp.appearance = NSAppearance(named: CommandLine.arguments.contains("--dark") ? .darkAqua : .aqua)
         func snap(_ name: String, _ w: NSWindow?) async {
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             // An app may capture its own windows; this includes the sidebar's translucency.
@@ -140,6 +140,7 @@ extension AppDelegate {
         }
         setup.guide = nil
         setupWindow?.close()
+        exit(0)  // pictures only: nothing to save
     }
 
     func demoReview() -> PlanReview {

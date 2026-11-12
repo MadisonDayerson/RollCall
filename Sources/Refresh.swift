@@ -171,8 +171,11 @@ enum SourceReader {
             }
         }
         var found = PlanFinder.find(lines, newIDs: newIDs, feedID: feed.id, chatID: chatID, now: now)
-        // Plans already under review, or added as rides, take in the replies that settle their details.
-        let following = store.state.reviews.values.filter { $0.feedID == feed.id && ($0.status == .open || $0.status == .added) }
+        // Plans already under review, or added as rides that are still there, take in the replies that settle
+        // their details. A removed ride's conversation isn't read any further.
+        let following = store.state.reviews.values.filter { r in
+            r.feedID == feed.id && (r.status == .open || (r.status == .added && r.rideID.flatMap { store.state.events[$0] } != nil))
+        }
             .sorted { $0.updated > $1.updated }
         let grown = PlanFinder.followUps(lines, newIDs: newIDs, found: &found, existing: following, now: now)
         result.reviews = grown + found

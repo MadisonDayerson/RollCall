@@ -34,7 +34,7 @@ extension AppDelegate {
     /// A ride added from a chat plan takes the plan's new time or place, keeping its length. Your own edits
     /// (Edit…) still win, and a ride you're going to updates its calendar event.
     private func followPlan(_ r: PlanReview, was: PlanSummary, chatName: String) {
-        guard let id = r.rideID, var ride = store.state.events[id] else { return }
+        guard let id = r.rideID, var ride = store.state.events[id], store.state.rideEdits[id] == nil else { return }
         let s = r.summary
         var notes: [String] = []
         if let start = s.start, s.hasTime, start != was.start, start > Date() {

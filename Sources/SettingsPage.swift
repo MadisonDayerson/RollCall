@@ -232,13 +232,20 @@ struct CrewLinksEditor: View {
 
     var body: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 8) {
-                TextField("Discord invite link", text: $discord.value, prompt: Text("Uses yours from Settings if empty"))
-                    .textFieldStyle(.roundedBorder)
-                TextField("Tags", text: $tags.value, prompt: Text("e.g. #hooligoon"))
-                    .textFieldStyle(.roundedBorder)
+            // Labelled beside each field: a plain text field on macOS shows only its placeholder.
+            Grid(alignment: .leading, verticalSpacing: 8) {
+                GridRow {
+                    Text("Discord").foregroundStyle(.secondary)
+                    TextField("Discord invite link", text: $discord.value, prompt: Text("Yours from Settings if empty"))
+                        .textFieldStyle(.roundedBorder).labelsHidden()
+                }
+                GridRow {
+                    Text("Tags").foregroundStyle(.secondary)
+                    TextField("Tags", text: $tags.value, prompt: Text("e.g. #hooligoon, as well as yours"))
+                        .textFieldStyle(.roundedBorder).labelsHidden()
+                }
                 Text("Added to the calendar events for this group's rides.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(.secondary).gridCellColumns(2)
             }
         } label: {
             Label("Riding with this group", systemImage: "person.2.wave.2")
