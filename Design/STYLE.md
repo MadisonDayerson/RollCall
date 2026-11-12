@@ -5,7 +5,9 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
 
 - **Black and white.** Text and marks use the system's text colours, so they invert for dark mode. Colour is
   kept for meaning and for Apple's standard controls: the person's own accent colour on the sidebar, filled
-  buttons and links (as Apple's guidelines expect), orange for warnings and problems. Nothing else is coloured.
+  buttons and links (as Apple's guidelines expect), orange for warnings and problems, and one neon blue glow: while the sources are checked, the sidebar's "Roll Call"
+  fills with glowing blue letters from left to right as a progress bar, then pulses blue when it's done (`Wordmark`).
+  Nothing else is coloured.
   The selected ride in the list is a light grey band with rounded corners, so the list stays black and white.
 - **The patch.** A rounded rectangle with a single 1.5pt line (`DateBadge`, which stays crisp), kept simple so a list of
   rides stays clean. The day is in heavy condensed numbers, the month and weekday in small bold capitals. Each ride's

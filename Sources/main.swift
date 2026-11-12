@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     let geocoder = Geocoder()
     var statusItem: NSStatusItem!
     var refreshing = false
+    /// How far a check of the sources has got, 0 to 1, for the wordmark; nil when it isn't checking.
+    let refreshProgress = Box<Double?>(nil)
     /// Sources being checked one at a time from the window.
     var checking: Set<String> = []
     lazy var ui = UIModel(app: self)

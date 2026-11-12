@@ -13,15 +13,23 @@ extension AppDelegate {
             : store.state.feeds
         if dueOnly && feeds.isEmpty { return }
         refreshing = true
+        refreshProgress.value = 0
         NotificationCenter.default.post(name: Store.changed, object: nil)
-        defer { refreshing = false; updateBadge(); NotificationCenter.default.post(name: Store.changed, object: nil) }
+        defer {
+            refreshing = false
+            refreshProgress.value = nil
+            updateBadge()
+            NotificationCenter.default.post(name: Store.changed, object: nil)
+        }
         let started = Date()
         var refreshed: Set<String> = []
         var changed: [String] = []
         // Problems from sources that have since been removed shouldn't linger.
         store.state.feedErrors = store.state.feedErrors.filter { id, _ in store.state.feeds.contains { $0.id == id } }
         let chatProblem = feeds.contains { $0.type == .chat } ? await Beeper.connectionProblem() : nil
-        for feed in feeds {
+        for (i, feed) in feeds.enumerated() {
+            // The sources are most of the work; the last bit is for places, the calendar and routes.
+            refreshProgress.value = 0.9 * Double(i) / Double(feeds.count)
             if feed.type == .chat {
                 if let chatProblem {
                     // Check the connection once, rather than waiting for every chat to fail on its own.
@@ -37,6 +45,7 @@ extension AppDelegate {
             if feed.type == .calendar, store.state.feedErrors[feed.id] == nil { refreshed.insert(feed.id) }
             updateBadge()
         }
+        refreshProgress.value = 0.9
         scanDownloads(save: false)
         store.prune(refreshedSources: refreshed, refreshStarted: started)
         store.state.lastRefresh = Date()
