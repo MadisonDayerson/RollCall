@@ -43,7 +43,7 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
   **From**. **All** shows Undecided (including Maybe), Going, Skipped and Past in sections you can fold away. Click a
   ride for a plain summary of the description (**See more** shows all of it), the event page (to RSVP) and
   the route. A ? on the date means it was read from a post, so double-check it.
-  Rides you went on move to **Past** once they're over.
+  Rides you went on move to **Past** once they're over, and are deleted after a week (up to two: Settings → Privacy).
 - **To review:** ride plans from your chats, in two groups. **Possible plans** meet every test: a ride or bike
   event on a day still to come, with a time and a place. **Partial plans** are still missing one of those, along
   with ride posts that didn't say when. RollCall keeps reading each conversation for four days as the details
@@ -162,9 +162,9 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **Saved rides are private.** They're in `~/Library/Application Support/RollCall`, which only your Mac
   account can open. RollCall keeps no web cache or cookies.
 - **Only what's needed is kept.** Your home area is saved as just the suburb and a rough spot (about 1 km).
-  Messages from plans you mark Not a ride are deleted after a week (or straight away, or after a day or two
-  weeks: choose in Settings → Privacy), removing a chat removes what was kept from it, and
-  past rides you didn't go to are removed after a week.
+  Past rides, and the messages from plans you mark Not a ride, are deleted after a week (or straight away, or
+  after a day or two weeks at most: choose in Settings → Privacy). Calendar events stay in Calendar. Removing a
+  chat removes what was kept from it.
 - **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
   on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies

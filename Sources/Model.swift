@@ -182,11 +182,12 @@ struct Settings: Codable {
     var skippedVersion: String? = nil
     /// Which maps app Route opens (nil means automatic).
     var mapsApp: MapsApp? = nil
-    /// Days to keep the messages of plans you dismissed, so you can bring one back (nil means 7; 0 keeps none).
+    /// Days to keep past rides and the messages of plans you dismissed, then they're deleted (nil means 7; 0 keeps
+    /// none; at most 14). Named for what it first covered.
     var keepDismissedDays: Int? = nil
 
     var crew: Together { together ?? Together() }
-    var keepDismissed: Int { keepDismissedDays ?? 7 }
+    var keepDays: Int { min(keepDismissedDays ?? 7, 14) }
 }
 
 /// A ride's route as RollCall worked it out: places Apple Maps could find, in order. `from` is a fingerprint of
@@ -510,13 +511,14 @@ final class Store {
         return 2 * r * asin(min(1, sqrt(a)))
     }
 
-    /// Drops past events nobody is attending, plus feed events that vanished from their feed
-    /// (cancelled or removed), keeping anything the user marked Attending.
+    /// Drops rides that have been over for longer than Settings → Privacy keeps them (ones you went on wait under
+    /// Past rides until then), plus feed events that vanished from their feed (cancelled or removed) unless you're
+    /// going. Calendar events stay in Calendar.
     func prune(refreshedSources: Set<String>, refreshStarted: Date, now: Date = Date()) {
         let weekAgo = now.addingTimeInterval(-7 * 86400)
+        let kept = now.addingTimeInterval(-Double(state.settings.keepDays) * 86400)
         for (id, e) in state.events {
-            // Rides you went on stay, under Past rides.
-            let past = e.finish < weekAgo && decision(id) != .attending
+            let past = e.finish < kept
             let vanished = refreshedSources.contains(e.source) && e.lastSeen < refreshStarted && e.start > now
             if past || (vanished && decision(id) != .attending) {
                 state.events[id] = nil
@@ -539,7 +541,7 @@ final class Store {
     /// A dismissed conversation only needs its summary. People's messages stay only for plans you dismissed
     /// yourself, and only as long as Settings → Privacy says.
     func forgetDismissedMessages(now: Date = Date()) {
-        let since = now.addingTimeInterval(-Double(state.settings.keepDismissed) * 86400)
+        let since = now.addingTimeInterval(-Double(state.settings.keepDays) * 86400)
         for (id, r) in state.reviews where r.status == .dismissed && !r.lines.isEmpty {
             if (r.dismissed ?? .distantPast) <= since { state.reviews[id]?.lines = [] }
         }
@@ -547,7 +549,7 @@ final class Store {
 
     /// Plans you dismissed that can still be brought back, newest first.
     func reviewedPlans(now: Date = Date()) -> [PlanReview] {
-        let since = now.addingTimeInterval(-Double(state.settings.keepDismissed) * 86400)
+        let since = now.addingTimeInterval(-Double(state.settings.keepDays) * 86400)
         return state.reviews.values
             .filter { $0.status == .dismissed && !$0.lines.isEmpty && ($0.dismissed ?? .distantPast) > since }
             .sorted { $0.dismissed! > $1.dismissed! || ($0.dismissed == $1.dismissed && $0.id < $1.id) }

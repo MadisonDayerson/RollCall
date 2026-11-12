@@ -148,11 +148,20 @@ check(store.state.events.count == 1, "...unless you're attending")
 let monthOn = now.addingTimeInterval(40 * 86400)
 check(store.past(now: monthOn).map(\.id) == ["meetup-x:event_316000001@meetup.com"], "attended ride listed under past rides once it's over")
 check(store.past(now: now).isEmpty, "...but not before")
-store.prune(refreshedSources: [], refreshStarted: monthOn, now: monthOn)
-check(store.state.events.count == 1 && store.decision("meetup-x:event_316000001@meetup.com") == .attending, "attended rides kept after they pass")
-store.state.decisions["meetup-x:event_316000001@meetup.com"] = .undecided
-store.prune(refreshedSources: [], refreshStarted: monthOn, now: monthOn)
-check(store.state.events.isEmpty, "removed from past rides, it's cleared away")
+let wentID = "meetup-x:event_316000001@meetup.com"
+let over = store.state.events[wentID]!.finish
+store.prune(refreshedSources: [], refreshStarted: over, now: over.addingTimeInterval(6 * 86400))
+check(store.state.events[wentID] != nil && store.decision(wentID) == .attending, "a ride you went on stays under Past for the week Privacy keeps it")
+store.prune(refreshedSources: [], refreshStarted: over, now: over.addingTimeInterval(8 * 86400))
+check(store.state.events.isEmpty && store.state.decisions[wentID] == nil, "...then it's deleted")
+store.merge(m, source: "meetup-x", sourceName: "X", now: now)
+store.state.decisions[wentID] = .attending
+store.state.settings.keepDismissedDays = 0
+store.prune(refreshedSources: [], refreshStarted: over, now: over.addingTimeInterval(60))
+check(store.state.events.isEmpty, "with Don't keep, a ride is deleted once it's over")
+store.state.settings.keepDismissedDays = 30
+check(store.state.settings.keepDays == 14, "nothing is kept longer than two weeks")
+store.state.settings.keepDismissedDays = nil
 store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.save()

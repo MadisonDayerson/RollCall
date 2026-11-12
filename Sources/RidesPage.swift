@@ -91,7 +91,7 @@ struct RideSectionView: View {
             Divider()
             if open.wrappedValue {
                 if section.rides.isEmpty {
-                    Text(section.name == "Past" ? "Rides you went on show here once they're over." : "None right now.")
+                    Text(section.name == "Past" ? "Rides you went on show here once they're over, for as long as Settings → Privacy keeps them." : "None right now.")
                         .font(.callout).foregroundStyle(.secondary)
                         .padding(.leading, 28).padding(.vertical, 8)
                 }

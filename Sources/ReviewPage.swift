@@ -11,7 +11,7 @@ struct ReviewPage: View {
         let partial = model.app.partialPlans()
         let posts = model.app.postsToLookAt()
         let reviewed = model.app.reviewedPlans()
-        let keep = model.store.state.settings.keepDismissed
+        let keep = model.store.state.settings.keepDays
         ScrollViewReader { scroller in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
