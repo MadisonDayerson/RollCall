@@ -187,7 +187,7 @@ struct Settings: Codable {
     var keepDismissedDays: Int? = nil
 
     var crew: Together { together ?? Together() }
-    var keepDays: Int { min(keepDismissedDays ?? 7, 14) }
+    var keepDays: Int { min(keepDismissedDays ?? 7, Store.maxKeepDays) }
 }
 
 /// A ride's route as RollCall worked it out: places Apple Maps could find, in order. `from` is a fingerprint of
@@ -302,6 +302,8 @@ final class Store {
     /// Taking pictures of the window (`--snapshots`) uses your saved rides but never changes them: a sample ride
     /// may be added for the pictures, so nothing is saved and no sources are checked.
     static let picturesOnly = CommandLine.arguments.contains("--snapshots")
+    /// Nothing about rides, chats or posts is kept longer than this.
+    static let maxKeepDays = 14
 
     static let folder: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -531,10 +533,15 @@ final class Store {
         state.removedRides = state.removedRides.filter { $0.value > weekAgo }
         let cutoff = now.addingTimeInterval(-120 * 86400)
         state.seenPosts = state.seenPosts.filter { $0.value > cutoff }
+        let longest = now.addingTimeInterval(-Double(Store.maxKeepDays) * 86400)
         // Reviews go once the conversation is two weeks old or the plan is well past.
         state.reviews = state.reviews.filter { _, r in
-            r.updated > now.addingTimeInterval(-14 * 86400) && (r.summary.start.map { $0 > now.addingTimeInterval(-86400) } ?? true)
+            r.updated > longest && (r.summary.start.map { $0 > now.addingTimeInterval(-86400) } ?? true)
         }
+        state.recentPosts = state.recentPosts.mapValues { $0.filter { ($0.published ?? now) > longest } }.filter { !$0.value.isEmpty }
+        // Places are only looked up for the rides RollCall still has.
+        let places = Set(state.events.values.map { $0.location.lowercased() })
+        state.geocodeCache = state.geocodeCache.filter { places.contains($0.key) }
         forgetDismissedMessages(now: now)
     }
 

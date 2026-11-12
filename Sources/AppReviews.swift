@@ -220,7 +220,7 @@ extension AppDelegate {
 
     func addRecentPosts(_ posts: [PostItem], feed: Feed) {
         guard !posts.isEmpty else { return }
-        let cutoff = Date().addingTimeInterval(-30 * 86400)
+        let cutoff = Date().addingTimeInterval(-Double(Store.maxKeepDays) * 86400)
         var list = posts + (store.state.recentPosts[feed.id] ?? [])
         var seen = Set<String>()
         list = list.filter { seen.insert($0.id).inserted && ($0.published ?? Date()) > cutoff }

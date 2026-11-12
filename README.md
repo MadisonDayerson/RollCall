@@ -163,8 +163,9 @@ tags in the calendar event rather than showing friends' locations or posting for
   account can open. RollCall keeps no web cache or cookies.
 - **Only what's needed is kept.** Your home area is saved as just the suburb and a rough spot (about 1 km).
   Past rides, and the messages from plans you mark Not a ride, are deleted after a week (or straight away, or
-  after a day or two weeks at most: choose in Settings → Privacy). Calendar events stay in Calendar. Removing a
-  chat removes what was kept from it.
+  after a day or two weeks at most: choose in Settings → Privacy). Calendar events stay in Calendar. Posts and
+  conversations waiting to be looked at go after two weeks, and places are only remembered for rides RollCall
+  still has. Removing a chat removes what was kept from it.
 - **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
   on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies

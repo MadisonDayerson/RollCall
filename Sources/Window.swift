@@ -47,7 +47,8 @@ struct MainView: View {
 
 /// RollCall's look, taken from its icon: black and white, a thin double frame like a club patch, spaced
 /// capitals like the "ROLLCALL" under the logo, and the gothic lettering saved for a few brand moments.
-/// Colour is left for meaning (warnings, problems), so the monochrome reads as the brand.
+/// Colour is left for meaning (warnings, problems) and the wordmark's blue glow while checking (see `Wordmark`),
+/// so the monochrome reads as the brand.
 enum Brand {
     /// Gothic lettering drawn by Design/make_wordmark.swift. It's a picture of the letters (the font itself
     /// isn't shipped), drawn black and tinted like the text around it, so it follows light and dark mode.

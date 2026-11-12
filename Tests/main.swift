@@ -162,6 +162,12 @@ check(store.state.events.isEmpty, "with Don't keep, a ride is deleted once it's 
 store.state.settings.keepDismissedDays = 30
 check(store.state.settings.keepDays == 14, "nothing is kept longer than two weeks")
 store.state.settings.keepDismissedDays = nil
+store.state.recentPosts = ["f": [PostItem(id: "old", title: "", link: "", published: now.addingTimeInterval(-15 * 86400), text: "Made-up post"),
+                                 PostItem(id: "new", title: "", link: "", published: now.addingTimeInterval(-86400), text: "Made-up post")]]
+store.state.geocodeCache = ["long gone ride place": [0, 0]]
+store.prune(refreshedSources: [], refreshStarted: now, now: now)
+check(store.state.recentPosts["f"]?.map(\.id) == ["new"], "posts waiting to be looked at go after two weeks")
+check(store.state.geocodeCache.isEmpty, "places are forgotten once no ride is there")
 store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.save()
