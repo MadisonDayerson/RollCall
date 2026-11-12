@@ -302,7 +302,7 @@ final class Store {
     /// Taking pictures of the window (`--snapshots`) uses your saved rides but never changes them: a sample ride
     /// may be added for the pictures, so nothing is saved and no sources are checked.
     static let picturesOnly = CommandLine.arguments.contains("--snapshots")
-    /// Nothing about rides, chats or posts is kept longer than this.
+    /// Nothing about rides, chats or posts is kept longer than this, and sources aren't read further back.
     static let maxKeepDays = 14
 
     static let folder: URL = {
@@ -531,9 +531,9 @@ final class Store {
         state.foundRoutes = state.foundRoutes.filter { state.events[$0.key] != nil }
         state.responses = state.responses.filter { state.events[$0.key] != nil }
         state.removedRides = state.removedRides.filter { $0.value > weekAgo }
-        let cutoff = now.addingTimeInterval(-120 * 86400)
-        state.seenPosts = state.seenPosts.filter { $0.value > cutoff }
         let longest = now.addingTimeInterval(-Double(Store.maxKeepDays) * 86400)
+        // Nothing older than two weeks is read, so which posts were read is only needed that long.
+        state.seenPosts = state.seenPosts.filter { $0.value > longest }
         // Reviews go once the conversation is two weeks old or the plan is well past.
         state.reviews = state.reviews.filter { _, r in
             r.updated > longest && (r.summary.start.map { $0 > now.addingTimeInterval(-86400) } ?? true)

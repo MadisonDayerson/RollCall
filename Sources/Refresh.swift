@@ -17,7 +17,8 @@ struct SourceResult {
 enum SourceReader {
     static let threadsPerRefresh = 6
     static let detailPagesPerRefresh = 8
-    static let recentDays = 45.0
+    /// Posts and threads older than this are skipped: their rides have likely happened.
+    static let recentDays = Double(Store.maxKeepDays)
 
     static func read(_ feed: Feed, store: Store, now: Date = Date()) async throws -> SourceResult {
         switch feed.type {
@@ -124,9 +125,9 @@ enum SourceReader {
 
     // MARK: Beeper chats (WhatsApp and others)
 
-    /// Events are often announced a few weeks ahead, so a month of messages is read.
+    /// Two weeks of messages are read: older chat is no longer relevant, and its rides have likely happened.
     /// Each message only raises a review the first time it's seen.
-    nonisolated static let chatLookBackDays = 30.0
+    nonisolated static let chatLookBackDays = Double(Store.maxKeepDays)
 
     static func readChat(_ feed: Feed, store: Store, now: Date) async throws -> SourceResult {
         let chatID = Beeper.chatID(of: feed)

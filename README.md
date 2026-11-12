@@ -155,7 +155,8 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **No accounts, no tracking, no AI services.** RollCall has no server of its own. It doesn't collect or
   send anything about you, and nobody else using RollCall can see your rides, chats or settings.
 - **Chats stay on your Mac.** They're read through Beeper Desktop on your own Mac, with read-only permission.
-  The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
+  Only the last two weeks of messages are read (older chat is no longer relevant), and forums and news feeds are
+  read back two weeks too. The Beeper key is kept in your keychain. Chat plans are summarised by Apple's on-device model (when Apple
   Intelligence is on), so messages never go to an online AI. The same on-device model reads ride descriptions to
   find their start, stops and destination. Before the model reads them, swearing is left out, tracking is taken off links and long
   conversations are trimmed to the messages that matter; your messages themselves aren't changed.
