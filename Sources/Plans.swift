@@ -176,8 +176,9 @@ enum PlanFinder {
     }
 
     /// Conversations already under review (or added as rides) with new messages that add to them: the time, day or
-    /// place, ride talk, people saying they're in, or quick replies. A newly found conversation in the same chat
-    /// about the same day joins the one already there instead of being a second plan. Returns the reviews that grew.
+    /// place, ride talk, people saying they're in, or quick replies. After a quiet spell the chat has usually moved
+    /// on, so only a message naming the plan's day or place picks it up again. A newly found conversation in the same
+    /// chat about the same day joins the one already there instead of being a second plan. Returns the reviews that grew.
     static func followUps(_ lines: [ChatLine], newIDs: Set<String>, found: inout [PlanReview], existing: [PlanReview], now: Date) -> [PlanReview] {
         var grown: [PlanReview] = []
         let sorted = lines.sorted { $0.sent < $1.sent }
@@ -186,13 +187,17 @@ enum PlanFinder {
             var adding: [ChatLine] = []
             var previous = lastSent
             for l in sorted where newIDs.contains(l.id) && l.sent > lastSent && !r.lines.contains(where: { $0.id == l.id }) {
-                let relevant = l.mentionsWhen || RidePlan.place(in: l.text) != nil || RidePlan.has(RidePlan.rideWords, l.text)
-                    || RidePlan.has(yesWords, l.text.lowercased()) || l.sent.timeIntervalSince(previous) <= 20 * 60
+                let relevant = l.sent.timeIntervalSince(previous) > gap ? picksUp(r, l)
+                    : l.mentionsWhen || RidePlan.place(in: l.text) != nil || RidePlan.has(RidePlan.rideWords, l.text)
+                        || RidePlan.has(yesWords, l.text.lowercased()) || l.sent.timeIntervalSince(previous) <= 20 * 60
                 if relevant { adding.append(l); previous = l.sent }
             }
-            // The same plan raised again: its messages join this one.
-            let sameDay = { (a: Date?, b: Date?) in a == nil || b == nil || Calendar.current.isDate(a!, inSameDayAs: b!) }
-            if let i = found.firstIndex(where: { $0.chatID == r.chatID && sameDay($0.summary.start, r.summary.start) }) {
+            // The same plan raised again: its messages join this one. With no day to compare, only straight after it.
+            let samePlan = { (f: PlanReview) in
+                if let a = f.summary.start, let b = r.summary.start { return Calendar.current.isDate(a, inSameDayAs: b) }
+                return (f.lines.first?.sent ?? .distantFuture).timeIntervalSince(previous) <= gap
+            }
+            if let i = found.firstIndex(where: { $0.chatID == r.chatID && samePlan($0) }) {
                 adding += found[i].lines.filter { l in !r.lines.contains { $0.id == l.id } && !adding.contains { $0.id == l.id } }
                 found.remove(at: i)
             }
@@ -205,6 +210,19 @@ enum PlanFinder {
             grown.append(r)
         }
         return grown
+    }
+
+    /// After a quiet spell, a message that settles a detail of the plan: a meeting place, a time, or a day that's the
+    /// plan's own. Chat about something else ("keen", another day) doesn't pick an old plan up again.
+    static func picksUp(_ r: PlanReview, _ l: ChatLine) -> Bool {
+        if RidePlan.place(in: l.text) != nil { return true }
+        if let place = r.summary.place, !place.isEmpty, l.text.localizedCaseInsensitiveContains(place) { return true }
+        guard l.mentionsWhen else { return false }
+        let t = l.text.lowercased()
+        // A time on its own ("9am") is for the plan's day; a day has to be the plan's.
+        guard RidePlan.has(dayWords, t) || RidePlan.has(TextDetect.absoluteDate, t) else { return true }
+        guard let day = r.summary.start, let said = guess([l], now: l.sent).start else { return false }
+        return Calendar.current.isDate(said, inSameDayAs: day)
     }
 
     // MARK: Best guess without the on-device model

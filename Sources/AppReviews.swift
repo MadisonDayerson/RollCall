@@ -27,23 +27,27 @@ extension AppDelegate {
             let echo = store.state.reviews.values.contains { $0.status == .open && $0.id != r.id && CrossPost.samePlan($0, r) }
             store.state.reviews[r.id] = r
             if r.status == .open, r.summary.isReady, !echo, !wasReady || changed { notify(r, chatName: feed.name) }
-            if r.status == .added, changed, let old { followPlan(r, was: old.summary, chatName: feed.name) }
+            if r.status == .added, changed, let old {
+                followPlan(r, was: old.summary, said: r.lines.filter { l in !old.lines.contains { $0.id == l.id } }, chatName: feed.name)
+            }
         }
     }
 
-    /// A ride added from a chat plan takes the plan's new time or place, keeping its length. Your own edits
-    /// (Edit…) still win, and a ride you're going to updates its calendar event.
-    private func followPlan(_ r: PlanReview, was: PlanSummary, chatName: String) {
+    /// A ride added from a chat plan takes the plan's new time or place, keeping its length, but only when one of the
+    /// new messages (`said`) gives a time or a place: a summary read again can come out differently on its own. Your
+    /// own edits (Edit…) still win, and a ride you're going to updates its calendar event.
+    private func followPlan(_ r: PlanReview, was: PlanSummary, said: [ChatLine], chatName: String) {
         guard let id = r.rideID, var ride = store.state.events[id], store.state.rideEdits[id] == nil else { return }
         let s = r.summary
         var notes: [String] = []
-        if let start = s.start, s.hasTime, start != was.start, start > Date() {
+        if let start = s.start, s.hasTime, start != was.start, start > Date(), said.contains(where: \.mentionsWhen) {
             let length = ride.end.map { $0.timeIntervalSince(ride.start) } ?? 3 * 3600
             ride.start = start
             ride.end = start.addingTimeInterval(length)
             notes.append(PlanFinder.describe(start, hasTime: true))
         }
-        if let place = s.place, !place.isEmpty, place != was.place, place != ride.location {
+        if let place = s.place, !place.isEmpty, place != was.place, place != ride.location,
+           said.contains(where: { RidePlan.place(in: $0.text) != nil || $0.text.localizedCaseInsensitiveContains(place) }) {
             ride.location = place
             ride.latitude = nil; ride.longitude = nil; ride.distanceKm = nil
             notes.append(place)

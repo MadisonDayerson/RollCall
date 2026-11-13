@@ -441,6 +441,13 @@ do {
     var none: [PlanReview] = []
     check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [quiet], now: wed).count == 1,
           "a plan quiet for days still takes a new time or place until its ride is over")
+    let chatter = start + [msgAt("f6", "Jo", 4, 12, 0, "Keen for a ride sometime, who's in?"),
+                           msgAt("f7", "Sam", 4, 12, 2, "yeah me too, new tyres need scrubbing")]
+    check(PlanFinder.followUps(chatter, newIDs: ["f6", "f7"], found: &none, existing: [quiet], now: wed).isEmpty,
+          "after a quiet spell, chat that doesn't settle the plan's day, time or place leaves it alone")
+    let otherDay = start + [msgAt("f8", "Jo", 4, 12, 0, "Anyone riding Wednesday night?")]
+    check(PlanFinder.followUps(otherDay, newIDs: ["f8"], found: &none, existing: [quiet], now: wed).isEmpty,
+          "talk of another day doesn't join an old plan")
     var stale = quiet; stale.summary.start = nil
     check(PlanFinder.followUps(later, newIDs: ["f4"], found: &none, existing: [stale], now: wed).isEmpty,
           "old conversations with no day stop collecting")
