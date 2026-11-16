@@ -56,8 +56,8 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
 - **Sources:** everything RollCall reads, grouped by app (click a heading to fold it away). Chats are
   checked every 15 minutes, calendars every 3 hours, and websites and forums every 6 hours; change
   any of them with **Check for new rides** (right-click a heading to change a whole group).
-  Instagram and Facebook you check yourself. Add a source with **+**; change its name or link on its page (a new
-  link is read straight away); remove it with **−**, the Delete key, **Remove…** or by right-clicking it.
+  Instagram and Facebook you check yourself. Add a source with **+** in the toolbar; change its name or link on its page (a new
+  link is read straight away); remove it with the Delete key, **Remove…** on its page or by right-clicking it.
 - **Settings:** home area, chats, your Facebook events link, calendar, riding together, road alerts and updates.
 
 ## Adding rides and sources

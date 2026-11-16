@@ -10,45 +10,29 @@ struct SourcesPage: View {
         let groups = model.sourceGroups()
         let rows = groups.flatMap(\.rows)
         ListAndDetail(showingDetail: model.selectedSource != nil, back: "Sources", close: { model.selectedSource = nil }) {
-            VStack(spacing: 0) {
-                List(selection: $model.selectedSource) {
-                    ForEach(groups) { g in
-                        DisclosureGroup(isExpanded: model.expanded(g.name)) {
-                            ForEach(g.rows) { row in
-                                SourceRowView(row: row).tag(row.id)
-                                    .contextMenu {
-                                        if model.feed(row.id) != nil {
-                                            Button("Check now") { Task { await model.app.checkFeed(row.id) } }
-                                                .disabled(model.app.checking.contains(row.id) || model.app.refreshing)
-                                        }
-                                        if model.removable(row.id) {
-                                            Button("Remove…") { model.later { model.app.removeSource(row.id) } }
-                                        }
+            List(selection: $model.selectedSource) {
+                ForEach(groups) { g in
+                    DisclosureGroup(isExpanded: model.expanded(g.name)) {
+                        ForEach(g.rows) { row in
+                            SourceRowView(row: row).tag(row.id)
+                                .contextMenu {
+                                    if model.feed(row.id) != nil {
+                                        Button("Check now") { Task { await model.app.checkFeed(row.id) } }
+                                            .disabled(model.app.checking.contains(row.id) || model.app.refreshing)
                                     }
-                            }
-                        } label: {
-                            SourceGroupHeader(group: g, model: model)
+                                    if model.removable(row.id) {
+                                        Button("Remove…") { model.later { model.app.removeSource(row.id) } }
+                                    }
+                                }
                         }
+                    } label: {
+                        SourceGroupHeader(group: g, model: model)
                     }
                 }
-                // Delete removes the selected source, as in other Mac lists.
-                .onDeleteCommand {
-                    if let id = model.selectedSource, model.removable(id) { model.later { model.app.removeSource(id) } }
-                }
-                Divider()
-                HStack(spacing: 0) {
-                    Button { model.showAdd = true } label: { Image(systemName: "plus").frame(width: 24, height: 20) }
-                        .help("Add a source or a ride")
-                    Divider().frame(height: 16)
-                    Button { if let id = model.selectedSource { model.later { model.app.removeSource(id) } } } label: {
-                        Image(systemName: "minus").frame(width: 24, height: 20)
-                    }
-                    .help(model.removable(model.selectedSource) ? "Remove the selected source" : "Select a source to remove it")
-                    .disabled(!model.removable(model.selectedSource))
-                    Spacer()
-                }
-                .buttonStyle(.borderless)
-                .padding(6)
+            }
+            // Delete removes the selected source, as in other Mac lists.
+            .onDeleteCommand {
+                if let id = model.selectedSource, model.removable(id) { model.later { model.app.removeSource(id) } }
             }
         } detail: {
             Group {
@@ -56,7 +40,7 @@ struct SourcesPage: View {
                     SourceDetail(row: row, model: model)
                 } else {
                     EmptyState(text: "Choose a source to see its options.",
-                               detail: "Use + to add a website, forum, calendar, Meetup group, Facebook event, Instagram account or chat.")
+                               detail: "Use + in the toolbar to add a website, forum, calendar, Meetup group, Facebook event, Instagram account or chat.")
                 }
             }
         }
