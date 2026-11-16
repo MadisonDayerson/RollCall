@@ -36,8 +36,11 @@ enum AppMenu {
             item("Quit RollCall", #selector(NSApplication.terminate(_:)), "q"),
         ])
         _ = menu("File", [
-            item("Add…", #selector(AppDelegate.openAddMenu), "n", target: d),
+            item("Add a Ride…", #selector(AppDelegate.addRideMenu), "n", target: d),
+            item("Add a Source…", #selector(AppDelegate.addSourceMenu), "n", [.command, .shift], target: d),
+            .separator(),
             item("Type a Ride In…", #selector(AppDelegate.addManualMenu), target: d),
+            item("Paste an Event Poster…", #selector(AppDelegate.addFromPosterMenu), target: d),
             item("Paste a Post or Message…", #selector(AppDelegate.addFromPostMenu), target: d),
             item("Import a Calendar File…", #selector(AppDelegate.importMenu), "o", [.command, .shift], target: d),
             .separator(),

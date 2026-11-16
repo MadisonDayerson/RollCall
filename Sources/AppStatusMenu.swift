@@ -38,7 +38,8 @@ extension AppDelegate {
         menu.addItem(action("Open RollCall…", #selector(openWindowMenu), key: "o"))
         let toReview = possiblePlans().count
         if toReview > 0 { menu.addItem(action("To review (\(toReview))…", #selector(openPostsMenu))) }
-        menu.addItem(action("Add…", #selector(openAddMenu), key: "n"))
+        menu.addItem(action("Add a ride…", #selector(addRideMenu), key: "n"))
+        menu.addItem(action("Add a source…", #selector(addSourceMenu)))
         menu.addItem(action("Set up RollCall…", #selector(openSetupMenu)))
         if let u = availableUpdate {
             menu.addItem(.separator())

@@ -249,4 +249,14 @@ enum Dialogs {
         panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
         return panel.runModal() == .OK ? panel.urls : []
     }
+
+    static func choosePoster() -> URL? {
+        bringForward()
+        let panel = NSOpenPanel()
+        panel.title = "Choose the event poster"
+        panel.message = "A photo or screenshot of the poster. Next time you can copy the picture and it's read straight away."
+        panel.allowedContentTypes = [.image, .pdf]
+        panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        return panel.runModal() == .OK ? panel.url : nil
+    }
 }

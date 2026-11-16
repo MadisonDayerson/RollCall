@@ -37,11 +37,14 @@ struct MainView: View {
                 }
                 .help("Check all sources now")
                 .disabled(model.app.refreshing)
-                Button { model.showAdd = true } label: { Label("Add", systemImage: "plus") }
-                    .help("Add a source or a ride")
+                Menu {
+                    Button("Add a Ride…") { model.adding = .ride }
+                    Button("Add a Source…") { model.adding = .source }
+                } label: { Label("Add", systemImage: "plus") }
+                    .help("Add a ride or a source")
             }
         }
-        .sheet(isPresented: $model.showAdd) { AddSheet(model: model) }
+        .sheet(item: $model.adding) { AddSheet(model: model, kind: $0) }
     }
 }
 

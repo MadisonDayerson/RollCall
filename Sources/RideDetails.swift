@@ -32,7 +32,8 @@ enum RideDetails {
         return """
         You fill in a form for a motorcyclist adding a group ride or motorbike event to their calendar. \
         Group chats and posts are casual: slang, swearing, jokes and typos are normal, and words left out show as "…". \
-        Today is \(f.string(from: now)). The text is a chat conversation or an event post, and the person has \
+        Today is \(f.string(from: now)). The text is a chat conversation, an event post, or the words read from \
+        an event poster (those can be out of order, misspelt or in capitals), and the person has \
         confirmed it describes a ride. Use the time each message was sent to work out what "tomorrow" or "Sunday" meant. \
         Only use what the text says. Never invent a place, time or link: write unknown instead. \
         Reply in exactly this format, one item per line:
@@ -71,6 +72,7 @@ enum RideDetails {
     /// The text to read: a conversation's messages with when each was sent, or a post as it is.
     static func input(_ lines: [ChatLine], chatName: String) -> AppleModel.Input { PlanSummariser.input(lines, chatName: chatName) }
     static func input(post: String) -> AppleModel.Input { AppleModel.Input(heading: "Event post", lines: [post]) }
+    static func input(poster: String) -> AppleModel.Input { AppleModel.Input(heading: "Words read from an event poster", lines: [poster]) }
 
     static func extract(_ input: AppleModel.Input, now: Date = Date()) async -> Details? {
         guard let reply = await AppleModel.ask(instructions: instructions(now: now), input),

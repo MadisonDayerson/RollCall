@@ -39,7 +39,7 @@ extension AppDelegate {
                 _ = try await Fetcher.download(feed.url)
             } catch {
                 Dialogs.info("Facebook didn't send your events",
-                             "\(error.localizedDescription)\n\nCopy the link from Facebook again and paste it. Until then, you can still add Facebook events one at a time with +.")
+                             "\(error.localizedDescription)\n\nCopy the link from Facebook again and paste it. Until then, you can still add Facebook events one at a time with + → Add a Ride.")
                 return
             }
             store.state.feeds.removeAll { $0.id == feed.id }
@@ -145,12 +145,12 @@ extension AppDelegate {
 
                              1. Join the group on Meetup (RollCall can open the page for you).
                              2. On the group's Events tab, click the ⋯ menu or the calendar icon and choose “Subscribe” / “Add to calendar”.
-                             3. Copy the link it gives you (it starts with webcal:// or https://), then click + and paste it.
+                             3. Copy the link it gives you (it starts with webcal:// or https://), then click + → Add a Source and paste it.
                              """)
                 open(FeedLinks.normalise(raw)?.groupURL)
             } catch {
                 Dialogs.info("Couldn't use that link", error.localizedDescription
-                             + "\n\nIf the site only posts rides as news or photos, use Paste a post or message (under +) for each one.")
+                             + "\n\nIf the site only posts rides as news or photos, use Paste a post or message or Paste an event poster (under + → Add a Ride) for each one.")
             }
         }
     }
@@ -161,7 +161,31 @@ extension AppDelegate {
         Task { addFromPost(post, details: post.text.isEmpty ? nil : await RideDetails.extract(RideDetails.input(post: post.text))) }
     }
 
-    private func addFromPost(_ post: (link: String, text: String), details d: RideDetails.Details?) {
+    /// A ride from an event poster: the picture on the clipboard, or one you choose.
+    func addFromPoster() {
+        let image: CGImage
+        if let pasted = Poster.pasted() {
+            image = pasted
+        } else {
+            guard let file = Dialogs.choosePoster() else { return }
+            guard let chosen = Poster.image(at: file) else {
+                Dialogs.info("Couldn't open that picture", "Choose a photo or screenshot of the poster (PNG, JPEG, HEIC or PDF).")
+                return
+            }
+            image = chosen
+        }
+        Task {
+            let text = await Poster.text(in: image)
+            guard !text.isEmpty else {
+                Dialogs.info("No writing found on the poster",
+                             "RollCall couldn't read any words in that picture. Try a larger or sharper copy, or use Type a ride in.")
+                return
+            }
+            addFromPost((link: "", text: text), details: await RideDetails.extract(RideDetails.input(poster: text)), from: "poster")
+        }
+    }
+
+    private func addFromPost(_ post: (link: String, text: String), details d: RideDetails.Details?, from what: String = "post") {
         var link = post.link
         if !link.isEmpty, !link.lowercased().hasPrefix("http") { link = "https://" + link }
         if link.isEmpty, let l = d?.link { link = l }
@@ -173,13 +197,16 @@ extension AppDelegate {
             start = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: start) ?? start
         }
         var notes: [String] = []
+        if what == "poster" { notes.append("The poster's words were read from the picture on this Mac.") }
         if d != nil { notes.append("Apple Intelligence helped fill this in, on this Mac.") }
-        notes.append(found.start == nil ? "No date found in the text, so pick one below."
-                     : found.hasTime ? "Date and time found in the text. Check they're right."
+        notes.append(found.start == nil ? "No date found on the \(what), so pick one below."
+                     : found.hasTime ? "Date and time found on the \(what). Check they're right."
                      : "A date was found but no time, so 9am is filled in. Check it.")
         if found.address == nil { notes.append("No address found. Type the meeting place if you know it.") }
+        // Posters are often all capitals.
+        let title = d?.title ?? Brief.plainValue(TextDetect.title(from: post.text))
         guard let r = Dialogs.manualRide(
-            prefill: .init(title: d?.title ?? TextDetect.title(from: post.text), start: start, hours: d?.hours ?? 4,
+            prefill: .init(title: title, start: start, hours: d?.hours ?? 4,
                            location: found.address ?? "", link: link,
                            notes: post.text.count > 1000 ? String(post.text.prefix(1000)) + "…" : post.text),
             note: notes.joined(separator: " ")) else { return }
@@ -193,7 +220,7 @@ extension AppDelegate {
                             title: r.title, start: r.start, end: r.start.addingTimeInterval(r.hours * 3600),
                             allDay: false, location: r.location,
                             notes: r.notes, url: url)
-        let name = fbID != nil ? "Facebook" : isInstagram ? "Instagram post" : "Added from a post"
+        let name = fbID != nil ? "Facebook" : isInstagram ? "Instagram post" : "Added from a \(what)"
         store.merge([item], source: source, sourceName: name)
         let id = Store.eventID(source: source, item: item)
         store.save()

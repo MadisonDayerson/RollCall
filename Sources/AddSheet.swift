@@ -3,50 +3,24 @@ import AppKit
 
 // MARK: - Add
 
+/// What + adds: a single ride, or a source RollCall keeps checking for rides.
+enum AddKind: String, Identifiable {
+    case ride, source
+    var id: String { rawValue }
+}
+
 struct AddSheet: View {
     @ObservedObject var model: UIModel
+    let kind: AddKind
     @Environment(\.dismiss) private var dismiss
     @StateObject private var link = Box("")
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Add").font(.title2).fontWeight(.semibold)
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Paste a link")
-                    .font(.headline)
-                TextField("https://…  or  @instagramaccount", text: $link.value, onCommit: go)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(minWidth: 460)
-                Text("Works with a club or event website, a forum section, a Meetup group, a calendar link, a news feed, a Facebook event, or an Instagram account or post. RollCall works out what it is.")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            HStack {
-                Spacer()
-                Button("Add link", action: go)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-
-            Divider()
-            Text("Or").font(.headline)
-            Grid(horizontalSpacing: 10, verticalSpacing: 10) {
-                GridRow {
-                    choice("bubble.left.and.bubble.right", "Check chats", "WhatsApp, Messenger and more, through Beeper") {
-                        Task { await model.app.setUpBeeper() }
-                    }
-                    choice("doc.on.clipboard", "Paste a post or message", "Reads the date and place from the text") {
-                        model.app.addFromPost()
-                    }
-                }
-                GridRow {
-                    choice("square.and.pencil", "Type a ride in", "Name, time and meeting place") {
-                        model.app.addManual()
-                    }
-                    choice("calendar.badge.plus", "Import a calendar file", "An .ics file someone sent you") {
-                        model.app.importICS()
-                    }
-                }
+            Text(kind == .ride ? "Add a ride" : "Add a source").font(.title2).fontWeight(.semibold)
+            switch kind {
+            case .ride: rideChoices
+            case .source: sourceChoices
             }
             HStack {
                 Spacer()
@@ -56,8 +30,60 @@ struct AddSheet: View {
         .padding(24)
         .frame(width: 560)
         .onAppear {
+            guard kind == .source else { return }
             let clip = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if clip.hasPrefix("http"), !clip.contains(where: \.isWhitespace) { link.value = clip }
+        }
+    }
+
+    private var rideChoices: some View {
+        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+            GridRow {
+                choice("photo", "Paste an event poster", "Copy its picture first, or choose the file") {
+                    model.app.addFromPoster()
+                }
+                choice("doc.on.clipboard", "Paste a post or message", "Reads the date and place from the text") {
+                    model.app.addFromPost()
+                }
+            }
+            GridRow {
+                choice("square.and.pencil", "Type a ride in", "Name, time and meeting place") {
+                    model.app.addManual()
+                }
+                choice("calendar.badge.plus", "Import a calendar file", "An .ics file someone sent you") {
+                    model.app.importICS()
+                }
+            }
+            GridRow {
+                choice("link", "Add a Facebook event", "Paste the event's link") {
+                    model.app.addFacebookEvent()
+                }
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+            }
+        }
+    }
+
+    @ViewBuilder private var sourceChoices: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Paste a link")
+                .font(.headline)
+            TextField("https://…  or  @instagramaccount", text: $link.value, onCommit: go)
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 460)
+            Text("Works with a club or event website, a forum section, a Meetup group, a calendar link, a news feed or an Instagram account. RollCall works out what it is, and checks it for new rides.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        HStack {
+            Spacer()
+            Button("Add link", action: go)
+                .keyboardShortcut(.defaultAction)
+                .disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        Divider()
+        Text("Or").font(.headline)
+        choice("bubble.left.and.bubble.right", "Check chats", "WhatsApp, Messenger and more, through Beeper") {
+            Task { await model.app.setUpBeeper() }
         }
     }
 

@@ -326,7 +326,7 @@ struct FacebookOptions: View {
             FacebookCalendarBox(app: model.app, connected: model.app.facebookCalendarConnected, later: model.later, pointToSources: false)
             Divider()
             Text("Or add one event at a time").font(.headline)
-            Text("For events you haven't responded to, or if the calendar link stops working: paste the event's link with +, then download the event from Facebook and RollCall fills in the details.")
+            Text("For events you haven't responded to, or if the calendar link stops working: add the event with + → Add a Ride → Add a Facebook event, then download the event from Facebook and RollCall fills in the details.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button("Add event…") { model.later { model.app.addFacebookEvent() } }
             Toggle("Pick up Facebook event downloads from the Downloads folder", isOn: Binding(

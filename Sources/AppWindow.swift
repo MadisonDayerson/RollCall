@@ -6,18 +6,20 @@ extension AppDelegate {
 
     @objc func openWindowMenu() { showWindow() }
     @objc func openPostsMenu() { showWindow(page: .review) }
-    @objc func openAddMenu() { showWindow(page: .sources, add: true) }
+    @objc func addRideMenu() { showWindow(add: .ride) }
+    @objc func addSourceMenu() { showWindow(page: .sources, add: .source) }
     @objc func showSettingsMenu() { showWindow(page: .settings) }
     @objc func showPageMenu(_ sender: NSMenuItem) {
         showWindow(page: (sender.representedObject as? String).flatMap(UIModel.Page.init(rawValue:)))
     }
     @objc func addManualMenu() { addManual() }
     @objc func addFromPostMenu() { addFromPost() }
+    @objc func addFromPosterMenu() { addFromPoster() }
     @objc func importMenu() { importICS() }
     @objc func checkForUpdatesMenu() { Task { await checkForUpdates(manual: true) } }
     @objc func helpMenu() { open("https://github.com/MadisonDayerson/RollCall#readme") }
 
-    func showWindow(page: UIModel.Page? = nil, add: Bool = false) {
+    func showWindow(page: UIModel.Page? = nil, add: AddKind? = nil) {
         if let page { ui.page = page }
         if window == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 640),
@@ -41,7 +43,7 @@ extension AppDelegate {
         NSApp.setActivationPolicy(.regular)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        if add { ui.showAdd = true }
+        if let add { ui.adding = add }
     }
 
     /// For checking the design: saves a picture of each page of the window.
@@ -118,10 +120,13 @@ extension AppDelegate {
         await snap("6-sources-facebook", window)
         ui.page = .settings
         await snap("7-settings", window)
-        ui.showAdd = true
-        try? await Task.sleep(nanoseconds: 800_000_000)
-        await snap("8-add", window?.attachedSheet)
-        ui.showAdd = false
+        for kind in [AddKind.ride, .source] {
+            ui.adding = kind
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            await snap("8-add-\(kind)", window?.attachedSheet)
+            ui.adding = nil
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
         window?.close()
         showSetup()
         if let i = CommandLine.arguments.firstIndex(of: "--snapshot-size"), i + 1 < CommandLine.arguments.count {

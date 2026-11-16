@@ -24,7 +24,8 @@ final class UIModel: ObservableObject {
 
     unowned let app: AppDelegate
     @Published var page: Page = .rides
-    @Published var showAdd = false
+    /// The Add sheet that's open, if any.
+    @Published var adding: AddKind?
     @Published var selectedSource: String?
     @Published var selectedRide: String?
     @Published var selectedReview: String?

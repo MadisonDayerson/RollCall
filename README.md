@@ -62,16 +62,25 @@ RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch page
 
 ## Adding rides and sources
 
-Click **+** and paste a link. RollCall works out what it is:
+Click **+** in the toolbar and choose **Add a Ride…** or **Add a Source…**.
+
+**Add a Source…**: paste a link and RollCall works out what it is, then keeps checking it for new rides.
 
 | Paste | Result |
 |---|---|
 | Club or event website, forum section, Meetup group, calendar link (`.ics`, `webcal://`) or news feed | Checked automatically |
-| Facebook event, or your Facebook events calendar link | Follow the steps below |
+| Your Facebook events calendar link | Follow the steps below |
 | Instagram account (`@name`) | Added to the accounts you check |
-| Instagram post, or any post or message | Opens **Paste post** to make a ride from it |
 
-You can also **Type a ride in** or **Import a calendar file**.
+Chats are added here too, with **Check chats** (see Group chats below).
+
+**Add a Ride…** adds one ride:
+- **Paste an event poster**: copy the poster's picture (right-click it → Copy Image, or ⌃⇧⌘4 for a screenshot
+  of it) and RollCall reads its words on your Mac, then fills in the name, date, time and meeting place for
+  you to check. With nothing copied, you choose the picture file instead. Apple Intelligence, when it's on,
+  helps make sense of the poster; nothing leaves your Mac.
+- **Paste a post or message**: the text of a post or message, or an Instagram post's link.
+- **Type a ride in**, **Import a calendar file** or **Add a Facebook event**.
 
 **Your Facebook events.** Facebook can share a private calendar of the events you're Going or Interested
 in. Connect it in setup's **Groups & accounts** step, in **Settings → Facebook** (where you can also replace
@@ -86,12 +95,12 @@ something else for that ride in RollCall yourself, which always wins.
 Keep that link to yourself: anyone who has it can see your events.
 
 **One Facebook event at a time** (events you haven't responded to, or if the calendar link stops working):
-1. Click **+** and paste the event link, then click **Open event page**.
+1. Click **+** → **Add a Ride…** → **Add a Facebook event**, paste the event link, then click **Open event page**.
 2. On Facebook, click **⋯** → **Add to calendar** → **Download**.
 3. The ride appears in RollCall within a minute. (Allow access to Downloads if asked.)
 
 **Instagram posts.** Instagram doesn't let apps read posts, so open the account from **Sources**,
-copy a ride post's caption (⌘C), then click **+** → **Paste a post or message**. RollCall fills in
+copy a ride post's caption (⌘C), then click **+** → **Add a Ride…** → **Paste a post or message**. RollCall fills in
 the date, time and place for you to check.
 
 ## Group chats
@@ -104,7 +113,7 @@ through each step below in plain language and checks each one for you.
 
 1. Install Beeper and connect your chat accounts in **Beeper → Settings → Accounts**.
 2. In Beeper, open **Settings → Developers** and switch on **Beeper Desktop API**.
-3. In RollCall, click **+** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
+3. In RollCall, click **+** → **Add a Source…** → **Check chats**, click **Allow** in Beeper, then tick your ride chats.
 
 When a chat mentions a day or time for a ride or bike event, RollCall sums up the plan (what, when,
 where, who's in) and asks you to review it. Replies that settle the details later join the same plan, and a ride

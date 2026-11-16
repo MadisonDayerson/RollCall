@@ -296,7 +296,7 @@ struct AccountsStep: View {
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Card {
                 FacebookCalendarBox(app: model.app, connected: model.app.facebookCalendarConnected, later: model.later)
-                Text("You can skip this and add Facebook events one at a time later with +.")
+                Text("You can skip this and add Facebook events one at a time later with + → Add a Ride.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if !model.followed.isEmpty {
