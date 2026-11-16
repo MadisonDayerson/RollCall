@@ -40,7 +40,7 @@ struct SourcesPage: View {
                     SourceDetail(row: row, model: model)
                 } else {
                     EmptyState(text: "Choose a source to see its options.",
-                               detail: "Use + in the toolbar to add a website, forum, calendar, Meetup group, Facebook event, Instagram account or chat.")
+                               detail: "Use + → Add a Source… to add a website, forum, calendar, Meetup group, Instagram account or chat.")
                 }
             }
         }

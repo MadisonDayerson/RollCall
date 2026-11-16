@@ -218,10 +218,7 @@ final class UIModel: ObservableObject {
         store.save()
     }
 
-    func removable(_ id: String?) -> Bool {
-        guard let id else { return false }
-        return id != "facebook" && id != "yours"
-    }
+    func removable(_ id: String) -> Bool { id != "facebook" && id != "yours" }
 }
 
 /// A value a view can change and watch (stands in for @State, which needs a compiler plugin).

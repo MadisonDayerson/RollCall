@@ -161,6 +161,7 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
     var close: () -> Void
     @ViewBuilder var list: ListContent
     @ViewBuilder var detail: Detail
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Below this width the two columns would be cramped.
     static var sideBySide: CGFloat { 600 }
@@ -183,10 +184,12 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
                         Color.black.opacity(0.12)
                             .contentShape(Rectangle())
                             .onTapGesture(perform: close)
+                            .accessibilityHidden(true)  // Back does the same
                             .transition(.opacity)
                         drawer
                             .frame(width: max(g.size.width - 28, 0))
-                            .transition(.move(edge: .trailing))
+                            // With Reduce Motion on, it fades in instead of sliding.
+                            .transition(reduceMotion ? .opacity : .move(edge: .trailing))
                     }
                 }
                 .clipped()

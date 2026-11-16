@@ -524,14 +524,14 @@ check(PlanSummariser.parse("PLAN: yes\nWHERE: Sunbury\nSUMMARY: x", fallback: fa
 check(RidePlan.judge("Anyone out riding around 8ish?", sent: sentAt(1, 15), now: sentAt(1, 15), calendar: planCal).start.map { comps($0).hour == 20 } == true, "a bare 8 sent in the afternoon means 8pm")
 check(PlanSummariser.parse("PLAN: yes\nWHEN: 6pm\nDATE: 2026-11-01 18:00\nSUMMARY: x", fallback: fallback, now: now)?.start == fallback.start, "a time read from the messages beats the model's")
 let premeet = [
-    msgAt("p1", "Robin", 1, 7, 0, "🎃 HALLOWEEN PRE-MEET RIDE! 🏍️\n\nGet your costumes on and ride with the crew to our HOOLIGOON Halloween Bike Night!\n\n📅 Saturday 7th November.\n📍 45 Hoddle Street, Richmond\n⏰ Kickstands up 5:30pm"),
-    msgAt("p2", "Morgan", 1, 7, 10, "Oh no I forgot to organise a costume for the ride"),
-    msgAt("p3", "Taylor", 1, 7, 13, "Bummed that im missing this"),
+    msgAt("p1", "Robin", 1, 7, 0, "🎃 SPOOKY PRE-MEET RIDE! 🏍️\n\nDress up and ride over together to the Example Club Halloween Bike Night!\n\n📅 Saturday 7th November.\n📍 12 Example Street, Richmond\n⏰ Kickstands up 5:30pm"),
+    msgAt("p2", "Morgan", 1, 7, 10, "Still need to sort out a costume"),
+    msgAt("p3", "Taylor", 1, 7, 13, "Can't make this one sorry"),
 ]
 check(premeet[0].mentionsWhen, "an emoji-laden announcement's date is spotted")
 let premeetPlan = PlanFinder.find(premeet, newIDs: ["p1"], feedID: "x", chatID: "x", now: now).first?.summary
 check(premeetPlan?.start.map { comps($0).day == 7 && comps($0).hour == 17 && comps($0).minute == 30 } == true, "announced date and kickstands-up time read")
-check(premeetPlan?.place?.contains("Hoddle") == true, "announced meeting point read")
+check(premeetPlan?.place?.contains("Example Street") == true, "announced meeting point read")
 var vic = Settings(); vic.homeCity = "Ringwood"; vic.homeRegion = "VIC"; vic.homeCountry = "Australia"
 check(Starter.suggestions(for: vic).feeds.count == Starter.feeds.count, "Victorians get the Victorian groups")
 var nsw = Settings(); nsw.homeCity = "Newtown"; nsw.homeRegion = "NSW"; nsw.homeCountry = "Australia"
@@ -540,7 +540,7 @@ check(Starter.suggestions(for: Settings()).feeds.isEmpty, "no suggestions before
 check(AppState().feeds.isEmpty && !AppState().setupDone, "new installs start empty, before setup")
 func ride(_ title: String, _ notes: String = "", source: String = "manual") -> RideEvent {
     RideEvent(id: "r1", title: title, start: DateComponents(calendar: Calendar.current, year: 2026, month: 10, day: 31, hour: 17, minute: 30).date!,
-              end: nil, allDay: false, location: "45 Hoddle Street, Richmond", notes: notes, url: nil,
+              end: nil, allDay: false, location: "12 Example Street, Richmond", notes: notes, url: nil,
               source: source, sourceName: "SUNDAY CREW", lastSeen: Date())
 }
 check(Crew.rideTags(ride("Halloween Pre-Meet Ride"))[0] == "#RC31102026", "ride code is RC and the date")
@@ -552,12 +552,12 @@ check(Crew.rideTags(ride("Krispy Kreme run to the Black Spur")).contains("#Black
 check(!Crew.rideTags(ride("Breakfast at Marysville with Sam")).contains("#Sam"), "people's names aren't tags")
 check(Crew.placeTags("Kebab Shop, 12 Example St, Broadford VIC 3658, Australia") == ["#KebabShop", "#Broadford"], "venue and town from an address")
 check(Crew.rideTags(ride("Sunday ride", "see you there #blackspur")).contains("#blackspur"), "tags in someone's invite are kept")
-var crewT = Together(); crewT.tags = "hooligoon, #RollCall #melbriders"; crewT.discord = "https://discord.gg/abc"; crewT.intercomGroup = "DMC SUNDAY CREW"
+var crewT = Together(); crewT.tags = "hooligoon, #RollCall #melbriders"; crewT.discord = "https://discord.gg/abc"; crewT.intercomGroup = "EXAMPLE SUNDAY CREW"
 let tagsOut = Crew.hashtags(ride("Halloween Pre-Meet Ride"), together: crewT, links: CrewLinks(tags: "#sundaycrew"))
 check(tagsOut == ["#RC31102026", "#Halloween", "#Richmond", "#RollCall", "#sundaycrew", "#hooligoon", "#melbriders"], "tags: ride, app, group, yours, no repeats")
 let card = Crew.card(ride("Halloween Pre-Meet Ride"), together: crewT, links: CrewLinks(discord: "https://discord.gg/group")).joined(separator: "\n")
 check(card.contains("discord.gg/group") && !card.contains("discord.gg/abc"), "a group's Discord replaces yours")
-check(card.contains("Cardo: DMC SUNDAY CREW") && card.contains("Find My") && card.contains("maps.apple.com/?q=45%20Hoddle"), "calendar card has intercom, location app and map")
+check(card.contains("Cardo: EXAMPLE SUNDAY CREW") && card.contains("Find My") && card.contains("maps.apple.com/?q=12%20Example"), "calendar card has intercom, location app and map")
 check(Crew.key(forSource: "file") == "yours" && Crew.key(forSource: "facebook") == "facebook", "hand-added rides share crew settings")
 check(Updater.isNewer("1.10", than: "1.9") && Updater.isNewer("v1.1", than: "1.0") && !Updater.isNewer("1.0", than: "1.0.0"), "version comparison")
 check(Updater.isOurDownload("https://github.com/MadisonDayerson/RollCall/releases/download/v1.2.3/RollCall.dmg")
