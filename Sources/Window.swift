@@ -174,21 +174,41 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
                     list.frame(minWidth: 250, idealWidth: max(250, g.size.width * 0.4), maxWidth: max(250, g.size.width * 0.5))
                     detail.frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
                 }
-            } else if showingDetail {
-                VStack(spacing: 0) {
-                    HStack {
-                        Button(action: close) { Label(back, systemImage: "chevron.left") }
-                            .buttonStyle(.borderless)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    Divider()
-                    detail.frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
             } else {
-                list.frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The details slide in from the right over the list, like a drawer, and slide back out with
+                // Back, so it's clear the list is still there underneath.
+                ZStack(alignment: .trailing) {
+                    list.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if showingDetail {
+                        Color.black.opacity(0.12)
+                            .contentShape(Rectangle())
+                            .onTapGesture(perform: close)
+                            .transition(.opacity)
+                        drawer
+                            .frame(width: max(g.size.width - 28, 0))
+                            .transition(.move(edge: .trailing))
+                    }
+                }
+                .clipped()
+                .animation(.spring(response: 0.32, dampingFraction: 0.9), value: showingDetail)
             }
         }
+    }
+
+    private var drawer: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: close) { Label(back, systemImage: "chevron.left") }
+                    .buttonStyle(.borderless)
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            Divider()
+            detail.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .shadow(color: .black.opacity(0.18), radius: 8, x: -2)
     }
 }
 
