@@ -31,12 +31,12 @@ extension AppDelegate {
             host.sizingOptions = []
             w.contentViewController = host
             w.setContentSize(NSSize(width: 980, height: 640))
-            // Small enough to tile into a quarter of a laptop screen; narrow windows show one column at a time.
-            w.minSize = NSSize(width: 480, height: 340)
+            w.contentMinSize = Self.smallestWindow
             w.isReleasedWhenClosed = false
             w.setFrameAutosaveName("RollCallWindow")
             w.delegate = self
             if !w.setFrameUsingName("RollCallWindow") { w.center() }
+            Self.keepSmallest(w)  // a size saved by an older RollCall can be smaller
             window = w
         }
         // Show in the Dock and ⌘-Tab while the window is open.
@@ -170,6 +170,22 @@ extension AppDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         showWindow()
         return true
+    }
+
+    /// No smaller than a quarter of the smallest MacBook screen (1440 × 900, below the menu bar), so the window
+    /// still tiles into a corner; at that size every page fits, with a ride's or source's details as a drawer.
+    static let smallestWindow = NSSize(width: 720, height: 438)
+
+    /// Dragging stops at the smallest size by itself; this undoes a smaller size set another way
+    /// (a saved frame, or a window-arranging app).
+    static func keepSmallest(_ w: NSWindow) {
+        let size = w.contentRect(forFrameRect: w.frame).size, min = smallestWindow
+        guard size.width < min.width || size.height < min.height else { return }
+        w.setContentSize(NSSize(width: max(size.width, min.width), height: max(size.height, min.height)))
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        if let w = notification.object as? NSWindow, w === window { Self.keepSmallest(w) }
     }
 
     func windowWillClose(_ notification: Notification) {
