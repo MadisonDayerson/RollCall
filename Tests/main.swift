@@ -1112,36 +1112,34 @@ do {
     }
 }
 
-// Event posters: words read in order, then the date, time and place found as in a post.
+// Event posters: a made-up poster drawn here and read back with Live Text, then its date, time and place
+// found as in a post.
 do {
-    let order = Poster.readingOrder([
-        (text: "9:00AM", box: CGRect(x: 0.6, y: 0.495, width: 0.2, height: 0.05)),
-        (text: "PRETEND VALLEY POKER RUN", box: CGRect(x: 0.1, y: 0.8, width: 0.8, height: 0.1)),
-        (text: "SUNDAY 6 DECEMBER", box: CGRect(x: 0.1, y: 0.5, width: 0.4, height: 0.05)),
-        (text: "Meet at Example Servo, 12 Fake St, Sunshine VIC", box: CGRect(x: 0.1, y: 0.3, width: 0.8, height: 0.05)),
-    ])
-    check(order == "PRETEND VALLEY POKER RUN\nSUNDAY 6 DECEMBER  9:00AM\nMeet at Example Servo, 12 Fake St, Sunshine VIC",
-          "poster words are read top to bottom, and side by side on one line")
-
-    // A made-up poster drawn here and read back with Apple's text recognition.
-    let size = NSSize(width: 900, height: 1200)
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8,
-                               samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-    NSColor.black.setFill(); NSRect(origin: .zero, size: size).fill()
-    for (line, y, pt) in [("PRETEND VALLEY", 1000.0, 80.0), ("POKER RUN", 900.0, 80.0), ("SUNDAY 6 DECEMBER 2026", 650.0, 50.0),
-                          ("KSU 9:30AM", 560.0, 50.0), ("Example Servo, 12 Fake St, Sunshine VIC", 400.0, 34.0), ("$20 a hand", 250.0, 40.0)] {
-        (line as NSString).draw(at: NSPoint(x: 60, y: y), withAttributes: [.font: NSFont.boldSystemFont(ofSize: pt), .foregroundColor: NSColor.white])
+    func poster(_ lines: [(String, Double, Double, Double)]) -> CGImage {
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 900, pixelsHigh: 1200, bitsPerSample: 8, samplesPerPixel: 4,
+                                   hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSColor.black.setFill(); NSRect(x: 0, y: 0, width: 900, height: 1200).fill()
+        for (text, x, y, pt) in lines {
+            (text as NSString).draw(at: NSPoint(x: x, y: y), withAttributes: [.font: NSFont.boldSystemFont(ofSize: pt), .foregroundColor: NSColor.white])
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.cgImage!
     }
-    NSGraphicsContext.restoreGraphicsState()
-    let read = await Poster.text(in: rep.cgImage!)
+    let read = await Poster.text(in: poster([("PRETEND VALLEY", 60, 1000, 80), ("POKER RUN", 60, 900, 80), ("SUNDAY 6 DECEMBER 2026", 60, 650, 50),
+                                             ("KSU 9:30AM", 60, 560, 50), ("Example Servo, 12 Fake St, Sunshine VIC", 60, 400, 34), ("$20 a hand", 60, 250, 40)]))
     check(read.contains("POKER RUN") && read.contains("6 DECEMBER") && read.contains("Sunshine"), "a poster's words are read from the picture")
     let found = TextDetect.scan(read, now: now, daysAhead: 365)
     check(found.start.map { comps($0).day == 6 && comps($0).month == 12 && comps($0).hour == 9 && comps($0).minute == 30 } == true && found.hasTime,
           "the poster's day and time are found")
     check(Brief.plainValue("PRETEND VALLEY POKER RUN") != "PRETEND VALLEY POKER RUN",
           "a poster's capitals don't make an all-capitals ride name")
+
+    let columns = await Poster.text(in: poster([("WHEN", 50, 850, 40), ("Sunday 6 December", 50, 800, 30), ("Meet 9:30am", 50, 760, 30),
+                                                ("WHERE", 480, 850, 40), ("Example Servo", 480, 800, 30), ("12 Fake St, Sunshine", 480, 760, 30)]))
+    check(columns.contains("Sunday 6 December\nMeet 9:30am") && columns.contains("Example Servo\n12 Fake St, Sunshine"),
+          "a poster's columns are read one at a time, not mixed line by line")
 }
 
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
