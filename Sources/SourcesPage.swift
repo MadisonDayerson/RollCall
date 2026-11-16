@@ -14,11 +14,26 @@ struct SourcesPage: View {
                 List(selection: $model.selectedSource) {
                     ForEach(groups) { g in
                         DisclosureGroup(isExpanded: model.expanded(g.name)) {
-                            ForEach(g.rows) { SourceRowView(row: $0).tag($0.id) }
+                            ForEach(g.rows) { row in
+                                SourceRowView(row: row).tag(row.id)
+                                    .contextMenu {
+                                        if model.feed(row.id) != nil {
+                                            Button("Check now") { Task { await model.app.checkFeed(row.id) } }
+                                                .disabled(model.app.checking.contains(row.id) || model.app.refreshing)
+                                        }
+                                        if model.removable(row.id) {
+                                            Button("Remove…") { model.later { model.app.removeSource(row.id) } }
+                                        }
+                                    }
+                            }
                         } label: {
                             SourceGroupHeader(group: g, model: model)
                         }
                     }
+                }
+                // Delete removes the selected source, as in other Mac lists.
+                .onDeleteCommand {
+                    if let id = model.selectedSource, model.removable(id) { model.later { model.app.removeSource(id) } }
                 }
                 Divider()
                 HStack(spacing: 0) {
@@ -163,7 +178,6 @@ struct FeedOptions: View {
     let kind: FeedKind
     let status: String
     @ObservedObject var model: UIModel
-    @StateObject private var name = Box("")
 
     @ViewBuilder func buttons(_ feed: Feed) -> some View {
         let app = model.app
@@ -229,22 +243,78 @@ struct FeedOptions: View {
                         set: { on in model.setFeed(id) { $0.keywordFilter = on } }))
                 }
 
-                HStack {
-                    Text("Name").foregroundStyle(.secondary)
-                    TextField("Name", text: $name.value, onCommit: {
-                        let n = name.value.trimmingCharacters(in: .whitespaces)
-                        if !n.isEmpty { model.setFeed(id) { $0.name = n } }
-                    })
-                    .textFieldStyle(.roundedBorder)
-                }
-                .onAppear { name.value = feed.name }
-                .onChange(of: id) { _, _ in name.value = model.feed(id)?.name ?? "" }
-
-                if kind != .chat {
-                    Text(feed.url).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).lineLimit(2)
-                }
+                SourceEditor(id: id, feed: feed, model: model)
             }
         }
+    }
+}
+
+/// A source's name and link. The name saves as you type; a new link is read when you press Return or Change.
+/// Chats are picked in Beeper (Change chats…), and Facebook's calendar link is replaced on its own page.
+struct SourceEditor: View {
+    let id: String
+    let feed: Feed
+    @ObservedObject var model: UIModel
+    @StateObject private var name = Box("")
+    @StateObject private var link = Box("")
+    @StateObject private var pending = Box<Task<Void, Never>?>(nil)
+
+    var linkEditable: Bool { feed.type != .chat && id != FeedLinks.facebookCalendarID }
+    var newLink: String { link.value.trimmingCharacters(in: .whitespaces) }
+
+    var body: some View {
+        Grid(alignment: .leading, verticalSpacing: 8) {
+            GridRow {
+                Text("Name").foregroundStyle(.secondary)
+                TextField("Name", text: $name.value).textFieldStyle(.roundedBorder).labelsHidden()
+            }
+            if linkEditable {
+                GridRow {
+                    Text("Link").foregroundStyle(.secondary)
+                    HStack {
+                        TextField("Link", text: $link.value, onCommit: changeLink).textFieldStyle(.roundedBorder).labelsHidden()
+                        Button("Change", action: changeLink).disabled(newLink.isEmpty || newLink == feed.url)
+                    }
+                }
+                Text("A new link is read straight away; rides from the old one go, except ones you're going to.")
+                    .font(.caption).foregroundStyle(.secondary).gridCellColumns(2)
+            }
+        }
+        .onAppear(perform: load)
+        .onChange(of: id) { old, _ in
+            // Picking another source reuses this view, so save the name typed for the last one first.
+            pending.value?.cancel()
+            saveName(old, name.value)
+            load()
+        }
+        .onChange(of: feed.url) { _, url in link.value = url }
+        .onChange(of: name.value) { _, n in
+            pending.value?.cancel()
+            let k = id
+            pending.value = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                if !Task.isCancelled { saveName(k, n) }
+            }
+        }
+        .onDisappear { pending.value?.cancel(); saveName(id, name.value) }
+    }
+
+    func load() {
+        name.value = model.feed(id)?.name ?? ""
+        link.value = model.feed(id)?.url ?? ""
+    }
+
+    /// An empty name isn't saved: the source keeps the one it had.
+    func saveName(_ key: String, _ text: String) {
+        let n = text.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty, model.feed(key)?.name != n else { return }
+        model.setFeed(key) { $0.name = n }
+        model.objectWillChange.send()
+    }
+
+    func changeLink() {
+        guard !newLink.isEmpty, newLink != feed.url else { return }
+        model.app.changeLink(id, to: newLink)
     }
 }
 

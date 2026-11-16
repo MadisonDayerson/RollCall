@@ -26,12 +26,45 @@ extension AppDelegate {
 
     func forgetFeed(_ id: String) {
         store.state.feeds.removeAll { $0.id == id }
+        forgetReadings(id)
+    }
+
+    /// Forgets what was read from a source: its rides (except ones you're going to), posts, plans, problems and which
+    /// posts it had, so adding it again (or giving it a new link) reads it afresh.
+    private func forgetReadings(_ id: String) {
         store.state.feedErrors[id] = nil
         store.state.recentPosts[id] = nil
         store.state.lastChecked[id] = nil
         store.state.reviews = store.state.reviews.filter { $0.value.feedID != id }
+        store.state.seenPosts = store.state.seenPosts.filter { !$0.key.hasPrefix(id + ":") }
         for (eid, e) in store.state.events where e.source == id && store.decision(eid) != .attending {
             store.state.events[eid] = nil
+        }
+    }
+
+    /// Points a source at a new link (a club site that moved, a new calendar link), keeping its name, group links
+    /// and how often it's checked. What was read from the old link goes, and the new one is read straight away.
+    func changeLink(_ id: String, to raw: String) {
+        Task {
+            do {
+                let found = try await Web.discover(raw)
+                guard var feed = store.state.feeds.first(where: { $0.id == id }), found.url != feed.url else { return }
+                if let other = store.state.feeds.first(where: { $0.id != id && $0.url == found.url }) {
+                    Dialogs.info("Already added", "\(other.name) already uses that link.")
+                    return
+                }
+                if found.type != feed.type { feed.every = nil }  // a different kind of source has its own usual timing
+                feed.url = found.url
+                feed.groupURL = found.groupURL
+                feed.kind = found.kind
+                feed.keywordFilter = found.keywordFilter
+                store.state.feeds = store.state.feeds.map { $0.id == id ? feed : $0 }
+                forgetReadings(id)
+                store.save()
+                await checkFeed(id)
+            } catch {
+                Dialogs.info("Couldn't use that link", error.localizedDescription)
+            }
         }
     }
 

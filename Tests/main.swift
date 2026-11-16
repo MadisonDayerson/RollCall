@@ -569,7 +569,10 @@ check(RidePlan.place(in: "this is going to hurt me more then it will you") == ni
 
 check(PlanSummariser.prompt(Array(thread.prefix(2)), chatName: "Sunday Crew").contains("Alex: Thinking about going for a ride"), "conversation goes into the prompt")
 check(TextDetect.scan("ride this Sunday 9am", now: Date(), absoluteOnly: true).start == nil, "old message: 'this Sunday' ignored")
-check(TextDetect.scan("ride Sunday 15 Nov 9am", now: Date(), absoluteOnly: true).start != nil, "old message: full date kept")
+// A week ahead, so the date never falls into the past.
+let aheadText: String = { let f = DateFormatter(); f.locale = Locale(identifier: "en_AU"); f.dateFormat = "EEEE d MMM"
+    return f.string(from: Date().addingTimeInterval(7 * 86400)) }()
+check(TextDetect.scan("ride \(aheadText) 9am", now: Date(), absoluteOnly: true).start != nil, "old message: full date kept")
 check(TextDetect.scan("ride this Sunday 9am", now: Date()).start != nil, "new message: 'this Sunday' used")
 check(Beeper.pathPart("!abc:beeper.com") == "%21abc%3Abeeper.com", "chat id escaped for the URL")
 check(Beeper.callbackQuery("GET /callback?code=xyz&state=s1 HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n") == ["code": "xyz", "state": "s1"], "OAuth callback read")
