@@ -166,6 +166,7 @@ struct RideDetail: View {
                               past: model.isPast(ride), scale: 1.5)
                     Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
                 }
+                .padding(.trailing, 36)  // room for the ⋯ menu
                 if model.isPast(ride) {
                     Label("You went", systemImage: "checkmark.seal")
                         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -192,30 +193,6 @@ struct RideDetail: View {
                 }
                 RideAbout(ride: ride, model: model).id(ride.id)
 
-                // The same buttons for every ride, in the same order; one that can't do anything yet says why.
-                Flow {
-                    Button("Open event") { app.open(ride.url) }
-                        .disabled(ride.url == nil)
-                        .help(ride.url == nil ? "This ride has no event page. Add a link with Edit…" : ride.linkHelp)
-                    Button("Edit…") { model.later { app.editRide(id: ride.id) } }
-                        .help("Change the name, time, place, link or notes. Changes go to the calendar too.")
-                    Button("Find more details") { app.findMoreDetails(for: ride) }
-                        .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
-                        .help(AppleModel.available
-                              ? "Look through this ride's page, your chats and your other sources for more about it. Apple Intelligence checks each find is about this ride, on this Mac."
-                              : "Needs Apple Intelligence (System Settings → Apple Intelligence & Siri), which checks each find is about this ride.")
-                    Button("Route") { app.openRoute(ride) }
-                        .disabled(!ride.hasRoute)
-                        .help(!ride.hasRoute ? "Add a place with Edit… to get a route"
-                              : Route.link(in: ride.notes) != nil ? "Open the organiser's route"
-                              : "Directions from your suburb to the meeting place and any stops (choose your maps app in Settings)")
-                    Button("Remove", role: .destructive) {
-                        model.selectedRide = nil
-                        if model.isPast(ride) { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }
-                    }
-                    .help(model.isPast(ride) ? "Remove it from your past rides" : "Remove this ride. It won't come back when its source is checked again.")
-                }
-
                 if let lookup = model.lookups[ride.id] { RideFindings(id: ride.id, lookup: lookup, forPlan: false, model: model) }
 
                 RouteBox(ride: ride, model: model).id(ride.id)
@@ -223,7 +200,51 @@ struct RideDetail: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .topTrailing) { RideActions(ride: ride, model: model).padding(14) }
         }
+    }
+}
+
+/// A ride's actions, in the ⋯ menu at the top right: the same for every ride, in the same order; one that can't do
+/// anything yet is greyed out and says why.
+struct RideActions: View {
+    let ride: RideEvent
+    @ObservedObject var model: UIModel
+
+    var body: some View {
+        let app = model.app
+        let past = model.isPast(ride)
+        Menu {
+            Button(ride.url == nil ? "Open event (add a link with Edit…)" : ride.linkHelp) { app.open(ride.url) }
+                .disabled(ride.url == nil)
+            Button("Edit…") { model.later { app.editRide(id: ride.id) } }
+            Button(AppleModel.available ? "Find more details" : "Find more details (needs Apple Intelligence)") { app.findMoreDetails(for: ride) }
+                .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
+            Menu(ride.hasRoute ? "Open route in" : "Open route in (add a place with Edit…)") {
+                if Route.link(in: ride.notes) != nil {
+                    Button("The organiser's route") { app.openRoute(ride) }
+                    Divider()
+                }
+                ForEach(MapsApp.allCases.filter { $0 != .automatic && ($0 != .apple || app.hasAppleMaps) }, id: \.self) { maps in
+                    Button(maps.name + (maps.holdsStops || Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 ? "" : " (meeting place only)")) {
+                        app.openRoute(ride, in: maps)
+                    }
+                }
+            }
+            .disabled(!ride.hasRoute)
+            Divider()
+            Button(past ? "Remove from past rides" : "Remove", role: .destructive) {
+                model.selectedRide = nil
+                if past { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle").font(.system(size: 20))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Open event, edit, find more details, route or remove")
+        .accessibilityLabel("Ride actions")
     }
 }
 

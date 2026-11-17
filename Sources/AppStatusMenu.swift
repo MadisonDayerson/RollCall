@@ -160,8 +160,13 @@ extension AppDelegate {
     /// Directions for a ride: the organiser's own route if the description has one, otherwise from your
     /// suburb to the meeting place, any stops and the destination, in the maps app chosen in Settings.
     /// Automatic uses Apple Maps for a simple trip when it's on this Mac, and Google Maps for stops.
-    func openRoute(_ ride: RideEvent) {
-        if let link = Route.link(in: ride.notes) {
+    /// Apple Maps is on this Mac (it can be removed).
+    var hasAppleMaps: Bool { NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps") != nil }
+
+    /// Opens the ride's route: the organiser's shared route, or else directions in the maps app you pick
+    /// (or the one chosen in Settings).
+    func openRoute(_ ride: RideEvent, in chosen: MapsApp? = nil) {
+        if chosen == nil, let link = Route.link(in: ride.notes) {
             open(link.replacingOccurrences(of: "http://", with: "https://"))
             return
         }
@@ -169,8 +174,7 @@ extension AppDelegate {
         let places = Array(store.routePlaces(ride).drop { $0 == store.homePlace })
         guard let first = places.first else { return }
         let home = store.state.settings.homeCity?.nilIfEmpty
-        let hasAppleMaps = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps") != nil
-        var app = store.state.settings.mapsApp ?? .automatic
+        var app = chosen ?? store.state.settings.mapsApp ?? .automatic
         if app == .automatic { app = places.count == 1 && hasAppleMaps ? .apple : .google }
         if app == .apple, !hasAppleMaps { app = .google }
         switch app {
