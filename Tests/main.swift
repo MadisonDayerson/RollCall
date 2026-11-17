@@ -1142,5 +1142,41 @@ do {
           "a poster's columns are read one at a time, not mixed line by line")
 }
 
+// Find more details: a quick sift, then the model must agree the text is about this ride, and only new details are offered.
+do {
+    let day = cal.date(from: DateComponents(year: 2026, month: 11, day: 22))!
+    let pokerRun = RideEvent(id: "pr", title: "Pretend Valley Poker Run", start: day, end: nil, allDay: true, location: "",
+                             notes: "Five stops, best hand wins.", url: nil, source: "manual", sourceName: "Added by you", lastSeen: now)
+    check(RideSearch.mightBeAbout("Who's doing the poker run in Pretend Valley?", pokerRun), "the ride's name finds text about it")
+    check(!RideSearch.mightBeAbout("Sunday ride anyone? Meet at the servo", pokerRun), "day names and ride words alone don't")
+    var placed = pokerRun; placed.title = "Sunday ride"; placed.location = "Example Servo, 12 Fake St, Sunshine VIC"
+    check(RideSearch.mightBeAbout("see you at example servo at 9", placed), "the meeting place finds it too")
+
+    let lines = (0..<8).map { i in ChatLine(id: "m\(i)", sender: "Sam", sent: now.addingTimeInterval(Double(i) * 60),
+                                            text: i == 2 ? "Pretend Valley poker run is on!" : "message \(i)", mentionsWhen: false) }
+    check(RideSearch.aboutRide(lines, pokerRun).map(\.id) == ["m2", "m3", "m4", "m5"], "a chat gives the message about the ride and the replies after it")
+
+    let yes = "SAME: yes\nSTART: 2026-11-22 09:30\nEND: 2026-11-22 14:00\nMEET: Example Servo, 12 Fake St, Sunshine VIC\nDESTINATION: Pretend Falls Hotel\nSTOPS: Kinglake; Example Bakery\nLINK: unknown\nDETAILS: $20 a hand, paid on the day."
+    check(RideSearch.same(yes) && !RideSearch.same("SAME: no\nSTART: unknown") && !RideSearch.same("START: 2026-11-22 09:30"), "SAME is read, and missing means no")
+    check(RideSearch.read(yes.replacingOccurrences(of: "SAME: yes", with: "SAME: no"), ride: pokerRun, original: "", now: now) == nil, "nothing is taken when the model says it's another ride")
+    check(RideSearch.read(yes.replacingOccurrences(of: "2026-11-22", with: "2026-11-29"), ride: pokerRun, original: "", now: now) == nil, "a time on another day is another ride")
+    let d = RideSearch.read(yes, ride: pokerRun, original: "", now: now)
+    let found = d.map { RideSearch.findings($0, for: pokerRun, from: "Example chat") } ?? []
+    check(found.map(\.field) == [.time, .place, .destination, .stops, .details], "an all-day ride gets its time, place, destination, stops and details")
+    check(found.first?.value == "9:30 am – 2:00 pm", "the time reads plainly: \(found.first?.value ?? "nil")")
+    var known = pokerRun; known.location = "Example Servo, 12 Fake St, Sunshine VIC"; known.notes = "Destination: Pretend Falls Hotel"
+    check(d.map { RideSearch.findings($0, for: known, from: "x").map(\.field) }?.contains(.place) == false
+          && d.map { RideSearch.findings($0, for: known, from: "x").map(\.field) }?.contains(.destination) == false, "what the ride already says isn't offered again")
+
+    if let time = found.first, let place = found.dropFirst().first, let more = found.last {
+        let timed = RideSearch.edit(pokerRun, adding: time)
+        check(!timed.allDay && comps(timed.start).hour == 9 && comps(timed.start).minute == 30 && timed.end.map { comps($0).hour == 14 } == true,
+              "adding the time makes it a timed ride")
+        check(RideSearch.edit(pokerRun, adding: place).location.contains("Example Servo"), "adding the place sets where it meets")
+        check(RideSearch.edit(pokerRun, adding: more).notes == "Five stops, best hand wins.\n$20 a hand, paid on the day. (from Example chat)",
+              "details go under the notes, saying where they came from")
+    }
+}
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

@@ -199,6 +199,11 @@ struct RideDetail: View {
                         .help(ride.url == nil ? "This ride has no event page. Add a link with Edit…" : ride.linkHelp)
                     Button("Edit…") { model.later { app.editRide(id: ride.id) } }
                         .help("Change the name, time, place, link or notes. Changes go to the calendar too.")
+                    Button("Find more details") { app.findMoreDetails(ride.id) }
+                        .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
+                        .help(AppleModel.available
+                              ? "Look through this ride's page, your chats and your other sources for more about it. Apple Intelligence checks each find is about this ride, on this Mac."
+                              : "Needs Apple Intelligence (System Settings → Apple Intelligence & Siri), which checks each find is about this ride.")
                     Button("Route") { app.openRoute(ride) }
                         .disabled(!ride.hasRoute)
                         .help(!ride.hasRoute ? "Add a place with Edit… to get a route"
@@ -210,6 +215,8 @@ struct RideDetail: View {
                     }
                     .help(model.isPast(ride) ? "Remove it from your past rides" : "Remove this ride. It won't come back when its source is checked again.")
                 }
+
+                if let lookup = model.lookups[ride.id] { RideFindings(ride: ride, lookup: lookup, model: model) }
 
                 RouteBox(ride: ride, model: model).id(ride.id)
 
@@ -279,6 +286,50 @@ struct RideAbout: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
             Label("About", systemImage: "text.alignleft")
+        }
+    }
+}
+
+/// What Find more details found: each detail with where it came from, to add or leave.
+struct RideFindings: View {
+    let ride: RideEvent
+    let lookup: UIModel.Lookup
+    @ObservedObject var model: UIModel
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                switch lookup {
+                case .looking(let step):
+                    HStack(spacing: 8) { ProgressView().controlSize(.small); Text(step).foregroundStyle(.secondary) }
+                case .done(let found, let checked):
+                    if found.isEmpty {
+                        Text("Nothing new about this ride. Looked through \(checked).").foregroundStyle(.secondary)
+                    } else {
+                        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 10) {
+                            ForEach(found) { f in
+                                GridRow {
+                                    Text(f.label).foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(f.value).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                                        Text("From \(f.from)").font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    Button("Add") { model.app.useFinding(f, rideID: ride.id) }
+                                        .help("Add it to the ride, as if you'd typed it with Edit…")
+                                }
+                            }
+                        }
+                        Text("Apple Intelligence checked each of these is about this ride. Looked through \(checked).")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Button("Done") { model.lookups[ride.id] = nil }
+                }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label("More details", systemImage: "magnifyingglass")
         }
     }
 }

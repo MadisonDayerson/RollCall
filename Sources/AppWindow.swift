@@ -68,6 +68,16 @@ extension AppDelegate {
         if ui.rides().isEmpty { ui.rideFilter = .skipped }
         ui.selectedRide = ui.rides().first?.id
         await snap("1-rides", window)
+        // Sample finds from Find more details (made up; they're only shown).
+        if let id = ui.selectedRide {
+            ui.lookups[id] = .done([
+                .init(field: .time, value: "9:30 am – 2:00 pm", from: "Example chat"),
+                .init(field: .place, value: "Example Servo, 12 Fake St, Sunshine VIC", from: "the event page"),
+                .init(field: .details, value: "$20 a hand, cash on the day.", from: "Example chat"),
+            ], checked: "its event page, your 2 chats, your other sources")
+            await snap("1-findings", window)
+            ui.lookups[id] = nil
+        }
         let filter = ui.rideFilter
         ui.rideFilter = .past
         // A sample finished ride if there isn't a real one (never saved: it's removed straight after).
