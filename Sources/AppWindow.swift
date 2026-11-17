@@ -114,6 +114,15 @@ extension AppDelegate {
         let demo = store.state.reviews.values.contains { $0.status == .open } ? nil : demoReview()
         if let demo { store.state.reviews[demo.id] = demo; ui.objectWillChange.send() }
         await snap("2-review", window)
+        // Sample finds for the first plan (made up; they're only shown).
+        if let first = openReviews().first ?? demo {
+            ui.lookups[first.id] = .done([
+                .init(field: .destination, value: "Marysville Bakery", from: "Example chat"),
+                .init(field: .details, value: "Bring a jacket, it gets cold over the top.", from: "Example chat"),
+            ], checked: "your 2 chats, your other sources")
+            await snap("2-review-findings", window)
+            ui.lookups[first.id] = nil
+        }
         if let demo { store.state.reviews[demo.id] = nil; ui.objectWillChange.send() }
         ui.page = .sources
         ui.selectedSource = nil

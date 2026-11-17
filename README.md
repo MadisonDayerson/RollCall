@@ -131,7 +131,8 @@ link or notes; your changes stay when RollCall checks the source again, and go t
 chats, and your other sources' listings and posts for more about that ride. Apple's on-device model reads each find
 and keeps it only if it's about this very ride (the same event on the same day, not another week's or a similar ride
 nearby), then shows what the ride doesn't say yet: its time, meeting place, destination, stops, cost or link, with
-where each came from. Click **Add** for the ones you want; they're saved like an edit. **Route** opens the organiser's route if the
+where each came from. Click **Add** for the ones you want; they're saved like an edit. Plans in **To review** have
+the button too, once they have a day: what it finds fills in the **Add ride…** form, apart from any you **Leave out**. **Route** opens the organiser's route if the
 description has one, otherwise directions from your suburb through the meeting place and stops, in Apple Maps,
 Google Maps, Waze or Kurviger (choose in Settings). Each ride's page also shows a map of the road route with the distance
 and riding time (click it to open Route). When the organiser shared a Google Maps or Apple Maps route, the map follows

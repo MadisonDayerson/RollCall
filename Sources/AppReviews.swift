@@ -149,13 +149,23 @@ extension AppDelegate {
         if let dest = d?.destination { parts.append("Destination: " + dest) }
         if let l = d?.link { parts.append("Link: " + l) }
         var notes = parts.joined(separator: "\n")
-        let intro = d != nil ? "Apple Intelligence filled this in from the conversation in \(chatName), on this Mac. Check it before adding."
+        var intro = d != nil ? "Apple Intelligence filled this in from the conversation in \(chatName), on this Mac. Check it before adding."
                              : "From the conversation in \(chatName). Check the time and meeting place."
+        // Where it starts and ends names a chat ride better than "Sam's ride".
+        var form = RideEvent(id: id, title: RideDetails.routeTitle(from: d?.meet, to: d?.destination) ?? (s.byAI ? s.title : d?.title ?? s.title),
+                             start: start, end: start.addingTimeInterval((d?.hours ?? 3) * 3600), allDay: false,
+                             location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", notes: notes, url: nil,
+                             source: "manual", sourceName: chatName, lastSeen: Date())
+        // What Find more details found and you kept.
+        let found = keptFindings(id)
+        for f in found { form = form.applying(RideSearch.edit(form, adding: f)) }
+        if found.contains(where: { $0.field == .time }) { hasTime = true }
+        if !found.isEmpty { intro += " What Find more details found is filled in too." }
         guard let ride = Dialogs.manualRide(
-            // Where it starts and ends names a chat ride better than "Sam's ride".
-            prefill: .init(title: RideDetails.routeTitle(from: d?.meet, to: d?.destination) ?? (s.byAI ? s.title : d?.title ?? s.title), start: start, hours: d?.hours ?? 3,
-                           location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", link: link, notes: notes),
+            prefill: .init(title: form.title, start: form.start, hours: (form.end ?? form.finish).timeIntervalSince(form.start) / 3600,
+                           location: form.location, link: form.url ?? link, notes: form.notes),
             note: intro + (hasTime ? "" : " No time was agreed, so 9am is filled in.")) else { return }
+        ui.lookups[id] = nil
         // Only the summary goes in the ride (and so the calendar): the chat's messages stay in the chat.
         notes = ride.notes
         let item = ICSEvent(uid: "plan-" + stableHash(r.id), title: ride.title, start: ride.start,

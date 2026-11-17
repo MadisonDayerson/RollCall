@@ -33,6 +33,14 @@ enum RideSearch {
         }
     }
 
+    /// A plan from a chat as a ride to search for. Nil until the plan has a day: finds are checked against it.
+    static func ride(for r: PlanReview, chatName: String) -> RideEvent? {
+        guard let start = r.summary.start else { return nil }
+        return RideEvent(id: r.id, title: r.summary.title, start: start, end: nil, allDay: !r.summary.hasTime,
+                         location: r.summary.place ?? "", notes: r.summary.summary, url: nil, source: r.feedID,
+                         sourceName: "Chat: " + chatName, lastSeen: r.updated)
+    }
+
     private static let dayWords: Set<String> = [
         "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "mon", "tue", "wed", "thu", "fri", "sat", "sun",
         "today", "tomorrow", "tonight", "morning", "afternoon", "evening", "night", "weekend",
@@ -139,14 +147,20 @@ enum RideSearch {
         var e = RideEdit(title: ride.title, start: ride.start, end: ride.end, allDay: ride.allDay,
                          location: ride.location, notes: ride.notes, url: ride.url)
         func addLine(_ line: String) { e.notes = e.notes.isEmpty ? line : e.notes + "\n" + line }
+        // Route reads one "Destination:" and one "Stops:" line, so a found one replaces what's there.
+        func setLine(_ label: String, _ value: String) {
+            let kept = e.notes.components(separatedBy: "\n").filter { !$0.hasPrefix(label + ":") }
+            e.notes = kept.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            addLine(label + ": " + value)
+        }
         switch f.field {
         case .time:
             guard let s = f.start else { break }
             let length = ride.allDay ? 3 * 3600 : (ride.end ?? ride.start.addingTimeInterval(3 * 3600)).timeIntervalSince(ride.start)
             e.start = s; e.end = f.end ?? s.addingTimeInterval(length); e.allDay = false
         case .place: e.location = f.value
-        case .destination: addLine("Destination: " + f.value)
-        case .stops: addLine("Stops: " + f.value)
+        case .destination: setLine("Destination", f.value)
+        case .stops: setLine("Stops", f.value)
         case .details: addLine(f.value + " (from \(f.from))")
         case .link: e.url = f.value
         }

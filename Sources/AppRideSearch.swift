@@ -6,10 +6,11 @@ extension AppDelegate {
     /// At most this many pieces of text are read by the model, a few seconds each.
     static let maxClues = 8
 
-    /// Looks for more about a ride in its event page, other listings, posts and your chats (read only, on this
-    /// Mac), keeps what Apple Intelligence agrees is about this ride, and shows what's new under the ride.
-    func findMoreDetails(_ id: String) {
-        guard let ride = store.state.events[id], ui.lookups[id]?.isLooking != true else { return }
+    /// Looks for more about a ride (or a plan from a chat) in its event page, other listings, posts and your chats
+    /// (read only, on this Mac), keeps what Apple Intelligence agrees is about it, and shows what's new under it.
+    func findMoreDetails(for ride: RideEvent) {
+        let id = ride.id
+        guard ui.lookups[id]?.isLooking != true else { return }
         ui.lookups[id] = .looking("Looking through your sources…")
         Task {
             let (clues, checked) = await clues(for: ride)
@@ -29,9 +30,19 @@ extension AppDelegate {
     func useFinding(_ f: RideSearch.Finding, rideID id: String) {
         guard let ride = store.state.events[id] else { return }
         saveEdit(RideSearch.edit(ride, adding: f), to: ride)
+        leaveOut(f, from: id)
+    }
+
+    func leaveOut(_ f: RideSearch.Finding, from id: String) {
         if case .done(let left, let checked) = ui.lookups[id] {
             ui.lookups[id] = .done(left.filter { $0 != f }, checked: checked)
         }
+    }
+
+    /// The details found for a plan that you kept, to fill in its Add ride form.
+    func keptFindings(_ id: String) -> [RideSearch.Finding] {
+        if case .done(let found, _) = ui.lookups[id] { return found }
+        return []
     }
 
     /// Text that might be about the ride, best first, and what was looked through.

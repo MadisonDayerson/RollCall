@@ -1173,9 +1173,27 @@ do {
         check(!timed.allDay && comps(timed.start).hour == 9 && comps(timed.start).minute == 30 && timed.end.map { comps($0).hour == 14 } == true,
               "adding the time makes it a timed ride")
         check(RideSearch.edit(pokerRun, adding: place).location.contains("Example Servo"), "adding the place sets where it meets")
+        var routed = pokerRun; routed.notes = "Five stops.\nDestination: Old Pub"
+        check(RideSearch.edit(routed, adding: RideSearch.Finding(field: .destination, value: "Pretend Falls Hotel", from: "x")).notes
+              == "Five stops.\nDestination: Pretend Falls Hotel", "a found destination replaces the one there, so Route reads one")
         check(RideSearch.edit(pokerRun, adding: more).notes == "Five stops, best hand wins.\n$20 a hand, paid on the day. (from Example chat)",
               "details go under the notes, saying where they came from")
     }
+}
+
+// A plan from a chat can be searched for once it has a day.
+do {
+    let sat = cal.date(from: DateComponents(year: 2026, month: 11, day: 21, hour: 14))!
+    var plan = PlanReview(id: "rv", feedID: "beeper-x", chatID: "x", lines: [],
+                          summary: PlanSummary(title: "Saturday Black Spur ride", when: "Saturday, 2pm", start: sat, hasTime: true,
+                                               place: "Example Servo", who: [], undecided: nil, summary: "A ride over the Black Spur.",
+                                               isPlan: true, byAI: true),
+                          status: .open, created: now, updated: now)
+    let r = RideSearch.ride(for: plan, chatName: "Example chat")
+    check(r?.id == "rv" && r?.start == sat && r?.allDay == false && r?.location == "Example Servo" && r?.sourceName == "Chat: Example chat",
+          "a plan becomes a ride to search for, keyed by the plan")
+    plan.summary.start = nil
+    check(RideSearch.ride(for: plan, chatName: "Example chat") == nil, "a plan without a day can't be searched for yet")
 }
 
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")

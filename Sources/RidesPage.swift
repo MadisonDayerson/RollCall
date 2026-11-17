@@ -199,7 +199,7 @@ struct RideDetail: View {
                         .help(ride.url == nil ? "This ride has no event page. Add a link with Edit…" : ride.linkHelp)
                     Button("Edit…") { model.later { app.editRide(id: ride.id) } }
                         .help("Change the name, time, place, link or notes. Changes go to the calendar too.")
-                    Button("Find more details") { app.findMoreDetails(ride.id) }
+                    Button("Find more details") { app.findMoreDetails(for: ride) }
                         .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
                         .help(AppleModel.available
                               ? "Look through this ride's page, your chats and your other sources for more about it. Apple Intelligence checks each find is about this ride, on this Mac."
@@ -216,7 +216,7 @@ struct RideDetail: View {
                     .help(model.isPast(ride) ? "Remove it from your past rides" : "Remove this ride. It won't come back when its source is checked again.")
                 }
 
-                if let lookup = model.lookups[ride.id] { RideFindings(ride: ride, lookup: lookup, model: model) }
+                if let lookup = model.lookups[ride.id] { RideFindings(id: ride.id, lookup: lookup, forPlan: false, model: model) }
 
                 RouteBox(ride: ride, model: model).id(ride.id)
 
@@ -290,10 +290,12 @@ struct RideAbout: View {
     }
 }
 
-/// What Find more details found: each detail with where it came from, to add or leave.
+/// What Find more details found: each detail with where it came from. A ride's are added one at a time; a plan's
+/// fill in its Add ride form, apart from any you leave out.
 struct RideFindings: View {
-    let ride: RideEvent
+    let id: String
     let lookup: UIModel.Lookup
+    let forPlan: Bool
     @ObservedObject var model: UIModel
 
     var body: some View {
@@ -304,7 +306,7 @@ struct RideFindings: View {
                     HStack(spacing: 8) { ProgressView().controlSize(.small); Text(step).foregroundStyle(.secondary) }
                 case .done(let found, let checked):
                     if found.isEmpty {
-                        Text("Nothing new about this ride. Looked through \(checked).").foregroundStyle(.secondary)
+                        Text("Nothing new about this \(forPlan ? "plan" : "ride"). Looked through \(checked).").foregroundStyle(.secondary)
                     } else {
                         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 10) {
                             ForEach(found) { f in
@@ -315,15 +317,20 @@ struct RideFindings: View {
                                         Text("From \(f.from)").font(.caption).foregroundStyle(.secondary)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    Button("Add") { model.app.useFinding(f, rideID: ride.id) }
-                                        .help("Add it to the ride, as if you'd typed it with Edit…")
+                                    if forPlan {
+                                        Button("Leave out") { model.app.leaveOut(f, from: id) }
+                                            .help("Don't fill this in when you add the ride")
+                                    } else {
+                                        Button("Add") { model.app.useFinding(f, rideID: id) }
+                                            .help("Add it to the ride, as if you'd typed it with Edit…")
+                                    }
                                 }
                             }
                         }
-                        Text("Apple Intelligence checked each of these is about this ride. Looked through \(checked).")
+                        Text("Apple Intelligence checked each of these is about this \(forPlan ? "plan" : "ride").\(forPlan ? " They're filled in when you add the ride." : "") Looked through \(checked).")
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
-                    Button("Done") { model.lookups[ride.id] = nil }
+                    Button(forPlan ? "Clear" : "Done") { model.lookups[id] = nil }
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
