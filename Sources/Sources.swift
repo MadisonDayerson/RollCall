@@ -130,8 +130,33 @@ enum DownloadsWatcher {
 @MainActor
 final class Geocoder {
     private let geocoder = CLGeocoder()
+    /// A place name that's only a business ("AR Bodyworks") can match one overseas; group rides from your sources
+    /// aren't this far away, so a match further than this counts as not found.
+    static let farthestKm = 1000.0
+
+    /// The closest match to home, as [latitude, longitude], or [] when none is near enough to be the place.
+    static func nearest(_ found: [CLLocationCoordinate2D], homeLatitude: Double, homeLongitude: Double) -> [Double] {
+        let km = { (c: CLLocationCoordinate2D) in Store.haversineKm(c.latitude, c.longitude, homeLatitude, homeLongitude) }
+        guard let c = found.min(by: { km($0) < km($1) }), km(c) <= farthestKm else { return [] }
+        return [c.latitude, c.longitude]
+    }
+
+    /// Places looked up before matches were checked for distance: ones placed too far away are looked up again.
+    static func forgetFarMatches(_ store: Store) {
+        let s = store.state.settings
+        for (key, c) in store.state.geocodeCache where c.count == 2
+            && Store.haversineKm(c[0], c[1], s.homeLatitude, s.homeLongitude) > farthestKm {
+            store.state.geocodeCache[key] = nil
+            for (id, e) in store.state.events where e.location.lowercased() == key && e.latitude == c[0] && e.longitude == c[1] {
+                store.state.events[id]?.latitude = nil
+                store.state.events[id]?.longitude = nil
+                store.state.events[id]?.distanceKm = nil
+            }
+        }
+    }
 
     func fill(_ store: Store) async {
+        Self.forgetFarMatches(store)
         let s = store.state.settings
         let region = CLCircularRegion(center: CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude),
                                       radius: 300_000, identifier: "home")
@@ -139,12 +164,8 @@ final class Geocoder {
             let key = e.location.lowercased()
             var coords = store.state.geocodeCache[key]
             if coords == nil {
-                let found = try? await geocoder.geocodeAddressString(e.location, in: region)
-                if let loc = found?.first?.location {
-                    coords = [loc.coordinate.latitude, loc.coordinate.longitude]
-                } else {
-                    coords = []
-                }
+                let found = (try? await geocoder.geocodeAddressString(e.location, in: region)) ?? []
+                coords = Self.nearest(found.compactMap { $0.location?.coordinate }, homeLatitude: s.homeLatitude, homeLongitude: s.homeLongitude)
                 store.state.geocodeCache[key] = coords
                 try? await Task.sleep(nanoseconds: 1_200_000_000)  // be gentle with Apple's rate limit
             }

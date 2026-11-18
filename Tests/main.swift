@@ -182,6 +182,22 @@ store.state.geocodeCache = ["long gone ride place": [0, 0]]
 store.prune(refreshedSources: [], refreshStarted: now, now: now)
 check(store.state.recentPosts["f"]?.map(\.id) == ["new"], "posts waiting to be looked at go after two weeks")
 check(store.state.geocodeCache.isEmpty, "places are forgotten once no ride is there")
+// A place found overseas isn't the place: the closest match counts, and none over 1000 km away.
+do {
+    let melb = CLLocationCoordinate2D(latitude: -37.81, longitude: 144.96), overseas = CLLocationCoordinate2D(latitude: 51.5, longitude: -0.12)
+    let h = store.state.settings
+    check(Geocoder.nearest([overseas, melb], homeLatitude: h.homeLatitude, homeLongitude: h.homeLongitude) == [melb.latitude, melb.longitude],
+          "the match closest to home is used")
+    check(Geocoder.nearest([overseas], homeLatitude: h.homeLatitude, homeLongitude: h.homeLongitude).isEmpty, "a match overseas counts as not found")
+    var shop = RideEvent(id: "shop", title: "Made-up bike night", start: now, end: nil, allDay: false, location: "Example Bodyworks",
+                         notes: "", url: nil, source: "feed", sourceName: "Feed", lastSeen: now)
+    shop.latitude = overseas.latitude; shop.longitude = overseas.longitude; shop.distanceKm = 16900
+    store.state.events = ["shop": shop]
+    store.state.geocodeCache = ["example bodyworks": [overseas.latitude, overseas.longitude]]
+    Geocoder.forgetFarMatches(store)
+    check(store.state.geocodeCache.isEmpty && store.state.events["shop"]?.distanceKm == nil, "a place matched overseas before is looked up again")
+    store.state.events = [:]
+}
 store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.save()
