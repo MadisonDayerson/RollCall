@@ -88,13 +88,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 extension RideEvent {
     var hasRoute: Bool { !location.isEmpty || Route.link(in: notes) != nil }
 
-    var linkHelp: String {
-        guard let url else { return "" }
-        return isFacebook ? "Open the event on Facebook to RSVP"
-            : url.contains("meetup.com") ? "Open the event on Meetup to RSVP"
-            : url.contains("instagram.com") ? "Open the Instagram post"
-            : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open the message in Beeper"
-            : needsCheck == true ? "Open the post the ride came from" : "Open the event page"
+    /// The first item in a ride's ⋯ menu: where its link goes, in a few words.
+    var openLabel: String {
+        guard let url else { return "Open event (no link)" }
+        return isFacebook ? "Open on Facebook"
+            : url.contains("meetup.com") ? "Open on Meetup"
+            : url.contains("instagram.com") ? "Open on Instagram"
+            : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open in Beeper"
+            : needsCheck == true ? "Open post" : "Open event page"
     }
 }
 

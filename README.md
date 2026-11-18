@@ -124,8 +124,9 @@ Apple Intelligence on your Mac where available. Beeper needs to be open for chat
 ## Riding with friends
 
 Each ride's page starts with its status, then **About**: when, where, who it's from and a plain summary of the
-description. The **⋯** menu at its top right has the same actions for every ride: **Open event**, **Edit…**, **Find more
-details**, **Open route in** and **Remove** (one that can't do anything yet is greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
+description. The **⋯** menu on each ride in the list has the same actions for every ride: **Open** (the event page, or
+the post or message it came from), **Open route in**, **Edit…**, **Find more details** and **Remove** (one that can't do
+anything yet is greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to.
 **Find more details** (with Apple Intelligence on) looks through the ride's event page, the last two weeks of your
 chats, and your other sources' listings and posts for more about that ride. Apple's on-device model reads each find

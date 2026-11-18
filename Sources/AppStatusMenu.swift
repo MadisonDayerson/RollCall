@@ -96,10 +96,10 @@ extension AppDelegate {
             sub.addItem(it)
         }
         sub.addItem(.separator())
-        // The same items as the buttons on the ride's page.
-        for (title, sel, object, enabled) in [("Open event", #selector(openLink(_:)), ride.url ?? "", ride.url != nil),
+        // The same items, in the same order, as the ride's ⋯ menu in the window.
+        for (title, sel, object, enabled) in [(ride.openLabel, #selector(openLink(_:)), ride.url ?? "", ride.url != nil),
+                                              ("Open route", #selector(openMaps(_:)), ride.id, ride.hasRoute),
                                               ("Edit…", #selector(editRide(_:)), ride.id, true),
-                                              ("Route", #selector(openMaps(_:)), ride.id, ride.hasRoute),
                                               ("Remove", #selector(removeRide(_:)), ride.id, true)] {
             let it = action(title, sel, enabled: enabled)
             it.representedObject = object

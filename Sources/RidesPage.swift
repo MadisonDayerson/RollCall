@@ -136,20 +136,24 @@ struct RideRow: View {
 
     var body: some View {
         let decision = model.store.decision(ride.id)
-        HStack(alignment: .top, spacing: 12) {
-            DateBadge(date: ride.start, decision: decision, needsCheck: ride.needsCheck == true, past: model.isPast(ride))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(ride.title).fontWeight(.semibold).lineLimit(2)
-                Text(ride.allDay ? "All day" : AppDelegate.timeFmt.string(from: ride.start)).font(.callout)
-                Text([ride.location.isEmpty ? nil : ride.location,
-                      ride.distanceKm.map { String(format: "%.0f km", $0) },
-                      ride.sourceName].compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
+                DateBadge(date: ride.start, decision: decision, needsCheck: ride.needsCheck == true, past: model.isPast(ride))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ride.title).fontWeight(.semibold).lineLimit(2)
+                    Text(ride.allDay ? "All day" : AppDelegate.timeFmt.string(from: ride.start)).font(.callout)
+                    Text([ride.location.isEmpty ? nil : ride.location,
+                          ride.distanceKm.map { String(format: "%.0f km", $0) },
+                          ride.sourceName].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(decisionName(decision, needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
+            RideActions(ride: ride, model: model)
         }
         .padding(.vertical, 3)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(decisionName(decision, needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
     }
 }
 
@@ -166,7 +170,6 @@ struct RideDetail: View {
                               past: model.isPast(ride), scale: 1.5)
                     Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
                 }
-                .padding(.trailing, 36)  // room for the ⋯ menu
                 if model.isPast(ride) {
                     Label("You went", systemImage: "checkmark.seal")
                         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -200,13 +203,12 @@ struct RideDetail: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .topTrailing) { RideActions(ride: ride, model: model).padding(14) }
         }
     }
 }
 
-/// A ride's actions, in the ⋯ menu at the top right: the same for every ride, in the same order; one that can't do
-/// anything yet is greyed out and says why.
+/// A ride's actions, in the ⋯ menu on its row in the list: going there first, then changing it, then removing it.
+/// Every ride has the same items in the same order; one that can't do anything yet is greyed out and says why.
 struct RideActions: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
@@ -215,14 +217,11 @@ struct RideActions: View {
         let app = model.app
         let past = model.isPast(ride)
         Menu {
-            Button(ride.url == nil ? "Open event (add a link with Edit…)" : ride.linkHelp) { app.open(ride.url) }
+            Button(ride.openLabel) { app.open(ride.url) }
                 .disabled(ride.url == nil)
-            Button("Edit…") { model.later { app.editRide(id: ride.id) } }
-            Button(AppleModel.available ? "Find more details" : "Find more details (needs Apple Intelligence)") { app.findMoreDetails(for: ride) }
-                .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
-            Menu(ride.hasRoute ? "Open route in" : "Open route in (add a place with Edit…)") {
+            Menu(ride.hasRoute ? "Open route in" : "Open route in (no place)") {
                 if Route.link(in: ride.notes) != nil {
-                    Button("The organiser's route") { app.openRoute(ride) }
+                    Button("Organiser's route") { app.openRoute(ride) }
                     Divider()
                 }
                 ForEach(MapsApp.allCases.filter { $0 != .automatic && ($0 != .apple || app.hasAppleMaps) }, id: \.self) { maps in
@@ -233,18 +232,25 @@ struct RideActions: View {
             }
             .disabled(!ride.hasRoute)
             Divider()
+            Button("Edit…") { model.later { app.editRide(id: ride.id) } }
+            Button(AppleModel.available ? "Find more details" : "Find more details (needs Apple Intelligence)") {
+                model.selectedRide = ride.id
+                app.findMoreDetails(for: ride)
+            }
+            .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
+            Divider()
             Button(past ? "Remove from past rides" : "Remove", role: .destructive) {
-                model.selectedRide = nil
+                if model.selectedRide == ride.id { model.selectedRide = nil }
                 if past { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }
             }
         } label: {
-            Image(systemName: "ellipsis.circle").font(.system(size: 20))
+            Image(systemName: "ellipsis.circle").font(.system(size: 15)).foregroundStyle(.secondary)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Open event, edit, find more details, route or remove")
-        .accessibilityLabel("Ride actions")
+        .help("Open, route, edit, find more details or remove")
+        .accessibilityLabel("Actions for \(ride.title)")
     }
 }
 
