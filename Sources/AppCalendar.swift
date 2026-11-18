@@ -30,6 +30,8 @@ extension AppDelegate {
     }
 
     func syncCalendar(_ id: String) {
+        // Taking pictures saves nothing, so a calendar event made then would be forgotten and made again later.
+        guard !Store.picturesOnly else { return }
         let attending = store.decision(id) == .attending
         let existing = store.state.calendarItems[id]
         if attending, let ride = store.state.events[id] {

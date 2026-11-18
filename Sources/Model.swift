@@ -435,6 +435,9 @@ final class Store {
                 needsCheck: needsCheck ? true : nil)
             // Your changes win over what the source says.
             if let edit = state.rideEdits[id] { e = e.applying(edit) }
+            // Calendar feeds still list rides that are over. Ones pruned already stay gone, or each check would
+            // bring them back, carry your Facebook Going across and put them in Calendar again.
+            if e.finish < now.addingTimeInterval(-Double(state.settings.keepDays) * 86400) { continue }
             if let old = state.events[id] {
                 // Keep things we worked out earlier.
                 if e.latitude == nil, old.location == e.location {
@@ -452,11 +455,12 @@ final class Store {
 
     /// Your Going or Interested on Facebook becomes Going or Maybe here, for rides you haven't decided on yourself
     /// (still Undecided, or as Facebook last set them). Returns the rides whose choice changed.
-    func carryResponses(_ items: [ICSEvent], source: String) -> [String] {
+    /// Rides that are over are left as they are, so one taken off Past rides doesn't come back to the calendar.
+    func carryResponses(_ items: [ICSEvent], source: String, now: Date = Date()) -> [String] {
         var changed: [String] = []
         for item in items {
             let id = Store.eventID(source: source, item: item)
-            guard let reply = item.response, state.events[id] != nil else { continue }
+            guard let reply = item.response, let ride = state.events[id], ride.finish > now else { continue }
             let current = decision(id)
             guard current == .undecided || current == state.responses[id] else { continue }
             if current != reply { state.decisions[id] = reply; changed.append(id) }

@@ -155,6 +155,19 @@ store.prune(refreshedSources: [], refreshStarted: over, now: over.addingTimeInte
 check(store.state.events[wentID] != nil && store.decision(wentID) == .attending, "a ride you went on stays under Past for the week Privacy keeps it")
 store.prune(refreshedSources: [], refreshStarted: over, now: over.addingTimeInterval(8 * 86400))
 check(store.state.events.isEmpty && store.state.decisions[wentID] == nil, "...then it's deleted")
+// Calendar feeds still list rides that are over: a pruned one isn't read back in (with your Facebook Going) each check.
+var stillListed = m[0]
+stillListed.response = .attending
+let wellAfter = over.addingTimeInterval(8 * 86400)
+store.merge([stillListed], source: "meetup-x", sourceName: "X", now: wellAfter)
+check(store.state.events.isEmpty, "a ride pruned after it's over isn't added again when its feed still lists it")
+store.merge([stillListed], source: "meetup-x", sourceName: "X", now: now)
+check(store.carryResponses([stillListed], source: "meetup-x", now: over.addingTimeInterval(60)).isEmpty
+      && store.state.decisions[wentID] == nil, "Facebook's Going isn't carried to a ride that's over (taken off Past rides)")
+check(store.carryResponses([stillListed], source: "meetup-x", now: now) == [wentID], "...but is for one still to come")
+store.state.decisions[wentID] = nil
+store.state.responses = [:]
+store.state.events = [:]
 store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions[wentID] = .attending
 store.state.settings.keepDismissedDays = 0
@@ -874,12 +887,12 @@ do {
     let start = cal.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 0))!
     let item = ICSEvent(uid: "show", title: "bike ride to the pretend show", start: start, end: start.addingTimeInterval(3 * 3600),
                         allDay: false, location: "Pretendville", notes: "", url: nil)
-    store.merge([item], source: "feed", sourceName: "Feed")
+    store.merge([item], source: "feed", sourceName: "Feed", now: start)
     let id = Store.eventID(source: "feed", item: item)
     let fixed = start.addingTimeInterval(9 * 3600)
     store.state.rideEdits[id] = RideEdit(title: "Pretend Show ride", start: fixed, end: fixed.addingTimeInterval(5 * 3600), allDay: false,
                                          location: "Example Servo, Sunshine", notes: "Bring cash", url: nil)
-    store.merge([item], source: "feed", sourceName: "Feed")
+    store.merge([item], source: "feed", sourceName: "Feed", now: start)
     let e = store.state.events[id]
     check(e?.title == "Pretend Show ride" && e?.start == fixed && e?.location == "Example Servo, Sunshine" && e?.notes == "Bring cash",
           "your changes stay when the source is checked again")
