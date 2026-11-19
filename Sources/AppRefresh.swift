@@ -5,7 +5,8 @@ import MapKit
 extension AppDelegate {
     // MARK: - Refreshing
 
-    /// Reads every source, or with `dueOnly` just those whose interval has passed.
+    /// Reads every source and then looks for more details about your rides, or with `dueOnly` just reads the sources
+    /// whose interval has passed.
     func refresh(dueOnly: Bool = false) async {
         guard !refreshing, !Store.picturesOnly else { return }
         let feeds = dueOnly
@@ -54,6 +55,7 @@ extension AppDelegate {
         for id in changed where store.decision(id) == .attending { syncCalendar(id) }
         store.save()
         await findRoutes()
+        if !dueOnly { refreshProgress.value = 0.95; await findMoreDetails() }
         // Booked roadworks take a minute to download: fetched now, so a ride's road alerts are ready when opened.
         Task { _ = try? await RoadAlerts.fetchBooked() }
     }

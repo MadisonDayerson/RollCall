@@ -145,12 +145,6 @@ struct PlanCard: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(model.readingReview != nil)
                 Button("Open chat") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
-                let plan = RideSearch.ride(for: review, chatName: chatName)
-                Button("Find more details") { if let plan { app.findMoreDetails(for: plan) } }
-                    .disabled(plan == nil || !AppleModel.available || model.lookups[review.id]?.isLooking == true)
-                    .help(!AppleModel.available ? "Needs Apple Intelligence (System Settings → Apple Intelligence & Siri), which checks each find is about this plan."
-                          : plan == nil ? "Needs the plan's day, to check finds against"
-                          : "Look through your chats and other sources for more about this plan. Apple Intelligence checks each find is about it, on this Mac.")
                 Spacer()
                 if review.status == .dismissed {
                     Button("Restore") { app.restoreReview(review.id) }

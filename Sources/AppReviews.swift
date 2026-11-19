@@ -156,11 +156,11 @@ extension AppDelegate {
                              start: start, end: start.addingTimeInterval((d?.hours ?? 3) * 3600), allDay: false,
                              location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", notes: notes, url: nil,
                              source: "manual", sourceName: chatName, lastSeen: Date())
-        // What Find more details found and you kept.
+        // What Refresh found about the plan and you kept.
         let found = keptFindings(id)
         for f in found { form = form.applying(RideSearch.edit(form, adding: f)) }
         if found.contains(where: { $0.field == .time }) { hasTime = true }
-        if !found.isEmpty { intro += " What Find more details found is filled in too." }
+        if !found.isEmpty { intro += " The details Refresh found are filled in too." }
         guard let ride = Dialogs.manualRide(
             prefill: .init(title: form.title, start: form.start, hours: (form.end ?? form.finish).timeIntervalSince(form.start) / 3600,
                            location: form.location, link: form.url ?? link, notes: form.notes),

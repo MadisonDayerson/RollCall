@@ -32,12 +32,11 @@ final class UIModel: ObservableObject {
     /// The plan Apple Intelligence is reading for the Add ride form.
     @Published var readingReview: String?
     @Published var rideFilter: RideFilter = .all
-    /// Ride id -> Find more details, while it looks and what it found (until RollCall quits).
+    /// Ride id -> more details Refresh is looking for, while it looks and what it found (until RollCall quits).
     @Published var lookups: [String: Lookup] = [:]
     enum Lookup {
         case looking(String)
         case done([RideSearch.Finding], checked: String)
-        var isLooking: Bool { if case .looking = self { return true } else { return false } }
     }
     private var observer: NSObjectProtocol?
 

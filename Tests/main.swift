@@ -1171,7 +1171,7 @@ do {
           "a poster's columns are read one at a time, not mixed line by line")
 }
 
-// Find more details: a quick sift, then the model must agree the text is about this ride, and only new details are offered.
+// More details (found by Refresh): a quick sift, then the model must agree the text is about this ride, and only new details are offered.
 do {
     let day = cal.date(from: DateComponents(year: 2026, month: 11, day: 22))!
     let pokerRun = RideEvent(id: "pr", title: "Pretend Valley Poker Run", start: day, end: nil, allDay: true, location: "",

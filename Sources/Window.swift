@@ -33,9 +33,10 @@ struct MainView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { Task { await model.app.refresh() } } label: {
-                    Label("Check all sources now", systemImage: "arrow.clockwise")
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
-                .help("Check all sources now")
+                .help(AppleModel.available ? "Check all sources now, then look for more details about the rides you're going to and plans to review"
+                      : "Check all sources now")
                 .disabled(model.app.refreshing)
                 Menu {
                     Button("Add a Ride…") { model.adding = .ride }

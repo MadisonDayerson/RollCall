@@ -68,7 +68,7 @@ extension AppDelegate {
         if ui.rides().isEmpty { ui.rideFilter = .skipped }
         ui.selectedRide = ui.rides().first?.id
         await snap("1-rides", window)
-        // Sample finds from Find more details (made up; they're only shown).
+        // Sample finds from Refresh (made up; they're only shown).
         if let id = ui.selectedRide {
             ui.lookups[id] = .done([
                 .init(field: .time, value: "9:30 am – 2:00 pm", from: "Example chat"),

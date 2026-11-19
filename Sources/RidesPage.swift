@@ -233,11 +233,6 @@ struct RideActions: View {
             .disabled(!ride.hasRoute)
             Divider()
             Button("Edit…") { model.later { app.editRide(id: ride.id) } }
-            Button(AppleModel.available ? "Find more details" : "Find more details (needs Apple Intelligence)") {
-                model.selectedRide = ride.id
-                app.findMoreDetails(for: ride)
-            }
-            .disabled(!AppleModel.available || model.lookups[ride.id]?.isLooking == true)
             Divider()
             Button(past ? "Remove from past rides" : "Remove", role: .destructive) {
                 if model.selectedRide == ride.id { model.selectedRide = nil }
@@ -249,7 +244,7 @@ struct RideActions: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Open, route, edit, find more details or remove")
+        .help("Open, route, edit or remove")
         .accessibilityLabel("Actions for \(ride.title)")
     }
 }
@@ -317,7 +312,7 @@ struct RideAbout: View {
     }
 }
 
-/// What Find more details found: each detail with where it came from. A ride's are added one at a time; a plan's
+/// What Refresh found about a ride or plan: each detail with where it came from. A ride's are added one at a time; a plan's
 /// fill in its Add ride form, apart from any you leave out.
 struct RideFindings: View {
     let id: String
@@ -332,9 +327,7 @@ struct RideFindings: View {
                 case .looking(let step):
                     HStack(spacing: 8) { ProgressView().controlSize(.small); Text(step).foregroundStyle(.secondary) }
                 case .done(let found, let checked):
-                    if found.isEmpty {
-                        Text("Nothing new about this \(forPlan ? "plan" : "ride"). Looked through \(checked).").foregroundStyle(.secondary)
-                    } else {
+                    if !found.isEmpty {
                         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 10) {
                             ForEach(found) { f in
                                 GridRow {

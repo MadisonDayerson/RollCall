@@ -1,29 +1,39 @@
 import Foundation
 
 extension AppDelegate {
-    // MARK: - Find more details
+    // MARK: - More details, found by Refresh
 
     /// At most this many pieces of text are read by the model, a few seconds each.
     static let maxClues = 8
 
-    /// Looks for more about a ride (or a plan from a chat) in its event page, other listings, posts and your chats
-    /// (read only, on this Mac), keeps what Apple Intelligence agrees is about it, and shows what's new under it.
-    func findMoreDetails(for ride: RideEvent) {
-        let id = ride.id
-        guard ui.lookups[id]?.isLooking != true else { return }
-        ui.lookups[id] = .looking("Looking through your sources…")
-        Task {
-            let (clues, checked) = await clues(for: ride)
-            var found: [RideSearch.Finding] = []
-            for (i, clue) in clues.enumerated() {
-                ui.lookups[id] = .looking("Checking \(i + 1) of \(clues.count): \(clue.from)…")
-                guard let d = await RideSearch.verify(clue, ride: ride) else { continue }
-                for f in RideSearch.findings(d, for: ride, from: clue.from) where !found.contains(where: { $0.field == f.field }) {
-                    found.append(f)
-                }
-            }
-            ui.lookups[id] = .done(found, checked: checked)
+    /// Part of Refresh (not the automatic checks, which run every few minutes): looks for more about the rides you're
+    /// going to or might go to, and the plans in To review that have a day. Each one with something new shows it
+    /// under More details on its page.
+    func findMoreDetails() async {
+        guard AppleModel.available else { return }
+        let rides = store.upcoming().filter { [.attending, .maybe].contains(store.decision($0.id)) }
+        let plans = openReviews().compactMap { r in
+            RideSearch.ride(for: r, chatName: store.state.feeds.first { $0.id == r.feedID }?.name ?? "chat")
         }
+        // Finds you haven't dealt with yet stay as they are, so ones you left out don't come back.
+        for ride in rides + plans where ui.lookups[ride.id] == nil { await findMoreDetails(for: ride) }
+    }
+
+    /// Looks for more about one ride in its event page, other listings, posts and your chats (read only, on this Mac),
+    /// and keeps what Apple Intelligence agrees is about it and the ride doesn't say yet.
+    private func findMoreDetails(for ride: RideEvent) async {
+        let id = ride.id
+        ui.lookups[id] = .looking("Looking through your sources…")
+        let (clues, checked) = await clues(for: ride)
+        var found: [RideSearch.Finding] = []
+        for (i, clue) in clues.enumerated() {
+            ui.lookups[id] = .looking("Checking \(i + 1) of \(clues.count): \(clue.from)…")
+            guard let d = await RideSearch.verify(clue, ride: ride) else { continue }
+            for f in RideSearch.findings(d, for: ride, from: clue.from) where !found.contains(where: { $0.field == f.field }) {
+                found.append(f)
+            }
+        }
+        ui.lookups[id] = found.isEmpty ? nil : .done(found, checked: checked)
     }
 
     /// Adds a found detail to the ride as your own change, like Edit…, and takes it off the list.

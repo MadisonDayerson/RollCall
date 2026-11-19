@@ -125,15 +125,17 @@ Apple Intelligence on your Mac where available. Beeper needs to be open for chat
 
 Each ride's page starts with its status, then **About**: when, where, who it's from and a plain summary of the
 description. The **⋯** menu on each ride in the list has the same actions for every ride: **Open** (the event page, or
-the post or message it came from), **Open route in**, **Edit…**, **Find more details** and **Remove** (one that can't do
-anything yet is greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
+the post or message it came from), **Open route in**, **Edit…** and **Remove** (one that can't do anything yet is
+greyed out and says why). **Remove** takes the ride away for good, even if its source still lists it. **Edit…** changes the name, time, length, place,
 link or notes; your changes stay when RollCall checks the source again, and go to the calendar for rides you're going to.
-**Find more details** (with Apple Intelligence on) looks through the ride's event page, the last two weeks of your
-chats, and your other sources' listings and posts for more about that ride. Apple's on-device model reads each find
+**Refresh** (the ↻ button, or Refresh Now) checks every source, then (with Apple Intelligence on) looks for more about
+the rides you're going to or might go to, and the plans in **To review** that have a day: through each one's event
+page, the last two weeks of your chats, and your other sources' listings and posts. The automatic checks every few
+minutes don't do this. Apple's on-device model reads each find
 and keeps it only if it's about this very ride (the same event on the same day, not another week's or a similar ride
 nearby), then shows what the ride doesn't say yet: its time, meeting place, destination, stops, cost or link, with
-where each came from. Click **Add** for the ones you want; they're saved like an edit. Plans in **To review** have
-a **Find more details** button too, once they have a day: what it finds fills in the **Add ride…** form, apart from any you **Leave out**. **Open route in** gives directions from your suburb through the meeting place and stops in the
+where each came from, under **More details** on its page. Click **Add** for the ones you want; they're saved like an
+edit. For a plan in **To review**, what it finds fills in the **Add ride…** form, apart from any you **Leave out**. **Open route in** gives directions from your suburb through the meeting place and stops in the
 maps app you pick: Apple Maps, Google Maps, Waze or Kurviger (Apple Maps and Waze only take the meeting place). When the
 description has the organiser's own route, it's at the top of the list. Each ride's page also shows a map of the road
 route with the distance and riding time; click it to open the route in the maps app chosen in Settings. When the organiser shared a Google Maps or Apple Maps route, the map follows
@@ -192,7 +194,7 @@ tags in the calendar event rather than showing friends' locations or posting for
   on your Mac and disconnects Beeper.
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you, and follows a short Google Maps link (maps.app.goo.gl) in a ride's description once to
-  find the route it points to. **Find more details** downloads the ride's own event page (never Facebook or
+  find the route it points to. **Refresh** downloads the event pages of the rides it looks for more details about (never Facebook or
   Instagram). It asks Apple Maps where a ride's location is, so it can work out the distance, and
   plans the road route between a ride's places to draw its map. For the weather along a route, the positions of
   a few points on it (not the ride or anything about you) go to Open-Meteo, a free forecast service. With a road
@@ -203,7 +205,7 @@ tags in the calendar event rather than showing friends' locations or posting for
   releases and its seal shows it hasn't been changed. When you open a ride's route, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps, Waze or Kurviger) to plan the route.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
-  choose. Text from chat messages isn't added, except a detail you add yourself from **Find more details**.
+  choose. Text from chat messages isn't added, except a detail Refresh found that you add yourself.
 
 RollCall is made to follow the Australian Privacy Principles: it only collects what it needs, keeps it
 secure, and deletes it when it's no longer needed. To report a security problem, see [SECURITY.md](SECURITY.md).
