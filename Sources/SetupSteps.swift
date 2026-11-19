@@ -10,6 +10,7 @@ struct SetupView: View {
             StepDots(model: model)
                 .padding(.top, 18).padding(.bottom, 10)
             Divider()
+            // Each step fades into the next, and the dots fill in as you go.
             ScrollView {
                 Group {
                     if model.guide != nil {
@@ -26,6 +27,8 @@ struct SetupView: View {
                     }
                     }
                 }
+                .id(model.step)
+                .transition(.opacity)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 36).padding(.vertical, 24)
             }
@@ -56,6 +59,7 @@ struct SetupView: View {
             }
         }
         .frame(minWidth: 520, minHeight: 400)
+        .animation(.easeInOut(duration: 0.2), value: model.step)
     }
 }
 

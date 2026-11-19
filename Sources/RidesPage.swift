@@ -52,7 +52,7 @@ struct RidesPage: View {
                     }
                 } else {
                     List(selection: $model.selectedRide) {
-                        ForEach(rides, id: \.id) { RideRow(ride: $0, model: model).tag($0.id) }
+                        ForEach(rides, id: \.id) { ListRideRow(ride: $0, model: model).tag($0.id) }
                     }
                 }
             }
@@ -73,14 +73,16 @@ struct RidesPage: View {
 struct RideSectionView: View {
     let section: UIModel.RideSection
     @ObservedObject var model: UIModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let open = model.rideSectionOpen(section.name)
         VStack(alignment: .leading, spacing: 0) {
-            Button { open.wrappedValue.toggle() } label: {
+            Button { withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { open.wrappedValue.toggle() } } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: open.wrappedValue ? "chevron.down" : "chevron.right")
+                    Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(width: 12)
+                        .rotationEffect(.degrees(open.wrappedValue ? 90 : 0))
                     PatchLabel(text: section.name, count: section.rides.count)
                     Spacer()
                 }
@@ -96,18 +98,44 @@ struct RideSectionView: View {
                         .padding(.leading, 28).padding(.vertical, 8)
                 }
                 ForEach(section.rides, id: \.id) { r in
-                    let selected = model.selectedRide == r.id
-                    RideRow(ride: r, model: model)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 6).padding(.horizontal, 8)
-                        .background(selected ? Color.primary.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
-                        .contentShape(Rectangle())
-                        .onTapGesture { model.selectedRide = r.id }
-                        .padding(.leading, 20)
+                    SectionRideRow(ride: r, model: model)
                     Divider().padding(.leading, 20)
                 }
             }
         }
+        .clipped()
+    }
+}
+
+/// A ride in a list: its ⋯ button shows under the pointer or when it's chosen.
+struct ListRideRow: View {
+    let ride: RideEvent
+    @ObservedObject var model: UIModel
+    @StateObject private var hovering = Box(false)
+
+    var body: some View {
+        RideRow(ride: ride, model: model, showMenu: model.selectedRide == ride.id || hovering.value)
+            .onHover { hovering.value = $0 }
+    }
+}
+
+/// A ride on the All tab, which is drawn by hand: it lights up under the pointer and when chosen, like a list row.
+struct SectionRideRow: View {
+    let ride: RideEvent
+    @ObservedObject var model: UIModel
+    @StateObject private var hovering = Box(false)
+
+    var body: some View {
+        let selected = model.selectedRide == ride.id
+        RideRow(ride: ride, model: model, showMenu: selected || hovering.value)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6).padding(.horizontal, 8)
+            .background(Color.primary.opacity(selected ? 0.1 : hovering.value ? 0.05 : 0), in: RoundedRectangle(cornerRadius: 8))
+            .contentShape(Rectangle())
+            .onTapGesture { model.selectedRide = ride.id }
+            .onHover { inside in withAnimation(.easeOut(duration: 0.12)) { hovering.value = inside } }
+            .padding(.leading, 20)
+            .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -133,6 +161,8 @@ struct RideSectionView: View {
 struct RideRow: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
+    /// The ⋯ button shows under the pointer or when the ride is chosen, so the list stays calm.
+    let showMenu: Bool
 
     var body: some View {
         let decision = model.store.decision(ride.id)
@@ -152,8 +182,10 @@ struct RideRow: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(decisionName(decision, needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
             RideActions(ride: ride, model: model)
+                .opacity(showMenu ? 1 : 0)
         }
         .padding(.vertical, 3)
+        .contextMenu { RideActionItems(ride: ride, model: model) }
     }
 }
 
@@ -207,45 +239,56 @@ struct RideDetail: View {
     }
 }
 
-/// A ride's actions, in the ⋯ menu on its row in the list: going there first, then changing it, then removing it.
-/// Every ride has the same items in the same order; one that can't do anything yet is greyed out and says why.
+/// A ride's actions, in the ⋯ button on its row and when you right-click it.
 struct RideActions: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
 
     var body: some View {
-        let app = model.app
-        let past = model.isPast(ride)
-        Menu {
-            Button(ride.openLabel) { app.open(ride.url) }
-                .disabled(ride.url == nil)
-            Menu(ride.hasRoute ? "Open route in" : "Open route in (no place)") {
-                if Route.link(in: ride.notes) != nil {
-                    Button("Organiser's route") { app.openRoute(ride) }
-                    Divider()
-                }
-                ForEach(MapsApp.allCases.filter { $0 != .automatic && ($0 != .apple || app.hasAppleMaps) }, id: \.self) { maps in
-                    Button(maps.name + (maps.holdsStops || Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 ? "" : " (meeting place only)")) {
-                        app.openRoute(ride, in: maps)
-                    }
-                }
-            }
-            .disabled(!ride.hasRoute)
-            Divider()
-            Button("Edit…") { model.later { app.editRide(id: ride.id) } }
-            Divider()
-            Button(past ? "Remove from past rides" : "Remove", role: .destructive) {
-                if model.selectedRide == ride.id { model.selectedRide = nil }
-                if past { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }
-            }
-        } label: {
-            Image(systemName: "ellipsis.circle").font(.system(size: 15)).foregroundStyle(.secondary)
+        Menu { RideActionItems(ride: ride, model: model) } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 13, weight: .semibold)).foregroundStyle(.secondary)
+                .frame(width: 24, height: 24)
+                .background(Color.primary.opacity(0.07), in: Circle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
         .help("Open, route, edit or remove")
         .accessibilityLabel("Actions for \(ride.title)")
+    }
+}
+
+/// Going there first, then changing the ride, then removing it. Every ride has the same items in the same order;
+/// one that can't do anything yet is greyed out and says why.
+struct RideActionItems: View {
+    let ride: RideEvent
+    @ObservedObject var model: UIModel
+
+    var body: some View {
+        let app = model.app
+        let past = model.isPast(ride)
+        Button(ride.openLabel) { app.open(ride.url) }
+            .disabled(ride.url == nil)
+        Menu(ride.hasRoute ? "Open route in" : "Open route in (no place)") {
+            if Route.link(in: ride.notes) != nil {
+                Button("Organiser's route") { app.openRoute(ride) }
+                Divider()
+            }
+            ForEach(MapsApp.allCases.filter { $0 != .automatic && ($0 != .apple || app.hasAppleMaps) }, id: \.self) { maps in
+                Button(maps.name + (maps.holdsStops || Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 ? "" : " (meeting place only)")) {
+                    app.openRoute(ride, in: maps)
+                }
+            }
+        }
+        .disabled(!ride.hasRoute)
+        Divider()
+        Button("Edit…") { model.later { app.editRide(id: ride.id) } }
+        Divider()
+        Button(past ? "Remove from past rides" : "Remove", role: .destructive) {
+            if model.selectedRide == ride.id { model.selectedRide = nil }
+            if past { model.later { app.forgetPastRide(ride.id) } } else { app.removeRide(id: ride.id) }
+        }
     }
 }
 

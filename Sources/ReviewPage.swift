@@ -43,7 +43,7 @@ struct ReviewPage: View {
                         HStack(alignment: .firstTextBaseline) {
                             PatchLabel(text: "Posts that didn't say when", count: posts.count)
                             Spacer()
-                            Button("Mark read") { model.app.markPostsRead() }.help("Mark all of these posts as read")
+                            Button("Mark read") { withAnimation { model.app.markPostsRead() } }.help("Mark all of these posts as read")
                         }
                         .padding(.top, 4)
                     }
@@ -147,10 +147,10 @@ struct PlanCard: View {
                 Button("Open chat") { app.open(Beeper.chatLink(chatID: review.chatID, messageID: review.keyMessage?.id)) }
                 Spacer()
                 if review.status == .dismissed {
-                    Button("Restore") { app.restoreReview(review.id) }
+                    Button("Restore") { withAnimation { app.restoreReview(review.id) } }
                         .help("Put it back under Possible plans")
                 } else {
-                    Button("Not a ride") { app.dismissReview(review.id) }
+                    Button("Not a ride") { withAnimation { app.dismissReview(review.id) } }
                         .help("Move it to Reviewed")
                 }
             }

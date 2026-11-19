@@ -33,9 +33,15 @@ struct MainView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { Task { await model.app.refresh() } } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
+                    // While it checks, the button shows it's working, as Mail's does.
+                    if model.app.refreshing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
                 }
-                .help(AppleModel.available ? "Check all sources now, then look for more details about the rides you're going to and plans to review"
+                .help(model.app.refreshing ? "Checking your sources…"
+                      : AppleModel.available ? "Check all sources now, then look for more details about the rides you're going to and plans to review"
                       : "Check all sources now")
                 .disabled(model.app.refreshing)
                 Menu {
@@ -121,6 +127,8 @@ struct DateBadge: View {
         // Fade the patch as one piece, so a filled patch's frame fades with it instead of showing darker.
         .compositingGroup()
         .opacity(decision == .skip ? 0.5 : past ? 0.7 : 1)
+        // Choosing Going fills the patch in, rather than it snapping.
+        .animation(.easeOut(duration: 0.2), value: decision)
         .accessibilityHidden(true)
     }
 

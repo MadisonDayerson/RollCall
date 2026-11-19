@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 extension AppDelegate {
     // MARK: - More details, found by Refresh
@@ -33,7 +34,8 @@ extension AppDelegate {
                 found.append(f)
             }
         }
-        ui.lookups[id] = found.isEmpty ? nil : .done(found, checked: checked)
+        // Fades in on the ride's page, rather than pushing what you're reading down all at once.
+        withAnimation(.easeOut(duration: 0.25)) { ui.lookups[id] = found.isEmpty ? nil : .done(found, checked: checked) }
     }
 
     /// Adds a found detail to the ride as your own change, like Edit…, and takes it off the list.
