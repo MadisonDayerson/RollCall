@@ -71,7 +71,8 @@ extension AppDelegate {
     /// Rides whose details already give the route (a maps link or labelled lines) don't need it.
     func findRoute(for ride: RideEvent) async {
         let from = Route.fingerprint(ride)
-        // Nothing to work out when the details already give the route: a full maps link, or labelled places.
+        // Nothing to work out when the details already give the route: a full maps link, or labelled places. The
+        // organiser's link comes first, so a short one is always followed, even when the post also lists places.
         let given = Route.link(in: ride.notes).map(Route.linkPlaces) ?? Route.places(meetingPlace: ride.location, notes: ride.notes)
         guard given.count < 2, store.state.foundRoutes[ride.id]?.from != from, !findingRoutes.contains(ride.id) else { return }
         findingRoutes.insert(ride.id)

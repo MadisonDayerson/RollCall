@@ -35,12 +35,20 @@ enum RouteFinder {
         return read.count > guessed.count ? read : guessed
     }
 
-    /// Where a short link leads, without cookies (see `Net`).
+    /// Where a short link leads, without cookies (see `Net`). Only its first hop is taken: that's the full route link,
+    /// and following on ends at a Google page without the route in its address.
     static func expand(_ link: String) async -> String? {
         guard let url = URL(string: link) else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 20)
         request.setValue(Web.userAgent, forHTTPHeaderField: "User-Agent")
-        return try? await Net.session.data(for: request).1.url?.absoluteString
+        guard let response = try? await Net.session.data(for: request, delegate: FirstHop()).1 as? HTTPURLResponse else { return nil }
+        return response.value(forHTTPHeaderField: "Location") ?? response.url?.absoluteString
+    }
+
+    /// Stops at the first redirect, so its address can be read.
+    private final class FirstHop: NSObject, URLSessionTaskDelegate {
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest) async -> URLRequest? { nil }
     }
 
     /// The places Apple Maps can find near home, in order, without repeats of the same spot. Fewer than two

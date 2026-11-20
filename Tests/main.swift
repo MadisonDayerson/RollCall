@@ -838,6 +838,10 @@ do {
     check(Route.linkPlaces("https://www.google.com/maps/dir/?api=1&origin=A+Town&destination=C+Town&waypoints=B+Town%7CD+Town") == ["A Town", "B Town", "D Town", "C Town"],
           "a Google route link made by an app")
     check(Route.linkPlaces("https://maps.apple.com/?saddr=A+Town&daddr=C+Town") == ["A Town", "C Town"], "an Apple Maps route")
+    let shared = "https://maps.google.com/?geocode=x;y&daddr=Example+Cafe,+Pretend+Road,+Ivanhoe+VIC+to:Example+Bodyworks,+Fake+Street,+Sunshine+North+VIC&saddr=12+Example+Street,+Port+Melbourne+VIC&dirflg=d"
+    check(Route.linkPlaces(shared) == ["12 Example Street, Port Melbourne VIC", "Example Cafe, Pretend Road, Ivanhoe VIC", "Example Bodyworks, Fake Street, Sunshine North VIC"],
+          "a shared Google route (from, then each to:) gives every stop in order")
+    check(Route.link(in: "Directions: " + shared) == shared, "...and counts as the organiser's route when written out in full")
     check(Route.point("-37.9,145.2")! == (-37.9, 145.2) && Route.point("Pretend Falls") == nil, "map points are read as points")
     // Working out a route from a ride's title and description (made-up rides).
     check(Route.guess(title: "Sunday cruise", location: "Example Servo, Sunshine", notes: "Coffee then heading to Pretend Falls for lunch.")
@@ -865,6 +869,10 @@ do {
         check(st.routePlaces(nowhere).isEmpty, "a ride with no place has no route")
         var written = ride; written.notes = "Destination: Lake Imaginary"
         check(st.routePlaces(written) == ["Example Servo", "Lake Imaginary"], "places written in the details win")
+        var linked = ride; linked.notes = "Meet: Example Servo\nDestination: Lake Imaginary\nRoute: https://maps.app.goo.gl/abc123"
+        st.state.foundRoutes["r1"] = FoundRoute(places: ["Example Servo", "Pretend Lookout", "Pretend Falls"], from: Route.fingerprint(linked))
+        check(st.routePlaces(linked) == ["Example Servo", "Pretend Lookout", "Pretend Falls"],
+              "...but the organiser's short route link, once followed, beats places written in the post")
     }
     check(RideDetails.routeTitle(from: nil, to: nil) == nil, "no places, no route name")
     check(RideDetails.parse("Sorry, I can't help with that.", now: now) == nil, "a reply in the wrong shape is ignored")

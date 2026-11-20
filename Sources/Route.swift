@@ -31,7 +31,7 @@ enum Route {
     /// A directions link in the text: Google Maps or Apple Maps. Short Google links can be a single place,
     /// so they only count on a line that mentions a route or directions.
     static func link(in text: String) -> String? {
-        let full = #"https?://(?:www\.|maps\.)?google\.[a-z.]+/maps/dir/[^\s<>"]+|https?://maps\.apple\.com/[^\s<>"]*[?&](?:daddr|destination)=[^\s<>"]+"#
+        let full = #"https?://(?:www\.|maps\.)?google\.[a-z.]+/maps/dir/[^\s<>"]+|https?://(?:maps\.apple\.com|(?:www\.|maps\.)?google\.[a-z.]+(?:/maps)?)/?[^\s<>"]*[?&](?:daddr|destination)=[^\s<>"]+"#
         let short = #"https?://(?:maps\.app\.goo\.gl|goo\.gl/maps)/[^\s<>"]+"#
         for line in text.components(separatedBy: .newlines) {
             if let l = first(full, in: line) { return l }
@@ -101,9 +101,13 @@ enum Route {
         // Links write spaces as "+".
         let query = Dictionary((c.queryItems ?? []).compactMap { q in q.value.map { (q.name, $0.replacingOccurrences(of: "+", with: " ")) } },
                                uniquingKeysWith: { a, _ in a })
-        if c.scheme == "maps" || c.host?.hasSuffix("apple.com") == true {
-            return [query["saddr"], query["daddr"]].compactMap { $0 }.filter { !$0.isEmpty }
+        // Apple Maps, and Google's older form (what a shared maps.app.goo.gl route leads to): from saddr, through each
+        // "to:" in daddr.
+        if let daddr = query["daddr"] {
+            let stops = daddr.components(separatedBy: "to:").map { $0.trimmingCharacters(in: .whitespaces) }
+            return ([query["saddr"] ?? ""] + stops).filter { !$0.isEmpty }
         }
+        if c.scheme == "maps" || c.host?.hasSuffix("apple.com") == true { return [] }
         guard c.percentEncodedPath.contains("/maps/dir/") else { return [] }
         if query["api"] == "1" {
             let via = query["waypoints"].map { $0.components(separatedBy: "|") } ?? []
@@ -286,13 +290,15 @@ extension Store {
     /// The route's places, and whether the organiser planned it avoiding highways (so it's planned that way here too).
     func route(_ ride: RideEvent) -> (places: [String], avoidHighways: Bool) {
         // The organiser's own maps link is the route itself.
+        let found = state.foundRoutes[ride.id].flatMap { $0.from == Route.fingerprint(ride) ? $0 : nil }
         if let link = Route.link(in: ride.notes) {
             let linked = Route.linkPlaces(link)
             if linked.count >= 2 { return (linked, Route.linkAvoidsHighways(link)) }
+            // A short link was followed to the route when the ride was found: it beats anything written in the post.
+            if let found, found.places.count >= 2 { return (found.places, found.avoidHighways ?? false) }
         }
         let written = Route.places(meetingPlace: ride.location, notes: ride.notes)
         if written.count >= 2 { return (written, false) }
-        let found = state.foundRoutes[ride.id].flatMap { $0.from == Route.fingerprint(ride) ? $0 : nil }
         if let found, found.places.count >= 2 { return (found.places, found.avoidHighways ?? false) }
         guard let venue = found?.places.first ?? written.first else { return ([], false) }
         return ([homePlace, venue], false)
@@ -309,5 +315,6 @@ extension Route {
         stableHash("\(finderVersion)\n" + ride.title + "\n" + ride.location + "\n" + ride.notes)
     }
     /// 2: Google links' dragged-through points on stops given only in the path, and "Avoid highways".
-    static let finderVersion = 2
+    /// 3: shared maps.app.goo.gl routes, which lead to Google's older from/to: links.
+    static let finderVersion = 3
 }
