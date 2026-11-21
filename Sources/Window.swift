@@ -35,7 +35,7 @@ struct MainView: View {
                 Button { Task { await model.app.refresh() } } label: {
                     // While it checks, the button shows it's working, as Mail's does.
                     if model.app.refreshing {
-                        ProgressView().controlSize(.small)
+                        ProgressView().controlSize(.small).accessibilityLabel("Refreshing")
                     } else {
                         Label("Refresh", systemImage: "arrow.clockwise")
                     }

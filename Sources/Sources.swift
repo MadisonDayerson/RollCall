@@ -130,7 +130,7 @@ enum DownloadsWatcher {
 @MainActor
 final class Geocoder {
     private let geocoder = CLGeocoder()
-    /// A place name that's only a business ("AR Bodyworks") can match one overseas; group rides from your sources
+    /// A place name that's only a business ("Example Bodyworks") can match one overseas; group rides from your sources
     /// aren't this far away, so a match further than this counts as not found.
     static let farthestKm = 1000.0
 

@@ -315,6 +315,7 @@ struct AccountsStep: View {
                         }
                         .buttonStyle(.borderless)
                         .help("Stop following")
+                        .accessibilityLabel("Stop following \(f.name)")
                     }
                 }
             }
@@ -365,6 +366,8 @@ struct CalendarStep: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // Read out like a radio button: which account is chosen.
+                    .accessibilityAddTraits(model.chosenAccount == s.sourceIdentifier ? .isSelected : [])
                 }
                 if !model.hasGoogle {
                     Card {

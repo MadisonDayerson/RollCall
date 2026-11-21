@@ -138,8 +138,8 @@ where each came from, under **More details** on its page. Click **Add** for the 
 edit. For a plan in **To review**, what it finds fills in the **Add ride…** form, apart from any you **Leave out**. **Open route in** gives directions from your suburb through the meeting place and stops in the
 maps app you pick: Apple Maps, Google Maps, Waze or Kurviger (Apple Maps and Waze only take the meeting place). When the
 description has the organiser's own route, it's at the top of the list. Each ride's page also shows a map of the road
-route with the distance and riding time; click it to open the route in the maps app chosen in Settings. When the organiser shared a Google Maps or Apple Maps route, the map follows
-it exactly. Otherwise RollCall works out the start, stops and destination from the ride's title
+route with the distance and riding time; click it to open the route in the maps app chosen in Settings. When the organiser shared a Google Maps or Apple Maps route (a short
+maps.app.goo.gl link too), the map follows it exactly, ahead of any places written in the post. Otherwise RollCall works out the start, stops and destination from the ride's title
 and description (with Apple Intelligence on the Mac when the wording isn't plain), checks each place with Apple Maps,
 and leaves out ones it can't find. A ride at one place, like a track day or bike night, shows the trip there from
 your suburb. Under the map is the weather along the way: the temperature, chance of rain and wind at points every
@@ -195,7 +195,8 @@ tags in the calendar event rather than showing friends' locations or posting for
 - **What goes online.** RollCall only downloads the pages and calendars on your Sources list, with no cookies
   or details about you, and follows a short Google Maps link (maps.app.goo.gl) in a ride's description once to
   find the route it points to. **Refresh** downloads the event pages of the rides it looks for more details about (never Facebook or
-  Instagram). It asks Apple Maps where a ride's location is, so it can work out the distance, and
+  Instagram). It asks Apple Maps where a ride's location is, so it can work out the distance (a match more than 1000 km
+  away is taken as not found, since it's another place with the same name), and
   plans the road route between a ride's places to draw its map. For the weather along a route, the positions of
   a few points on it (not the ride or anything about you) go to Open-Meteo, a free forecast service. With a road
   alerts key, RollCall downloads all of Victoria's road alerts from the Department of Transport and Planning (your
