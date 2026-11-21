@@ -970,7 +970,7 @@ do {
     s.merge(first, source: src, sourceName: "Your Facebook events", now: now)
     let id = { (n: Int) in Store.eventID(source: src, item: first[n]) }
     s.state.decisions[id(3)] = .skip   // you skipped this one in RollCall before the calendar was read
-    let changed = s.carryResponses(first, source: src)
+    let changed = s.carryResponses(first, source: src, now: now)
     check(Set(changed) == [id(0), id(1)], "replies carry over to undecided rides")
     check(s.decision(id(0)) == .attending && s.decision(id(1)) == .maybe && s.decision(id(2)) == .undecided,
           "Going becomes Going and Interested becomes Maybe")
@@ -978,7 +978,7 @@ do {
     // Interested becomes Going on Facebook; you choose Skip in RollCall for ride 0.
     s.state.decisions[id(0)] = .skip
     let second = calendar(["TENTATIVE", "ACCEPTED", nil, "ACCEPTED"])
-    check(s.carryResponses(second, source: src) == [id(1)], "a changed reply on Facebook carries over")
+    check(s.carryResponses(second, source: src, now: now) == [id(1)], "a changed reply on Facebook carries over")
     check(s.decision(id(1)) == .attending, "Interested to Going on Facebook becomes Going here")
     check(s.decision(id(0)) == .skip, "a ride you changed yourself keeps your choice")
 }
