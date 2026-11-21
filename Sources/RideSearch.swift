@@ -69,7 +69,9 @@ enum RideSearch {
     static func instructions(for ride: RideEvent, now: Date) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_AU")
-        f.dateFormat = ride.allDay ? "EEEE d MMMM yyyy" : "EEEE d MMMM yyyy, h:mm a"
+        // A plan with no time yet starts at midnight: give the model just the day, or "12:00 am" reads as another event.
+        let midnight = Calendar.current.component(.hour, from: ride.start) == 0 && Calendar.current.component(.minute, from: ride.start) == 0
+        f.dateFormat = ride.allDay || midnight ? "EEEE d MMMM yyyy" : "EEEE d MMMM yyyy, h:mm a"
         let today = DateFormatter()
         today.locale = Locale(identifier: "en_AU")
         today.dateFormat = "EEEE d MMMM yyyy"

@@ -12,30 +12,38 @@ extension AppDelegate {
     /// under More details on its page.
     func findMoreDetails() async {
         guard AppleModel.available else { return }
+        // Finds you haven't dealt with yet stay as they are, so ones you left out don't come back.
+        for ride in detailsToFind() where ui.lookups[ride.id] == nil {
+            let id = ride.id
+            ui.lookups[id] = .looking("Looking through your sources…")
+            let (found, checked) = await moreDetails(for: ride) { self.ui.lookups[id] = .looking($0) }
+            // Fades in on the ride's page, rather than pushing what you're reading down all at once.
+            withAnimation(.easeOut(duration: 0.25)) { ui.lookups[id] = found.isEmpty ? nil : .done(found, checked: checked) }
+        }
+    }
+
+    /// The rides you're going to or might go to, and the plans in To review that have a day.
+    func detailsToFind() -> [RideEvent] {
         let rides = store.upcoming().filter { [.attending, .maybe].contains(store.decision($0.id)) }
         let plans = openReviews().compactMap { r in
             RideSearch.ride(for: r, chatName: store.state.feeds.first { $0.id == r.feedID }?.name ?? "chat")
         }
-        // Finds you haven't dealt with yet stay as they are, so ones you left out don't come back.
-        for ride in rides + plans where ui.lookups[ride.id] == nil { await findMoreDetails(for: ride) }
+        return rides + plans
     }
 
     /// Looks for more about one ride in its event page, other listings, posts and your chats (read only, on this Mac),
-    /// and keeps what Apple Intelligence agrees is about it and the ride doesn't say yet.
-    private func findMoreDetails(for ride: RideEvent) async {
-        let id = ride.id
-        ui.lookups[id] = .looking("Looking through your sources…")
+    /// and keeps what Apple Intelligence agrees is about it and the ride doesn't say yet. Also says what was looked through.
+    func moreDetails(for ride: RideEvent, progress: (String) -> Void = { _ in }) async -> ([RideSearch.Finding], String) {
         let (clues, checked) = await clues(for: ride)
         var found: [RideSearch.Finding] = []
         for (i, clue) in clues.enumerated() {
-            ui.lookups[id] = .looking("Checking \(i + 1) of \(clues.count): \(clue.from)…")
+            progress("Checking \(i + 1) of \(clues.count): \(clue.from)…")
             guard let d = await RideSearch.verify(clue, ride: ride) else { continue }
             for f in RideSearch.findings(d, for: ride, from: clue.from) where !found.contains(where: { $0.field == f.field }) {
                 found.append(f)
             }
         }
-        // Fades in on the ride's page, rather than pushing what you're reading down all at once.
-        withAnimation(.easeOut(duration: 0.25)) { ui.lookups[id] = found.isEmpty ? nil : .done(found, checked: checked) }
+        return (found, checked)
     }
 
     /// Adds a found detail to the ride as your own change, like Edit…, and takes it off the list.

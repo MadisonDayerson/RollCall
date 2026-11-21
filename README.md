@@ -227,7 +227,8 @@ Run the tests:
 
 - Data is saved in `~/Library/Application Support/RollCall/state.json`; the Beeper token is in your
   login keychain.
-- `--snapshots <folder>` saves a picture of every page; `--check-chats` shows how chat messages are read.
+- `--snapshots <folder>` saves a picture of every page; `--check-chats` shows how chat messages are read;
+  `--check-details` shows what Refresh's search for more details finds.
 - The logo is drawn by `Design/make_icon.swift` (see `Design/fonts/bosieh/ABOUT.txt` for the font).
 - The app isn't signed with an Apple Developer ID, which is why the first open needs **Open Anyway**.
   Releases are signed with RollCall's own certificate instead (run `./make_signing_key.sh` once on the Mac

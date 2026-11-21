@@ -191,6 +191,24 @@ if CommandLine.arguments.contains("--check-chats") {
     RunLoop.main.run()
 }
 
+// For tuning: `RollCall --check-details` runs Refresh's search for more details on the rides you're going to or might
+// go to, and the plans to review, and prints what each piece of text gave, without changing anything.
+if CommandLine.arguments.contains("--check-details") {
+    Task { @MainActor in
+        let app = AppDelegate()
+        print("On-device model: \(AppleModel.available ? "available" : "not available")")
+        for ride in app.detailsToFind() {
+            print("\n=== \(ride.title) · \(rideWhen(ride, long: true)) · \(ride.location.isEmpty ? "no place" : ride.location)")
+            let (found, checked) = await app.moreDetails(for: ride) { print("  " + $0) }
+            print("  looked through \(checked)")
+            if found.isEmpty { print("  nothing new") }
+            for f in found { print("  FOUND \(f.label): \(f.value)  (from \(f.from))") }
+        }
+        exit(0)
+    }
+    RunLoop.main.run()
+}
+
 let app = NSApplication.shared
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate
