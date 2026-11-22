@@ -57,10 +57,15 @@ enum RideSearch {
         return !place.isEmpty && place.isSubset(of: words)
     }
 
-    /// The messages that might be about the ride, each with the three after it (where replies settle things).
-    static func aboutRide(_ lines: [ChatLine], _ ride: RideEvent) -> [ChatLine] {
+    /// The messages that might be about the ride, each with the three after it (where replies settle things). In the
+    /// ride's own chat, a message naming its day counts too: RollCall named the plan, so the chat may never use that name.
+    static func aboutRide(_ lines: [ChatLine], _ ride: RideEvent, ownChat: Bool = false, now: Date = Date()) -> [ChatLine] {
+        func namesDay(_ l: ChatLine) -> Bool {
+            guard ownChat, l.mentionsWhen, let (day, _) = RidePlan.when(in: l.text, sent: l.sent, now: now, calendar: .current) else { return false }
+            return Calendar.current.isDate(day, inSameDayAs: ride.start)
+        }
         var keep = IndexSet()
-        for (i, l) in lines.enumerated() where RideSearch.mightBeAbout(l.text, ride) {
+        for (i, l) in lines.enumerated() where RideSearch.mightBeAbout(l.text, ride) || namesDay(l) {
             keep.insert(integersIn: i..<min(i + 4, lines.count))
         }
         return Array(keep.map { lines[$0] }.suffix(PlanFinder.maxLines))

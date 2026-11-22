@@ -141,15 +141,24 @@ enum Beeper {
 
     /// Brings Beeper to the front with the chat (and message) open.
     static func focus(link: String) async throws {
-        let rest = String(link.dropFirst(chatLinkPrefix.count))
-        let parts = rest.split(separator: "#", maxSplits: 1).map(String.init)
-        var body = ["chatID": parts[0]]
-        if parts.count > 1 { body["messageID"] = parts[1] }
+        guard let parts = chatParts(link) else { return }
+        var body = ["chatID": parts.chat]
+        if let m = parts.message { body["messageID"] = m }
         _ = try await send("/v1/focus", method: "POST", json: body)
     }
 
     static func chatLink(chatID: String, messageID: String? = nil) -> String {
         chatLinkPrefix + chatID + (messageID.map { "#" + $0 } ?? "")
+    }
+
+    /// The chat (and message) a link made by `chatLink` points to, or nil for any other link. Edit… used to put
+    /// https:// in front of these, so that's allowed too.
+    static func chatParts(_ link: String) -> (chat: String, message: String?)? {
+        let bare = link.hasPrefix("https://" + chatLinkPrefix) ? String(link.dropFirst("https://".count)) : link
+        guard bare.hasPrefix(chatLinkPrefix) else { return nil }
+        let parts = bare.dropFirst(chatLinkPrefix.count).split(separator: "#", maxSplits: 1).map(String.init)
+        guard let chat = parts.first else { return nil }
+        return (chat, parts.count > 1 ? parts[1] : nil)
     }
 
     static func feed(for chat: Chat) -> Feed {

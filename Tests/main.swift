@@ -1192,6 +1192,23 @@ do {
     let lines = (0..<8).map { i in ChatLine(id: "m\(i)", sender: "Sam", sent: now.addingTimeInterval(Double(i) * 60),
                                             text: i == 2 ? "Pretend Valley poker run is on!" : "message \(i)", mentionsWhen: false) }
     check(RideSearch.aboutRide(lines, pokerRun).map(\.id) == ["m2", "m3", "m4", "m5"], "a chat gives the message about the ride and the replies after it")
+    // A plan RollCall named ("Sam's birthday ride") is found in its own chat by its day, not only its name.
+    let birthday = RideEvent(id: "bd", title: "Sam's Birthday Ride", start: day, end: nil, allDay: true, location: "",
+                             notes: "", url: nil, source: "beeper-x", sourceName: "Chat: Example chat", lastSeen: now)
+    let dayTexts = ["message 0", "ride on the 22nd of nov then lunch?", "message 2", "message 3", "the 29th of nov works too", "message 5"]
+    var dayLines: [ChatLine] = []
+    for (i, text) in dayTexts.enumerated() {
+        dayLines.append(ChatLine(id: "d\(i)", sender: "Sam", sent: now.addingTimeInterval(Double(i) * 60), text: text, mentionsWhen: text.contains("nov")))
+    }
+    check(RideSearch.aboutRide(dayLines, birthday, ownChat: true, now: now).map(\.id) == ["d1", "d2", "d3", "d4"],
+          "in the ride's own chat, a message naming its day is read, with the replies after it")
+    check(RideSearch.aboutRide(dayLines, birthday, now: now).isEmpty, "...but not in other chats, where the day alone says too little")
+    let chatLink = Beeper.chatLink(chatID: "!abc:example", messageID: "m1")
+    check(Beeper.chatParts(chatLink)?.chat == "!abc:example" && Beeper.chatParts(chatLink)?.message == "m1"
+          && Beeper.chatParts("https://example.com") == nil, "a ride added from a plan knows its chat from its link")
+    check(Beeper.chatParts("https://" + chatLink)?.chat == "!abc:example", "...even after Edit… put https:// in front of it")
+    check(Web.withScheme(chatLink) == chatLink && Web.withScheme("example.com/ride") == "https://example.com/ride",
+          "Edit… adds https:// to web links but leaves a chat link alone")
 
     let yes = "SAME: yes\nSTART: 2026-11-22 09:30\nEND: 2026-11-22 14:00\nMEET: Example Servo, 12 Fake St, Sunshine VIC\nDESTINATION: Pretend Falls Hotel\nSTOPS: Kinglake; Example Bakery\nLINK: unknown\nDETAILS: $20 a hand, paid on the day."
     check(RideSearch.same(yes) && !RideSearch.same("SAME: no\nSTART: unknown") && !RideSearch.same("START: 2026-11-22 09:30"), "SAME is read, and missing means no")

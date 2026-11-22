@@ -94,7 +94,7 @@ extension RideEvent {
         return isFacebook ? "Open on Facebook"
             : url.contains("meetup.com") ? "Open on Meetup"
             : url.contains("instagram.com") ? "Open on Instagram"
-            : url.hasPrefix(Beeper.chatLinkPrefix) ? "Open in Beeper"
+            : Beeper.chatParts(url) != nil ? "Open in Beeper"
             : needsCheck == true ? "Open post" : "Open event page"
     }
 }

@@ -92,8 +92,7 @@ extension AppDelegate {
             heading: "Edit ride", ok: "Save") else { return }
         // An all-day ride stays all day unless its start or length was changed.
         let allDay = ride.allDay && r.start == shownStart && r.hours == 24
-        var link: String? = r.link.isEmpty ? nil : r.link
-        if let l = link, !l.lowercased().hasPrefix("http") { link = "https://" + l }
+        let link: String? = r.link.isEmpty ? nil : Web.withScheme(r.link)
         saveEdit(RideEdit(title: r.title, start: allDay ? ride.start : r.start,
                           end: allDay ? ride.end : r.start.addingTimeInterval(r.hours * 3600), allDay: allDay,
                           location: r.location, notes: r.notes, url: link), to: ride)

@@ -4,6 +4,12 @@ import Foundation
 enum Web {
     static let userAgent = "RollCall/1.0 (personal calendar reader)"
 
+    /// A link typed into a ride's form, with https:// added when it's missing. A link to the chat a ride came from
+    /// (`Beeper.chatLink`) is kept as it is, so it still opens the chat.
+    static func withScheme(_ link: String) -> String {
+        link.lowercased().hasPrefix("http") || link.hasPrefix(Beeper.chatLinkPrefix) ? link : "https://" + link
+    }
+
     static func get(_ urlString: String) async throws -> (text: String, contentType: String, finalURL: URL) {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
         var req = URLRequest(url: url, timeoutInterval: 30)

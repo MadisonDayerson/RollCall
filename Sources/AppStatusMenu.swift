@@ -140,7 +140,7 @@ extension AppDelegate {
     @objc func openLink(_ sender: NSMenuItem) { open(sender.representedObject as? String) }
 
     func open(_ link: String?) {
-        if let link, link.hasPrefix(Beeper.chatLinkPrefix) {
+        if let link, Beeper.chatParts(link) != nil {
             Task {
                 do { try await Beeper.focus(link: link) } catch {
                     Dialogs.info("Couldn't open the chat in Beeper", error.localizedDescription)

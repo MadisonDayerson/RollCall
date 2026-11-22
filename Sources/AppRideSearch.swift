@@ -82,8 +82,13 @@ extension AppDelegate {
         }
         if !pages.isEmpty { checked.append(pages.count == 1 ? "its event page" : "its event pages") }
 
-        // Your chats: the last two weeks of each, with the replies after anything that mentions the ride.
+        // Your chats: the last two weeks of each, with the replies after anything that mentions the ride. The chat a
+        // ride or plan came from is read for its day as well as its name.
         let chats = store.state.feeds.filter { $0.type == .chat }
+        // A ride added from a plan links to its chat, which outlasts the plan itself.
+        let copies = [ride] + store.copies(of: ride)
+        let ownChatIDs = Set(copies.compactMap { $0.url.flatMap(Beeper.chatParts)?.chat })
+        let ownChats = Set(chats.filter { ownChatIDs.contains(Beeper.chatID(of: $0)) }.map(\.id) + copies.map(\.source))
         if !chats.isEmpty {
             if await Beeper.isRunning() {
                 let since = Date().addingTimeInterval(-Double(Store.maxKeepDays) * 86400)
@@ -91,7 +96,7 @@ extension AppDelegate {
                     let chatID = Beeper.chatID(of: chat)
                     guard let messages = try? await Beeper.messages(chatID: chatID, since: since, maxPages: 20) else { continue }
                     let lines = messages.compactMap { m in SourceReader.chatPost(m, chatID: chatID).map { PlanFinder.line(from: $0, sender: SourceReader.chatSender(m)) } }
-                    let picked = RideSearch.aboutRide(lines, ride)
+                    let picked = RideSearch.aboutRide(lines, ride, ownChat: ownChats.contains(chat.id))
                     if !picked.isEmpty { clues.append(.init(from: chat.name, input: RideDetails.input(picked, chatName: chat.name))) }
                 }
                 checked.append(chats.count == 1 ? "your chat" : "your \(chats.count) chats")

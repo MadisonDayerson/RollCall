@@ -94,8 +94,7 @@ extension AppDelegate {
 
     func addManual(prefill: String = "") {
         guard let r = Dialogs.manualRide(prefillLink: prefill) else { return }
-        var link: String? = r.link.isEmpty ? nil : r.link
-        if let l = link, !l.lowercased().hasPrefix("http") { link = "https://" + l }
+        let link: String? = r.link.isEmpty ? nil : Web.withScheme(r.link)
         let fbID = link.flatMap(Store.facebookEventID)
         let item = ICSEvent(uid: fbID.map { "e\($0)@facebook.com" } ?? "manual-\(UUID().uuidString)",
                             title: r.title, start: r.start, end: r.start.addingTimeInterval(r.hours * 3600),
@@ -186,8 +185,7 @@ extension AppDelegate {
     }
 
     private func addFromPost(_ post: (link: String, text: String), details d: RideDetails.Details?, from what: String = "post") {
-        var link = post.link
-        if !link.isEmpty, !link.lowercased().hasPrefix("http") { link = "https://" + link }
+        var link = post.link.isEmpty ? "" : Web.withScheme(post.link)
         if link.isEmpty, let l = d?.link { link = l }
         var found = TextDetect.scan(post.text, daysAhead: 365)
         if let ds = d?.start, found.start == nil || !found.hasTime { found.start = ds; found.hasTime = d?.hasTime ?? false }
@@ -211,8 +209,7 @@ extension AppDelegate {
                            notes: post.text.count > 1000 ? String(post.text.prefix(1000)) + "…" : post.text),
             note: notes.joined(separator: " ")) else { return }
 
-        var url: String? = r.link.isEmpty ? nil : r.link
-        if let l = url, !l.lowercased().hasPrefix("http") { url = "https://" + l }
+        let url: String? = r.link.isEmpty ? nil : Web.withScheme(r.link)
         let fbID = url.flatMap(Store.facebookEventID)
         let isInstagram = url?.contains("instagram.com") ?? false
         let source = fbID != nil ? "facebook" : isInstagram ? "instagram" : "manual"
