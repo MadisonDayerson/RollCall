@@ -159,6 +159,9 @@ six hours). They need a free key of your own (see **Road alerts** below).
 3. Log in, click **My Account → Profile**, then **API tokens**, and copy your key.
 4. In RollCall, paste it into **Settings → Road alerts** and click **Save**.
 
+**Road alerts on routes**, in the same place, chooses what routes show: **Current and planned** (the usual),
+**Current only** (no booked roadworks, which then aren't downloaded) or **None**.
+
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.
 

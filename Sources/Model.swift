@@ -182,11 +182,14 @@ struct Settings: Codable {
     var skippedVersion: String? = nil
     /// Which maps app Route opens (nil means automatic).
     var mapsApp: MapsApp? = nil
+    /// Which road alerts routes show (nil means current and planned).
+    var roadAlerts: RoadAlertsShown? = nil
     /// Days to keep past rides and the messages of plans you dismissed, then they're deleted (nil means 7; 0 keeps
     /// none; at most 14). Named for what it first covered.
     var keepDismissedDays: Int? = nil
 
     var crew: Together { together ?? Together() }
+    var roadAlertsShown: RoadAlertsShown { roadAlerts ?? .currentAndPlanned }
     var keepDays: Int { min(keepDismissedDays ?? 7, Store.maxKeepDays) }
 }
 

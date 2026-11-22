@@ -53,6 +53,12 @@ struct SettingsPage: View {
             }
             Section("Road alerts") {
                 RoadAlertsKeyBox()
+                let shown = model.store.state.settings.roadAlertsShown
+                Picker("Road alerts on routes", selection: Binding(
+                    get: { shown }, set: { model.store.state.settings.roadAlerts = $0; model.store.save() })) {
+                    ForEach(RoadAlertsShown.allCases, id: \.self) { Text($0.name).tag($0) }
+                }
+                Text(shown.help).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Section("General") {
                 Toggle("Open RollCall when you log in", isOn: Binding(

@@ -39,7 +39,7 @@ struct RouteBox: View {
                                 .help("Open the route in your maps app")
                                 .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
                                 .overlay {
-                                    if case .found(let roads, _) = alerts.value, let r = route.value {
+                                    if model.store.state.settings.roadAlertsShown != .none, case .found(let roads, _) = alerts.value, let r = route.value {
                                         RoadAlertMarks(alerts: roads.flatMap(\.alerts), route: r.line, map: map, size: Self.size)
                                     }
                                 }
@@ -53,8 +53,11 @@ struct RouteBox: View {
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             Divider()
                             RouteWeatherView(route: r, ride: ride, places: places, arriving: arriving)
-                            Divider()
-                            RoadAlertsView(route: r, ride: ride, arriving: arriving, state: alerts)
+                            let shown = model.store.state.settings.roadAlertsShown
+                            if shown != .none {
+                                Divider()
+                                RoadAlertsView(route: r, ride: ride, arriving: arriving, shown: shown, state: alerts)
+                            }
                         }
                     }
                 }

@@ -3,11 +3,13 @@ import MapKit
 
 /// Road alerts on a ride's route, under the weather: closures, crashes, hazards and roadworks on the roads you
 /// ride, at the time you'd ride them, in a drop-down that starts closed. Road closures are in orange. Alerts
-/// happening now show first; booked works follow once they've downloaded. The map marks the same alerts.
+/// happening now show first; booked works follow once they've downloaded, unless Settings says current only. The map marks the same alerts.
 struct RoadAlertsView: View {
     let route: RoutePlanner.Planned
     let ride: RideEvent
     let arriving: Bool
+    /// Current only leaves out booked roadworks (Settings → Road alerts).
+    let shown: RoadAlertsShown
     /// Shared with the map, which marks the same alerts.
     @ObservedObject var state: Box<Loading>
     @StateObject private var open = Box(false)
@@ -45,7 +47,7 @@ struct RoadAlertsView: View {
         }
         .font(.callout)
         .fixedSize(horizontal: false, vertical: true)
-        .task(id: "\(window.from.timeIntervalSince1970)|\(route.metres)") { await load() }
+        .task(id: "\(window.from.timeIntervalSince1970)|\(route.metres)|\(shown.rawValue)") { await load() }
     }
 
     private func waiting(_ text: String) -> some View {
@@ -101,6 +103,7 @@ struct RoadAlertsView: View {
         }
         do {
             let live = try await RoadAlerts.fetchLive()
+            guard shown == .currentAndPlanned else { state.value = .found(matching(live), stillBooking: false); return }
             state.value = .found(matching(live), stillBooking: true)
             let booked = try await RoadAlerts.fetchBooked()
             state.value = .found(matching(live + booked), stillBooking: false)

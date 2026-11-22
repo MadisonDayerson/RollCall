@@ -57,7 +57,7 @@ extension AppDelegate {
         await findRoutes()
         if !dueOnly { refreshProgress.value = 0.95; await findMoreDetails() }
         // Booked roadworks take a minute to download: fetched now, so a ride's road alerts are ready when opened.
-        Task { _ = try? await RoadAlerts.fetchBooked() }
+        if store.state.settings.roadAlertsShown == .currentAndPlanned { Task { _ = try? await RoadAlerts.fetchBooked() } }
     }
 
     // MARK: - Routes

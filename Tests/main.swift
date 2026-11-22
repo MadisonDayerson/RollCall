@@ -202,6 +202,10 @@ store.merge(m, source: "meetup-x", sourceName: "X", now: now)
 store.state.decisions["meetup-x:event_316000001@meetup.com"] = .attending
 store.save()
 check(Store(file: tmp).state.decisions.count == 1, "state saves and reloads")
+check(store.state.settings.roadAlertsShown == .currentAndPlanned, "routes show current and planned road alerts unless you choose otherwise")
+store.state.settings.roadAlerts = .current
+store.save()
+check(Store(file: tmp).state.settings.roadAlertsShown == .current, "your road alerts choice is kept")
 try? FileManager.default.removeItem(at: tmp)
 
 

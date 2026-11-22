@@ -256,3 +256,25 @@ enum RoadAlerts {
         return number.isEmpty ? total : nil
     }
 }
+
+/// Which road alerts a ride's route shows (Settings → Road alerts).
+enum RoadAlertsShown: String, Codable, CaseIterable {
+    case currentAndPlanned, current, none
+
+    var name: String {
+        switch self {
+        case .currentAndPlanned: return "Current and planned"
+        case .current: return "Current only"
+        case .none: return "None"
+        }
+    }
+
+    /// What each choice shows, for the line under it.
+    var help: String {
+        switch self {
+        case .currentAndPlanned: return "Crashes, hazards and closures happening now, and roadworks booked for when you'd ride."
+        case .current: return "Only crashes, hazards and closures happening now. Booked roadworks aren't downloaded."
+        case .none: return "Routes show no road alerts, and none are downloaded."
+        }
+    }
+}
