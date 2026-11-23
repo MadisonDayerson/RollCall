@@ -26,10 +26,11 @@ extension PhoneModel {
         await refresh()
     }
 
-    /// Removes the rides, sources and settings kept on this device, and starts setup again. The RollCall calendar
+    /// Removes the rides, sources, settings and road alerts key kept on this device, and starts setup again. The RollCall calendar
     /// stays in Calendar.
     func deleteAllData() {
         stopSharing()
+        RoadAlerts.removeKey()
         try? FileManager.default.removeItem(at: store.file)
         store.state = AppState()
         state = store.state

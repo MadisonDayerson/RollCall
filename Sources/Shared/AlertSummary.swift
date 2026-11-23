@@ -1,7 +1,7 @@
 import Foundation
 
-/// A brief line about the road alerts at one spot, for the map's hover label: written by Apple's on-device model
-/// when Apple Intelligence is on (nothing leaves the Mac), otherwise put together from the alerts themselves.
+/// A brief line about the road alerts at one spot, for the map's label: written by Apple's on-device model
+/// when Apple Intelligence is on (nothing leaves the device), otherwise put together from the alerts themselves.
 enum AlertSummary {
     /// Summaries already written, by the alerts they cover, so reopening a ride doesn't ask again.
     @MainActor private static var written: [String: String] = [:]

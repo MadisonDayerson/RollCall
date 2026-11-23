@@ -29,7 +29,7 @@ struct RouteMap: View {
                 .onTapGesture(perform: open)
                 .help("Open the route in your maps app")
                 .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
-                .overlay { if !alerts.isEmpty { RoadAlertMarks(alerts: alerts, route: route.line, map: map) } }
+                .overlay { if !alerts.isEmpty { RoadAlertMarks(alerts: alerts, route: route.line, size: map.size, spot: map.spot) } }
         } else if failed.value {
             Text("The map couldn't be loaded. Check your internet connection.").font(.callout).foregroundStyle(.secondary)
         } else {

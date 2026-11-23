@@ -66,6 +66,8 @@ enum RoadAlerts {
     static let unplannedURL = "https://api.opendata.transport.vic.gov.au/api/opendata/roads/disruptions/unplanned/v3"
     static let plannedURL = "https://api.opendata.transport.vic.gov.au/opendata/roads/disruptions/planned/v1/"
     static let signUpPage = "https://opendata.transport.vic.gov.au/"
+    /// What road alerts need, for Settings.
+    static let about = "See crashes, closures and roadworks on each ride's route in Victoria. It needs a free key: sign up at the Transport Victoria Open Data Portal, then find the key under My Account → Profile → API tokens."
 
     /// How close to the route an alert has to be to be on it.
     static let nearMetres = 50.0
@@ -269,12 +271,18 @@ enum RoadAlertsShown: String, Codable, CaseIterable {
         }
     }
 
+    #if os(macOS)
+    private var device: String { "this Mac" }
+    #else
+    private var device: String { "this device" }
+    #endif
+
     /// What each choice shows, for the line under it.
     var help: String {
         switch self {
         case .currentAndPlanned: return "Crashes, hazards and closures happening now, and roadworks booked for when you'd ride."
-        case .current: return "Only crashes, hazards and closures happening now. Booked roadworks aren't downloaded, and any already on this Mac are deleted."
-        case .none: return "Routes show no road alerts, none are downloaded, and any already on this Mac are deleted."
+        case .current: return "Only crashes, hazards and closures happening now. Booked roadworks aren't downloaded, and any already on \(device) are deleted."
+        case .none: return "Routes show no road alerts, none are downloaded, and any already on \(device) are deleted."
         }
     }
 }

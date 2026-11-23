@@ -96,6 +96,20 @@ extension RoadAlerts {
         }
     }
 
+    /// Keeps the rider's key, unless it's blank.
+    @MainActor static func saveKey(_ typed: String) -> Bool {
+        let key = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return false }
+        Keychain.roads.save(key)
+        forget()
+        return true
+    }
+
+    @MainActor static func removeKey() {
+        Keychain.roads.delete()
+        forget()
+    }
+
     /// Forgets the downloaded alerts, after the key changes or when booked roadworks are no longer shown.
     @MainActor static func forget() {
         live = nil

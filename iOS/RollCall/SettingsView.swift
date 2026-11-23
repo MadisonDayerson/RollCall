@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Home area, how far and how far ahead to look, the maps app, and deleting everything.
+/// Home area, how far and how far ahead to look, the maps app, road alerts, and deleting everything.
 struct SettingsView: View {
     @Environment(PhoneModel.self) private var model
     @State private var home = ""
@@ -33,6 +33,8 @@ struct SettingsView: View {
                 } footer: {
                     Text("Automatic uses Apple Maps for a simple trip and Google Maps for rides with stops. A route the organiser shared always opens as it is.")
                 }
+
+                RoadAlertsSection()
 
                 Section {
                     if let folder = model.macFolder {

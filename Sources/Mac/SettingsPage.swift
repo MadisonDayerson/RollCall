@@ -166,13 +166,12 @@ struct RoadAlertsBox: View {
     @StateObject private var saved = Box(Keychain.roads.read() != nil)
 
     var body: some View {
-        Text("See crashes, closures and roadworks on each ride's route in Victoria. It needs a free key: sign up at the Transport Victoria Open Data Portal, then find the key under My Account → Profile → API tokens.")
+        Text(RoadAlerts.about)
             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         if saved.value {
             LabeledContent("Key", value: "Saved in your keychain")
             Button("Remove key") {
-                Keychain.roads.delete()
-                RoadAlerts.forget()
+                RoadAlerts.removeKey()
                 saved.value = false
             }
         } else {
@@ -196,10 +195,7 @@ struct RoadAlertsBox: View {
     }
 
     private func save() {
-        let k = key.value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !k.isEmpty else { return }
-        Keychain.roads.save(k)
-        RoadAlerts.forget()
+        guard RoadAlerts.saveKey(key.value) else { return }
         key.value = ""
         saved.value = true
     }

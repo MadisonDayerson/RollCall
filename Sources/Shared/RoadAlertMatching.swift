@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 
 /// Which alerts are on a ride's route while you'd be riding it, grouped by road, most disruptive first. Worked
-/// out on the Mac, so the route itself never goes online.
+/// out on the device, so the route itself never goes online.
 extension RoadAlerts {
     /// Closures first, then lanes blocked, then the rest; happening now before booked.
     static func rank(_ a: Alert) -> Int {

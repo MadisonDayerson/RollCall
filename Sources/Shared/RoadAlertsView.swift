@@ -46,6 +46,7 @@ struct RoadAlertsView: View {
             }
         }
         .font(.callout)
+        .labelStyle(InlineLabelStyle())
         .fixedSize(horizontal: false, vertical: true)
         .task(id: "\(window.from.timeIntervalSince1970)|\(route.metres)|\(shown.rawValue)") { await load() }
     }

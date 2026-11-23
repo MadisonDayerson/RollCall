@@ -37,6 +37,7 @@ struct RouteWeatherView: View {
             }
         }
         .font(.callout)
+        .labelStyle(InlineLabelStyle())
         .fixedSize(horizontal: false, vertical: true)
         .task(id: "\(leave.timeIntervalSince1970)|\(route.metres)") { await load() }
     }

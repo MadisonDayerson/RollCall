@@ -251,6 +251,9 @@ Run the tests:
 
 `iOS/RollCall.xcodeproj` is a first iPhone and iPad version. It reads the same clubs, calendars, forums and
 event sites by itself (group chats stay on the Mac) and puts rides you're going to in a RollCall calendar.
+A ride's page has the same route map, weather and road alerts as on the Mac: tap an icon on the map for its summary.
+Road alerts need your key on each device, pasted into **Settings → Road alerts** (it's kept in that device's keychain
+and isn't shared between them).
 
 **Sharing with the Mac.** On the Mac, turn on Settings → iPhone and iPad → **Share with RollCall on iPhone and
 iPad** (iCloud Drive needs to be on). That makes a RollCall folder in iCloud Drive. On the iPhone, tap Settings →

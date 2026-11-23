@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Keeps a key (the Beeper access token, the road alerts key) in the login keychain rather than a plain file.
+/// Keeps a key (the Beeper access token, the road alerts key) in the keychain rather than a plain file.
 /// It's read from the keychain once and then remembered, so drawing Settings or reading a chat never waits on a
 /// keychain prompt again.
 final class Keychain: @unchecked Sendable {

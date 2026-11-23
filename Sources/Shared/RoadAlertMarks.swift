@@ -2,14 +2,15 @@ import SwiftUI
 import MapKit
 
 /// Road alerts marked on the route map: an icon set off to the side of the route, on a stalk pointing to where the
-/// alert is, so the route stays clear. Holding the pointer over an icon shows what it is. Icons that would overlap
-/// are shown as one. The label is a brief summary from Apple's on-device model, written in the background when the
+/// alert is, so the route stays clear. Holding the pointer over an icon (or tapping it on iPhone and iPad) shows what
+/// it is. Icons that would overlap are shown as one. The label is a brief summary from Apple's on-device model, written in the background when the
 /// map shows. Road closures are in orange.
 struct RoadAlertMarks: View {
     let alerts: [RoadAlerts.Alert]
     let route: [CLLocationCoordinate2D]
-    let map: RouteMapImage.Drawn
-    private var size: CGSize { map.size }
+    /// The map's size, and where a place falls on it, from the top left.
+    let size: CGSize
+    let spot: (CLLocationCoordinate2D) -> CGPoint
     @StateObject private var hovered = Box<Int?>(nil)
     /// Summaries written so far, by the alerts they cover.
     @StateObject private var summaries = Box<[String: String]>([:])
@@ -35,6 +36,10 @@ struct RoadAlertMarks: View {
             let scale = g.size.width / size.width
             let marks = self.marks
             ZStack(alignment: .topLeading) {
+                #if os(iOS)
+                // A tap elsewhere on the map puts the label away, rather than opening the route.
+                if hovered.value != nil { Color.clear.contentShape(Rectangle()).onTapGesture { hovered.value = nil } }
+                #endif
                 Path { path in
                     for m in marks {
                         path.move(to: scaled(m.at, scale))
@@ -49,6 +54,11 @@ struct RoadAlertMarks: View {
                         .onHover { inside in
                             if inside { hovered.value = i } else if hovered.value == i { hovered.value = nil }
                         }
+                        #if os(iOS)
+                        .contentShape(Circle().inset(by: -10))
+                        .accessibilityAddTraits(.isButton)
+                        .onTapGesture { hovered.value = hovered.value == i ? nil : i }
+                        #endif
                         .position(scaled(marks[i].icon, scale))
                 }
                 if let i = hovered.value, marks.indices.contains(i) {
@@ -74,11 +84,11 @@ struct RoadAlertMarks: View {
     private var marks: [Mark] {
         // The route on the picture, with points closer than 3 pt dropped: plenty to keep icons off it.
         var line: [CGPoint] = []
-        for p in route.map(map.spot) where line.last.map({ hypot($0.x - p.x, $0.y - p.y) >= 3 }) ?? true { line.append(p) }
+        for p in route.map(spot) where line.last.map({ hypot($0.x - p.x, $0.y - p.y) >= 3 }) ?? true { line.append(p) }
         var marks: [Mark] = []
         for a in alerts.sorted(by: { RoadAlerts.rank($0) < RoadAlerts.rank($1) }) {
-            guard let spot = a.mark else { continue }
-            let p = map.spot(spot)
+            guard let mark = a.mark else { continue }
+            let p = spot(mark)
             guard (0...size.width).contains(p.x), (0...size.height).contains(p.y) else { continue }
             if let i = marks.firstIndex(where: { hypot($0.at.x - p.x, $0.at.y - p.y) < Self.apart }) {
                 marks[i].alerts.append(a)
@@ -137,7 +147,7 @@ struct RoadAlertMarks: View {
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(a.closesRoad ? Color.orange : Color.primary)
             .frame(width: Self.iconSize, height: Self.iconSize)
-            .background(Circle().fill(Color(nsColor: .windowBackgroundColor)))
+            .background(Circle().fill(DateBadge.paper))
             .overlay(Circle().stroke(Color.primary.opacity(0.5), lineWidth: 1))
             .contentShape(Circle())
             .accessibilityLabel(a.summary)
@@ -152,7 +162,7 @@ struct RoadAlertMarks: View {
             .font(.caption)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 7).padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .windowBackgroundColor)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(DateBadge.paper))
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.25), lineWidth: 1))
             .frame(maxWidth: min(240, max(80, left ? area.width - p.x - gap - 4 : p.x - gap - 4)), alignment: left ? .leading : .trailing)
             .padding(left ? .leading : .trailing, left ? p.x + gap : area.width - p.x + gap)

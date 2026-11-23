@@ -28,6 +28,8 @@ extension PhoneModel {
             for id in changed where store.decision(id) == .attending { syncCalendar(id) }
         }
         saved()
+        // Booked roadworks take a minute to download: fetched now, so a ride's road alerts are ready when opened.
+        if store.state.settings.roadAlertsShown == .currentAndPlanned { Task { _ = try? await RoadAlerts.fetchBooked() } }
     }
 
     // MARK: - Sources
