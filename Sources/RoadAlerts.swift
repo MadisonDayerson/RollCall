@@ -273,8 +273,8 @@ enum RoadAlertsShown: String, Codable, CaseIterable {
     var help: String {
         switch self {
         case .currentAndPlanned: return "Crashes, hazards and closures happening now, and roadworks booked for when you'd ride."
-        case .current: return "Only crashes, hazards and closures happening now. Booked roadworks aren't downloaded."
-        case .none: return "Routes show no road alerts, and none are downloaded."
+        case .current: return "Only crashes, hazards and closures happening now. Booked roadworks aren't downloaded, and any already on this Mac are deleted."
+        case .none: return "Routes show no road alerts, none are downloaded, and any already on this Mac are deleted."
         }
     }
 }

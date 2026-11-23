@@ -52,13 +52,9 @@ struct SettingsPage: View {
                 TogetherForm(app: app)
             }
             Section("Road alerts") {
-                RoadAlertsKeyBox()
-                let shown = model.store.state.settings.roadAlertsShown
-                Picker("Road alerts on routes", selection: Binding(
-                    get: { shown }, set: { model.store.state.settings.roadAlerts = $0; model.store.save() })) {
-                    ForEach(RoadAlertsShown.allCases, id: \.self) { Text($0.name).tag($0) }
-                }
-                Text(shown.help).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                RoadAlertsBox(shown: Binding(
+                    get: { model.store.state.settings.roadAlertsShown },
+                    set: { model.store.state.settings.roadAlerts = $0; model.store.save() }))
             }
             Section("General") {
                 Toggle("Open RollCall when you log in", isOn: Binding(
@@ -150,9 +146,10 @@ struct SettingsPage: View {
 
 
 /// Location sharing, voice chat, Discord and tags, used in setup and Settings. Saves by itself.
-/// Where the road alerts key is pasted. It's the rider's own free key from the Transport Victoria Open Data
-/// Portal, kept in the keychain.
-struct RoadAlertsKeyBox: View {
+/// Where the road alerts key is pasted, and which alerts routes show. The key is the rider's own free key from the
+/// Transport Victoria Open Data Portal, kept in the keychain.
+struct RoadAlertsBox: View {
+    @Binding var shown: RoadAlertsShown
     @StateObject private var key = Box("")
     @StateObject private var saved = Box(Keychain.roads.read() != nil)
 
@@ -174,6 +171,16 @@ struct RoadAlertsKeyBox: View {
             Button("Get a key") { NSWorkspace.shared.open(URL(string: RoadAlerts.signUpPage)!) }
                 .help("Open the Transport Victoria Open Data Portal to sign up for a free key")
         }
+        Picker("Road alerts on routes", selection: Binding(get: { shown }, set: { choice in
+            shown = choice
+            // Booked roadworks kept on this Mac aren't needed any more.
+            if choice != .currentAndPlanned { RoadAlerts.forget() }
+        })) {
+            ForEach(RoadAlertsShown.allCases, id: \.self) { Text($0.name).tag($0) }
+        }
+        .disabled(!saved.value)
+        Text(saved.value ? shown.help : "Save a key first.")
+            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
 
     private func save() {

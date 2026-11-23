@@ -134,7 +134,8 @@ page, the last two weeks of your chats, and your other sources' listings and pos
 minutes don't do this. Apple's on-device model reads each find
 and keeps it only if it's about this very ride (the same event on the same day, not another week's or a similar ride
 nearby), then shows what the ride doesn't say yet: its time, meeting place, destination, stops, cost or link, with
-where each came from, under **More details** on its page. Click **Add** for the ones you want; they're saved like an
+where each came from, under **More details** on its page. While it looks, a small spinner shows next to that ride in
+the list (point at it to see what it's checking), and the **Roll Call** at the foot of the sidebar glows. Click **Add** for the ones you want; they're saved like an
 edit. For a plan in **To review**, what it finds fills in the **Add ride…** form, apart from any you **Leave out**. **Open route in** gives directions from your suburb through the meeting place and stops in the
 maps app you pick: Apple Maps, Google Maps, Waze or Kurviger (Apple Maps and Waze only take the meeting place). When the
 description has the organiser's own route, it's at the top of the list. Each ride's page also shows a map of the road
@@ -160,7 +161,8 @@ six hours). They need a free key of your own (see **Road alerts** below).
 4. In RollCall, paste it into **Settings → Road alerts** and click **Save**.
 
 **Road alerts on routes**, in the same place, chooses what routes show: **Current and planned** (the usual),
-**Current only** (no booked roadworks, which then aren't downloaded) or **None**.
+**Current only** (no booked roadworks, which then aren't downloaded) or **None**. Choosing either of the last two deletes
+any booked roadworks already downloaded. It's greyed out until a key is saved.
 
 The calendar event for a ride you're going to includes the map link, your crew's Discord, voice chat group and a
 location-sharing reminder.

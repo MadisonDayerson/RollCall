@@ -96,7 +96,7 @@ extension RoadAlerts {
         }
     }
 
-    /// Forgets the downloaded alerts, after the key changes.
+    /// Forgets the downloaded alerts, after the key changes or when booked roadworks are no longer shown.
     @MainActor static func forget() {
         live = nil
         booked = nil
