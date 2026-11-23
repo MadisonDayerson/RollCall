@@ -207,7 +207,13 @@ struct RideDetail: View {
                 HStack(alignment: .center, spacing: 16) {
                     DateBadge(date: ride.start, decision: model.store.decision(ride.id), needsCheck: ride.needsCheck == true,
                               past: model.isPast(ride), scale: 1.5)
-                    Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
+                        // A ride posted in several places shows once; this says everywhere it was.
+                        let sources = ([ride] + model.store.copies(of: ride)).map(\.sourceName).uniqued()
+                        Text((sources.count > 1 ? "Sources: " : "Source: ") + sources.joined(separator: ", "))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                 }
                 if model.isPast(ride) {
                     Label("You went", systemImage: "checkmark.seal")
@@ -319,11 +325,6 @@ struct RideAbout: View {
                                 }
                             }
                         }
-                    }
-                    GridRow {
-                        Text("From").foregroundStyle(.secondary)
-                        // A ride posted in several places shows once; this says where else it was.
-                        Text(([ride] + model.store.copies(of: ride)).map(\.sourceName).uniqued().joined(separator: ", "))
                     }
                     ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                         GridRow {

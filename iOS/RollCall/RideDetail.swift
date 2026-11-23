@@ -18,7 +18,7 @@ struct RideDetail: View {
                         Text(ride.title).font(.title2.bold())
                         Text(Format.when(ride)).foregroundStyle(.secondary)
                         if let place = Format.place(ride) { Text(place).foregroundStyle(.secondary) }
-                        Text("From \(ride.sourceName)").font(.footnote).foregroundStyle(.tertiary)
+                        Text("Source: \(ride.sourceName)").font(.footnote).foregroundStyle(.tertiary)
                     }
                 }
                 if ride.needsCheck == true {
