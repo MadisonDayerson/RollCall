@@ -18,6 +18,18 @@ enum RoutePlanner {
         var line: [CLLocationCoordinate2D] {
             legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
         }
+
+        /// The part of the map that shows the whole route in a map this size, with room around it for the marks.
+        func mapRect(size: CGSize) -> MKMapRect {
+            var rect = legs.map(\.boundingMapRect).reduce(MKMapRect.null) { $0.union($1) }
+            rect = rect.insetBy(dx: -rect.width * 0.1 - 1, dy: -rect.height * 0.1 - 1)
+            // Widen the short side to the map's shape, so MapKit doesn't crop the route to fit.
+            let aspect = size.width / size.height
+            if rect.width / rect.height < aspect {
+                return rect.insetBy(dx: -(rect.height * aspect - rect.width) / 2, dy: 0)
+            }
+            return rect.insetBy(dx: 0, dy: -(rect.width / aspect - rect.height) / 2)
+        }
     }
 
     // Only what was found is remembered, so a place missed while offline is tried again next time.

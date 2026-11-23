@@ -39,17 +39,7 @@ enum RouteMapImage {
         let config = MKStandardMapConfiguration(emphasisStyle: .muted)
         config.pointOfInterestFilter = .excludingAll
         options.preferredConfiguration = config
-        // The whole route, with room around it for the marks.
-        var rect = route.legs.map(\.boundingMapRect).reduce(MKMapRect.null) { $0.union($1) }
-        rect = rect.insetBy(dx: -rect.width * 0.1 - 1, dy: -rect.height * 0.1 - 1)
-        // Widen the short side to the picture's shape, so MapKit doesn't crop the route to fit.
-        let aspect = size.width / size.height
-        if rect.width / rect.height < aspect {
-            rect = rect.insetBy(dx: -(rect.height * aspect - rect.width) / 2, dy: 0)
-        } else {
-            rect = rect.insetBy(dx: 0, dy: -(rect.width / aspect - rect.height) / 2)
-        }
-        options.mapRect = rect
+        options.mapRect = route.mapRect(size: size)
         guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
 
         let ink = dark ? NSColor.white : NSColor.black

@@ -10,6 +10,7 @@ struct RoutePreview: View {
     let open: () -> Void
     @State private var planned: RoutePlanner.Planned?
     @State private var loading = Loading.planning
+    @State private var camera = MapCameraPosition.automatic
 
     enum Loading { case planning, done, failed }
 
@@ -46,7 +47,7 @@ struct RoutePreview: View {
     /// The route in the text colour on a grey map, with the start filled in, the destination outlined and the stops
     /// as small rings, as on the Mac.
     private func map(_ p: RoutePlanner.Planned, places: [String]) -> some View {
-        Map(initialPosition: .automatic, interactionModes: []) {
+        Map(position: $camera, interactionModes: []) {
             ForEach(p.legs.indices, id: \.self) { i in
                 MapPolyline(p.legs[i]).stroke(.primary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             }
@@ -64,6 +65,14 @@ struct RoutePreview: View {
         .mapStyle(.standard(emphasis: .muted, pointsOfInterest: .excludingAll))
         .saturation(0)
         .frame(height: 220)
+        // Fitted again when an iPad window changes shape: left alone, the map keeps its zoom and can cut off the route's ends.
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            let label: CGFloat = 24  // Apple Maps' label, along the bottom.
+            guard size.width > 0, size.height > label else { return }
+            var rect = p.mapRect(size: CGSize(width: size.width, height: size.height - label))
+            rect.size.height *= size.height / (size.height - label)
+            camera = .rect(rect)
+        }
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
         .contentShape(Rectangle())
