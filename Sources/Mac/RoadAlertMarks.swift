@@ -9,7 +9,7 @@ struct RoadAlertMarks: View {
     let alerts: [RoadAlerts.Alert]
     let route: [CLLocationCoordinate2D]
     let map: RouteMapImage.Drawn
-    let size: CGSize
+    private var size: CGSize { map.size }
     @StateObject private var hovered = Box<Int?>(nil)
     /// Summaries written so far, by the alerts they cover.
     @StateObject private var summaries = Box<[String: String]>([:])

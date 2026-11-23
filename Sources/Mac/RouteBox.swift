@@ -1,5 +1,4 @@
 import SwiftUI
-import MapKit
 
 /// The ride's route on its page: a still map of the road route from the meeting place through any stops to the
 /// destination (or from your suburb to a one-place ride), with the distance and riding time, the weather along
@@ -7,15 +6,11 @@ import MapKit
 struct RouteBox: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
-    @Environment(\.colorScheme) private var scheme
     @StateObject private var route = Box<RoutePlanner.Planned?>(nil)
-    @StateObject private var image = Box<RouteMapImage.Drawn?>(nil)
     @StateObject private var alerts = Box(RoadAlertsView.Loading.loading)
     @StateObject private var state = Box(Loading.planning)
 
     enum Loading { case planning, done, failed }
-
-    private static let size = CGSize(width: 480, height: 260)
 
     var body: some View {
         let (places, avoidHighways) = model.store.route(ride)
@@ -33,25 +28,15 @@ struct RouteBox: View {
                         Text("Apple Maps couldn't find a road route between \(places.joined(separator: ", ")). Check the places with Edit….")
                             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     case .done:
-                        if let map = image.value {
-                            Image(nsImage: map.image).resizable().scaledToFit()
-                                .onTapGesture { model.app.openRoute(ride) }
-                                .help("Open the route in your maps app")
-                                .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
-                                .overlay {
-                                    if model.store.state.settings.roadAlertsShown != .none, case .found(let roads, _) = alerts.value, let r = route.value {
-                                        RoadAlertMarks(alerts: roads.flatMap(\.alerts), route: r.line, map: map, size: Self.size)
-                                    }
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        }
                         if let r = route.value {
+                            let shown = model.store.state.settings.roadAlertsShown
+                            RouteMap(route: r, places: places, alerts: shown == .none ? [] : marked) { model.app.openRoute(ride) }
+                                .id(RouteMapImage.key(r))
                             let arriving = places.first == model.store.homePlace
                             Text(RoutePlanner.describe(r, places: places, notes: ride.notes))
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             Divider()
                             RouteWeatherView(route: r, ride: ride, places: places, arriving: arriving)
-                            let shown = model.store.state.settings.roadAlertsShown
                             if shown != .none {
                                 Divider()
                                 RoadAlertsView(route: r, ride: ride, arriving: arriving, shown: shown, state: alerts)
@@ -64,22 +49,26 @@ struct RouteBox: View {
             } label: {
                 Label("Route", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
             }
-            .task(id: places.joined(separator: "\n") + (avoidHighways ? "|no highways" : "") + (scheme == .dark ? "|dark" : "|light")) {
+            .task(id: places.joined(separator: "\n") + (avoidHighways ? "|no highways" : "")) {
                 await load(places, avoidHighways: avoidHighways)
             }
         }
     }
 
+    /// The road alerts to mark on the map.
+    private var marked: [RoadAlerts.Alert] {
+        if case .found(let roads, _) = alerts.value { return roads.flatMap(\.alerts) }
+        return []
+    }
+
     private func load(_ places: [String], avoidHighways: Bool) async {
         let home = model.store.homeSpot
         if route.value == nil { state.value = .planning }
-        guard let planned = await RoutePlanner.plan(places, near: home, avoidHighways: avoidHighways),
-              let map = await RouteMapImage.draw(planned, size: Self.size, dark: scheme == .dark) else {
+        guard let planned = await RoutePlanner.plan(places, near: home, avoidHighways: avoidHighways) else {
             state.value = .failed
             return
         }
         route.value = planned
-        image.value = map
         state.value = .done
     }
 }

@@ -6,17 +6,33 @@ import CoreImage
 /// colour, a filled dot at the start, small dots at named stops and a ring at the finish.
 @MainActor
 enum RouteMapImage {
-    /// The picture, and where a place falls on it (in points from the top left).
-    struct Drawn {
-        var image: NSImage
-        var spot: (CLLocationCoordinate2D) -> CGPoint
+    /// The picture, its size, and where a place falls on it (in points from the top left).
+    final class Drawn {
+        let image: NSImage
+        let size: CGSize
+        let spot: (CLLocationCoordinate2D) -> CGPoint
+
+        init(image: NSImage, size: CGSize, spot: @escaping (CLLocationCoordinate2D) -> CGPoint) {
+            (self.image, self.size, self.spot) = (image, size, spot)
+        }
     }
 
-    private static var drawn: [String: Drawn] = [:]
+    /// The last few pictures only: a full screen one is several megabytes.
+    private static let drawn: NSCache<NSString, Drawn> = {
+        let cache = NSCache<NSString, Drawn>()
+        cache.countLimit = 6
+        return cache
+    }()
 
-    static func draw(_ route: RoutePlanner.Planned, size: CGSize, dark: Bool) async -> Drawn? {
-        let key = "\(route.stops.map { "\($0.latitude),\($0.longitude)" }.joined(separator: ";"))|\(size.width)x\(size.height)|\(dark)"
-        if let img = drawn[key] { return img }
+    /// Which route a picture shows.
+    static func key(_ route: RoutePlanner.Planned) -> String {
+        route.stops.map { "\($0.latitude),\($0.longitude)" }.joined(separator: ";") + "|\(route.metres)"
+    }
+
+    /// `scale` is the screen's pixels per point.
+    static func draw(_ route: RoutePlanner.Planned, size: CGSize, scale: CGFloat, dark: Bool) async -> Drawn? {
+        let key = "\(key(route))|\(size.width)x\(size.height)@\(scale)|\(dark)" as NSString
+        if let kept = drawn.object(forKey: key) { return kept }
         let options = MKMapSnapshotter.Options()
         options.size = size
         options.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
@@ -38,7 +54,7 @@ enum RouteMapImage {
 
         let ink = dark ? NSColor.white : NSColor.black
         let paper = dark ? NSColor.black : NSColor.white
-        let map = greyscale(snapshot.image)
+        let map = greyscale(snapshot.image, scale: scale)
         let image = NSImage(size: size, flipped: false) { _ in
             map.draw(in: CGRect(origin: .zero, size: size))
             func spot(_ c: CLLocationCoordinate2D) -> CGPoint { snapshot.point(for: c) }
@@ -69,19 +85,20 @@ enum RouteMapImage {
             if let start = route.stops.first { dot(start, radius: 6, filled: true) }
             return true
         }
-        let result = Drawn(image: image) { c in
+        let result = Drawn(image: image, size: size) { c in
             let p = snapshot.point(for: c)
             return CGPoint(x: p.x, y: size.height - p.y)
         }
-        drawn[key] = result
+        drawn.setObject(result, forKey: key)
         return result
     }
 
-    /// The map in greys, to match RollCall's black and white.
-    private static func greyscale(_ image: NSImage) -> NSImage {
-        guard let tiff = image.tiffRepresentation, let input = CIImage(data: tiff),
+    /// The map in greys, to match RollCall's black and white. MapKit's picture comes in several resolutions, so the
+    /// screen's one is asked for.
+    private static func greyscale(_ image: NSImage, scale: CGFloat) -> NSImage {
+        guard let map = image.cgImage(forProposedRect: nil, context: nil, hints: [.ctm: NSAffineTransform(transform: AffineTransform(scale: scale))]),
               let filter = CIFilter(name: "CIColorControls") else { return image }
-        filter.setValue(input, forKey: kCIInputImageKey)
+        filter.setValue(CIImage(cgImage: map), forKey: kCIInputImageKey)
         filter.setValue(0, forKey: kCIInputSaturationKey)
         guard let output = filter.outputImage, let cg = CIContext().createCGImage(output, from: output.extent) else { return image }
         return NSImage(cgImage: cg, size: image.size)
