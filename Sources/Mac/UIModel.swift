@@ -111,10 +111,6 @@ final class UIModel: ObservableObject {
 
     var undecidedCount: Int { store.upcoming().filter { store.decision($0.id) == .undecided }.count }
 
-    func decision(_ id: String) -> Binding<Decision> {
-        Binding(get: { self.store.decision(id) }, set: { d in self.later { self.app.decide(id, d) } })
-    }
-
     // MARK: Sources
 
     struct SourceRow: Identifiable, Hashable {

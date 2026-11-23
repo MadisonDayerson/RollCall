@@ -214,14 +214,7 @@ struct RideDetail: View {
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Color.secondary.opacity(0.14), in: Capsule())
                 } else {
-                    Picker("Going?", selection: model.decision(ride.id)) {
-                        Text("Going").tag(Decision.attending)
-                        Text("Maybe").tag(Decision.maybe)
-                        Text("Skip").tag(Decision.skip)
-                        Text("Undecided").tag(Decision.undecided)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                    DecisionPicker(decision: model.store.decision(ride.id)) { d in model.later { app.decide(ride.id, d) } }
                     Text("Going adds it to the RollCall calendar, with a reminder the evening before.")
                         .font(.caption).foregroundStyle(.secondary)
                 }

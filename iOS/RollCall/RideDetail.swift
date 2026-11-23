@@ -29,10 +29,7 @@ struct RideDetail: View {
 
             if ride.finish >= Date() {
                 Section {
-                    Picker("Going?", selection: Binding(get: { decision }, set: { d in Task { await model.decide(ride.id, d) } })) {
-                        ForEach(Format.choices, id: \.0) { d, name, _ in Text(name).tag(d) }
-                    }
-                    .pickerStyle(.segmented)
+                    DecisionPicker(decision: decision) { d in Task { await model.decide(ride.id, d) } }
                 } footer: {
                     if decision == .attending, ride.isFacebook || ride.url?.contains("meetup.com") == true {
                         Text("It's in your RollCall calendar. To tell the organiser you're coming, press Going on the event page.")
