@@ -191,6 +191,11 @@ struct Settings: Codable {
     var syncDevices: Bool? = nil
 
     var crew: Together { together ?? Together() }
+    /// "Ringwood, Victoria, Australia" once the home area has been found.
+    var foundPlace: String? {
+        let parts = [homeCity, homeRegion, homeCountry].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
     var roadAlertsShown: RoadAlertsShown { roadAlerts ?? .currentAndPlanned }
     var keepDays: Int { min(keepDismissedDays ?? 7, Store.maxKeepDays) }
 }
@@ -262,6 +267,8 @@ struct AppState: Codable {
     var foundRoutes: [String: FoundRoute] = [:]
     /// Ride id -> the reply on Facebook that RollCall last carried over, so a choice you make yourself isn't undone.
     var responses: [String: Decision] = [:]
+    /// How many chats RollCall on the Mac reads, on an iPhone or iPad that shares with it.
+    var macChats: Int?
 
     init() {}
 
@@ -291,6 +298,7 @@ struct AppState: Codable {
         removedRides = get(.removedRides, [:])
         foundRoutes = get(.foundRoutes, [:])
         responses = get(.responses, [:])
+        macChats = get(.macChats, nil)
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion

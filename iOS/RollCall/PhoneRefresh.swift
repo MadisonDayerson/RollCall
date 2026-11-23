@@ -34,8 +34,16 @@ extension PhoneModel {
 
     // MARK: - Sources
 
-    /// Adds a source from a link. Returns a problem to show, or nil when it was added.
+    /// Adds a source from a link and reads it. Returns a problem to show, or nil when it was added.
     func addSource(_ link: String) async -> String? {
+        let problem = await follow(link)
+        if problem == nil { await refresh() }
+        return problem
+    }
+
+    /// Adds a source from a link. Returns a problem to show, or nil when it was added.
+    func follow(_ link: String) async -> String? {
+        if FeedLinks.facebookCalendar(link) != nil { return await connectFacebook(link) }
         do {
             let feed = try await Web.discover(link)
             if let existing = store.state.feeds.first(where: { $0.id == feed.id || $0.url == feed.url }) {
@@ -43,12 +51,36 @@ extension PhoneModel {
             }
             store.state.feeds.append(feed)
             saved()
-            await refresh()
             return nil
         } catch FeedError.privateFeed where link.contains("meetup.com") {
             return "This Meetup group's calendar is private. Join the group, then on its Events tab choose Subscribe / Add to calendar, and paste the link it gives you."
         } catch {
             return error.localizedDescription
+        }
+    }
+
+    func follow(_ feed: Feed, _ on: Bool) {
+        if !on {
+            store.forgetFeed(feed.id)
+        } else if !store.state.feeds.contains(where: { $0.id == feed.id }) {
+            store.state.feeds.append(feed)
+        }
+        saved()
+    }
+
+    var facebookConnected: Bool { state.feeds.contains { $0.id == FeedLinks.facebookCalendarID } }
+
+    /// Connects Facebook's calendar of your events. Returns a problem to show, or nil when it's connected.
+    func connectFacebook(_ link: String) async -> String? {
+        guard let feed = FeedLinks.facebookCalendar(link) else {
+            return "That isn't your Facebook events calendar link. It starts with https://www.facebook.com/events/ical/"
+        }
+        do {
+            try await store.followFacebookCalendar(feed)
+            saved()
+            return nil
+        } catch {
+            return "Facebook didn't send your events. \(error.localizedDescription) Copy the link from Facebook again and paste it."
         }
     }
 

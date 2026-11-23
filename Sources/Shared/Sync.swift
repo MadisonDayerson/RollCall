@@ -20,7 +20,12 @@ enum Sync {
         var rides: [String: RideEvent] = [:]
         /// Ride id -> its start, for rides removed on that device.
         var removed: [String: Date] = [:]
+        /// How many chats that device reads (only the Mac does), so the others can say they're connected.
+        var chats: Int? = nil
     }
+
+    /// The Mac's own file is Mac.json.
+    static let macName = "Mac"
 
     #if os(macOS)
     /// The Mac's folder for it, in iCloud Drive (nil when iCloud Drive is off).
@@ -70,15 +75,19 @@ enum Sync {
 
     /// Reads the file and every other device's, takes in their changes, and writes this device's file again if it
     /// changed. Returns the rides whose Going/Maybe/Skip changed, for the calendar. `name` is this device's file.
+    ///
+    /// A device that's `joining` takes on what the others have: its own choices and sources count as older than theirs,
+    /// and a file it left from before it was set up again is ignored (otherwise everything missing since would look
+    /// removed, and be removed on the others too).
     @MainActor
-    static func run(_ store: Store, folder: URL, name: String, now: Date = Date()) throws -> [String] {
+    static func run(_ store: Store, folder: URL, name: String, joining: Bool = false, now: Date = Date()) throws -> [String] {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let mineURL = folder.appendingPathComponent(name + ".json")
         let oldData = read(mineURL)
-        let previous = oldData.flatMap { try? Store.decoder.decode(File.self, from: $0) }
+        let previous = joining ? nil : oldData.flatMap { try? Store.decoder.decode(File.self, from: $0) }
         let others = otherFiles(in: folder, besides: mineURL.lastPathComponent).compactMap { read($0) }
             .compactMap { try? Store.decoder.decode(File.self, from: $0) }
-        let (file, changed) = store.exchange(previous: previous, others: others, now: now)
+        let (file, changed) = store.exchange(previous: previous, others: others, now: joining ? Date(timeIntervalSince1970: 0) : now)
         let data = try Store.encoder.encode(file)
         if data != oldData { try write(data, to: mineURL) }
         return changed
@@ -91,6 +100,11 @@ enum Sync {
             n.hasPrefix(".") && n.hasSuffix(".icloud") ? String(n.dropFirst().dropLast(".icloud".count)) : n
         }
         return Set(real).filter { $0.hasSuffix(".json") && $0 != mine }.sorted().map { folder.appendingPathComponent($0) }
+    }
+
+    /// The folder is the one RollCall on the Mac shares through.
+    static func isMacs(_ folder: URL) -> Bool {
+        otherFiles(in: folder, besides: "").contains { $0.lastPathComponent == macName + ".json" }
     }
 
     /// Reads through iCloud, which downloads the file first when it isn't on this device yet.
@@ -150,6 +164,9 @@ extension Store {
         }
         mine.rides = Sync.shared(state.events)
         mine.removed = state.removedRides
+        let chats = state.feeds.filter { $0.type == .chat }.count
+        mine.chats = chats > 0 ? chats : nil
+        state.macChats = others.compactMap(\.chats).max()
         return (mine, changed.sorted())
     }
 }

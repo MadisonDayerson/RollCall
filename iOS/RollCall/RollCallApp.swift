@@ -24,7 +24,7 @@ struct RootView: View {
             Tab("Settings", systemImage: "gearshape") { SettingsView() }
         }
         .tabViewStyle(.sidebarAdaptable)
-        .fullScreenCover(isPresented: .constant(!model.state.setupDone)) { SetupView() }
+        .fullScreenCover(isPresented: .constant(!model.state.setupDone || model.settingUp)) { SetupView() }
         .alert("RollCall", isPresented: Binding(get: { model.problem != nil }, set: { if !$0 { model.problem = nil } })) {
             Button("OK") {}
         } message: {
@@ -38,7 +38,10 @@ struct RootView: View {
             }
         }
         .onChange(of: phase) { _, now in
-            if now == .active { model.shareNow() }
+            if now == .active {
+                model.shareNow()
+                model.checkCalendar()
+            }
             // Coming back to the app after a few hours reads the sources again.
             guard now == .active, model.state.setupDone,
                   (model.state.lastRefresh ?? .distantPast) < Date().addingTimeInterval(-3 * 3600) else { return }

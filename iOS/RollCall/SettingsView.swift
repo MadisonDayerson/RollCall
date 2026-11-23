@@ -6,7 +6,6 @@ struct SettingsView: View {
     @State private var home = ""
     @State private var problem: String?
     @State private var confirmDelete = false
-    @State private var choosingFolder = false
 
     var body: some View {
         let s = model.state.settings
@@ -44,11 +43,9 @@ struct SettingsView: View {
                         }
                         Button("Stop sharing", role: .destructive) { model.stopSharing() }
                     } else {
-                        Button("Share with RollCall on Mac…") { choosingFolder = true }
+                        MacFolderButton(title: "Share with RollCall on Mac…")
                     }
-                    if let problem = model.shareProblem {
-                        Label("Couldn't share: \(problem)", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
-                    }
+                    if let problem = model.shareProblem { ProblemLabel(text: "Couldn't share: \(problem)") }
                 } header: {
                     PatchLabel(text: "Mac")
                 } footer: {
@@ -58,6 +55,7 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Button("Run setup…") { model.settingUp = true }
                     Button("Delete all data…", role: .destructive) { confirmDelete = true }
                 } footer: {
                     Text("Group chats are read by RollCall on your Mac.")
@@ -65,12 +63,6 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .onAppear { home = s.homeName }
-            .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
-                switch result {
-                case .success(let folder): model.shareWithMac(in: folder)
-                case .failure(let error): model.shareProblem = error.localizedDescription
-                }
-            }
             .confirmationDialog("Delete all RollCall data?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { model.deleteAllData() }
             } message: {

@@ -6,7 +6,7 @@ extension AppDelegate {
         guard store.state.settings.syncDevices == true, !Store.picturesOnly, let folder = Sync.macFolder else { return }
         let before = try? Store.encoder.encode(store.state)
         do {
-            for id in try Sync.run(store, folder: folder, name: "Mac") { syncCalendar(id) }
+            for id in try Sync.run(store, folder: folder, name: Sync.macName) { syncCalendar(id) }
             syncProblem = nil
         } catch {
             syncProblem = error.localizedDescription

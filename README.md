@@ -255,9 +255,15 @@ A ride's page has the same route map, weather and road alerts as on the Mac: tap
 Road alerts need your key on each device, pasted into **Settings → Road alerts** (it's kept in that device's keychain
 and isn't shared between them).
 
+**Setup.** The first time it opens, RollCall goes through your area, sharing with your Mac, your group chats, groups and
+websites to follow, your Facebook events, your road alerts key and your calendar, one step at a time. Every step after
+your area can be skipped, and Settings → **Run setup…** opens it again. Beeper only lets other apps read chats on a
+computer, so the Chats step sets it up on your Mac and says when the Mac is connected (it shares how many chats it
+checks, not which).
+
 **Sharing with the Mac.** On the Mac, turn on Settings → iPhone and iPad → **Share with RollCall on iPhone and
 iPad** (iCloud Drive needs to be on). That makes a RollCall folder in iCloud Drive. On the iPhone, tap Settings →
-**Share with RollCall on Mac…** and choose that folder. From then on, rides, Going/Maybe/Skip choices, ride
+**Share with RollCall on Mac…** and choose that folder. A device that joins takes on what the Mac has. From then on, rides, Going/Maybe/Skip choices, ride
 changes and sources go both ways: each device keeps its own file in the folder and reads the others', and the
 later change wins. Rides from your group chats reach the iPhone without the messages they came from. Rides you're
 going to are added to the RollCall calendar once, even when both devices add them.

@@ -1308,6 +1308,26 @@ do {
     check(FileManager.default.fileExists(atPath: dir.appendingPathComponent("Mac.json").path)
           && FileManager.default.fileExists(atPath: dir.appendingPathComponent("iPhone.json").path), "each device writes its own file")
     check(Sync.otherFiles(in: dir, besides: "Mac.json").map(\.lastPathComponent).contains("iPhone.json"), "the Mac finds the phone's file")
+    check(Sync.isMacs(dir) && !Sync.isMacs(dir.appendingPathComponent("elsewhere")), "the Mac's folder is told from others")
+
+    // A phone set up again leaves its old file behind: joining takes on what the Mac has, and removes nothing there.
+    mac.state.feeds.append(Feed(id: "club", name: "Example club", url: "https://example.com/club.ics", groupURL: nil))
+    mac.state.events["b"] = ride("b", source: "club")
+    mac.state.decisions["b"] = .attending
+    _ = try? Sync.run(mac, folder: dir, name: "Mac", now: now.addingTimeInterval(600))
+    _ = try? Sync.run(phone, folder: dir, name: "iPhone", now: now.addingTimeInterval(660))
+    check(phone.state.macChats == 1 && mac.state.macChats == nil, "the phone knows how many chats the Mac reads")
+    let again = Store(file: dir.appendingPathComponent("again.json"))
+    again.state.feeds = [Feed(id: "new", name: "New club", url: "https://example.com/new.ics", groupURL: nil)]
+    again.state.decisions["b"] = .skip
+    _ = try? Sync.run(again, folder: dir, name: "iPhone", joining: true, now: now.addingTimeInterval(720))
+    _ = try? Sync.run(mac, folder: dir, name: "Mac", now: now.addingTimeInterval(780))
+    check(Set(again.state.feeds.map(\.id)) == ["club", "new"] && again.state.decisions["b"] == .attending, "a joining phone takes on the Mac's sources and choices")
+    check(Set(mac.state.feeds.map(\.id)) == ["beeper-x", "club", "new"] && mac.state.decisions["b"] == .attending, "and takes nothing away from the Mac")
+    again.state.decisions["b"] = .skip
+    _ = try? Sync.run(again, folder: dir, name: "iPhone", now: now.addingTimeInterval(840))
+    _ = try? Sync.run(mac, folder: dir, name: "Mac", now: now.addingTimeInterval(900))
+    check(mac.state.decisions["b"] == .skip, "once joined, its later choices count")
 }
 
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")

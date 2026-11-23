@@ -156,7 +156,7 @@ struct HomeStep: View {
             }
             if let m = message.value {
                 Label(m, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
-            } else if let found = model.foundPlace {
+            } else if let found = model.settings.foundPlace {
                 Label("Found: \(found)", systemImage: "checkmark.circle.fill").foregroundStyle(.primary)
             }
             Picker("Show rides within", selection: Binding(
@@ -169,7 +169,7 @@ struct HomeStep: View {
             Text("You can change these later in Settings.").font(.caption).foregroundStyle(.secondary)
         }
         .onAppear {
-            place.value = model.foundPlace == nil && !model.store.state.setupDone ? "" : model.settings.homeName
+            place.value = model.settings.foundPlace == nil && !model.store.state.setupDone ? "" : model.settings.homeName
         }
     }
 
@@ -417,7 +417,7 @@ struct FinishStep: View {
         VStack(alignment: .leading, spacing: 14) {
             StepHeader(title: "You're all set", text: "RollCall lives in the menu bar, next to the clock. Click RC to see rides, or open the window for everything else.")
             Card {
-                Label(model.foundPlace.map { "Rides within \(Int(s.settings.radiusKm)) km of \($0)" } ?? "Home area not set",
+                Label(model.settings.foundPlace.map { "Rides within \(Int(s.settings.radiusKm)) km of \($0)" } ?? "Home area not set",
                       systemImage: "mappin.and.ellipse")
                 Label("\(count(s.feeds.filter { $0.type == .chat }.count, "chat")), \(count(s.feeds.filter { $0.type != .chat }.count, "group or website", "groups and websites")), \(count(s.instagram.count, "Instagram account"))",
                       systemImage: "person.3")

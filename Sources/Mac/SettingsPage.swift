@@ -29,7 +29,7 @@ struct SettingsPage: View {
                         Text("Looking up “\(place.value)”…").foregroundStyle(.secondary)
                     } else if let m = message.value {
                         Label(m, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
-                    } else if let found = foundPlace {
+                    } else if let found = model.store.state.settings.foundPlace {
                         Label("Found: " + found, systemImage: "checkmark.circle.fill")
                     }
                 }
@@ -120,13 +120,6 @@ struct SettingsPage: View {
         .navigationTitle("Settings")
         .onAppear(perform: load)
         .onDisappear(perform: savePlace)
-    }
-
-    /// "Sunshine, VIC, Australia" once the home area has been found on the map.
-    var foundPlace: String? {
-        let st = model.store.state.settings
-        let parts = [st.homeCity, st.homeRegion, st.homeCountry].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 
     func saveNumbers() {

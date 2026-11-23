@@ -58,14 +58,6 @@ final class SetupModel: ObservableObject {
         DispatchQueue.main.async { MainActor.assumeIsolated { action() } }
     }
 
-    // MARK: Home
-
-    /// "Ringwood, Victoria, Australia" once the home area has been found.
-    var foundPlace: String? {
-        let parts = [settings.homeCity, settings.homeRegion, settings.homeCountry].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: ", ")
-    }
-
     // MARK: Messages
 
     static let beeperApp = "com.automattic.beeper.desktop"

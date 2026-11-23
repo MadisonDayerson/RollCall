@@ -18,10 +18,37 @@ extension PhoneModel {
         saved()
     }
 
-    /// Finishes setup with the suggested sources for your area, then reads them.
-    func finishSetup(with feeds: [Feed]) async {
-        for f in feeds where !store.state.feeds.contains(where: { $0.id == f.id }) { store.state.feeds.append(f) }
+    /// Saves the road alerts key, unless it's empty.
+    func saveRoadAlertsKey(_ key: String) -> Bool {
+        guard RoadAlerts.saveKey(key) else { return false }
+        roadAlertsKeySaved = true
+        return true
+    }
+
+    func removeRoadAlertsKey() {
+        RoadAlerts.removeKey()
+        roadAlertsKeySaved = false
+    }
+
+    /// Notes whether calendars may be used, which can change in the Settings app.
+    func checkCalendar() {
+        calendar.checkAccess()
+        calendarAllowed = calendar.authorised
+    }
+
+    /// Asks to use calendars, then adds the rides you're already going to (from the Mac, say).
+    func allowCalendar() async {
+        _ = await calendar.requestAccess()
+        checkCalendar()
+        guard calendarAllowed else { return }
+        for ride in store.upcoming() where store.decision(ride.id) == .attending { syncCalendar(ride.id) }
+        saved()
+    }
+
+    /// Closes setup and reads the sources.
+    func finishSetup() async {
         store.state.setupDone = true
+        settingUp = false
         saved()
         await refresh()
     }
@@ -30,7 +57,7 @@ extension PhoneModel {
     /// stays in Calendar.
     func deleteAllData() {
         stopSharing()
-        RoadAlerts.removeKey()
+        removeRoadAlertsKey()
         try? FileManager.default.removeItem(at: store.file)
         store.state = AppState()
         state = store.state

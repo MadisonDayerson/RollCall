@@ -17,9 +17,20 @@ extension PhoneModel {
             shareProblem = "Couldn't keep access to that folder. Choose it again."
             return
         }
-        UserDefaults.standard.set(bookmark, forKey: Self.folderKey)
+        // Another folder, or the Mac hasn't shared yet.
+        guard Sync.isMacs(folder) else {
+            shareProblem = "RollCall on your Mac isn't sharing in that folder. Choose the RollCall folder in iCloud Drive. If that's the one, give iCloud a minute and choose it again."
+            return
+        }
         macFolder = folder
-        saved()
+        share(joining: true)
+        guard shareProblem == nil else {
+            macFolder = nil
+            return
+        }
+        UserDefaults.standard.set(bookmark, forKey: Self.folderKey)
+        store.save()
+        state = store.state
     }
 
     func stopSharing() {
@@ -27,6 +38,8 @@ extension PhoneModel {
         macFolder = nil
         lastShared = nil
         shareProblem = nil
+        store.state.macChats = nil
+        saved()
     }
 
     /// Takes in what the Mac changed since (called every minute while RollCall is open).
@@ -35,12 +48,12 @@ extension PhoneModel {
         saved()
     }
 
-    func share() {
+    func share(joining: Bool = false) {
         guard let folder = macFolder else { return }
         let allowed = folder.startAccessingSecurityScopedResource()
         defer { if allowed { folder.stopAccessingSecurityScopedResource() } }
         do {
-            let changed = try Sync.run(store, folder: folder, name: UIDevice.current.model)
+            let changed = try Sync.run(store, folder: folder, name: UIDevice.current.model, joining: joining)
             if calendar.authorised { for id in changed { syncCalendar(id) } }
             lastShared = Date()
             shareProblem = nil

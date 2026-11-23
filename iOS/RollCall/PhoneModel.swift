@@ -15,10 +15,14 @@ final class PhoneModel {
     var macFolder: URL? = PhoneModel.savedFolder()
     var lastShared: Date?
     var shareProblem: String?
+    /// The setup wizard is open again, from Settings.
+    var settingUp = false
+    var roadAlertsKeySaved = Keychain.roads.read() != nil
+    var calendarAllowed = false
 
     init() {
         state = store.state
-        calendar.checkAccess()
+        checkCalendar()
     }
 
     /// Saves, and shares the change with RollCall on the Mac (taking in its changes too) when that's set up.
@@ -52,7 +56,10 @@ final class PhoneModel {
     func decide(_ id: String, _ d: Decision) async {
         store.state.decisions[id] = d
         state = store.state  // shows the choice while Calendar access is asked for
-        if d == .attending, !calendar.authorised { _ = await calendar.requestAccess() }
+        if d == .attending, !calendar.authorised {
+            _ = await calendar.requestAccess()
+            checkCalendar()
+        }
         syncCalendar(id)
         saved()
     }

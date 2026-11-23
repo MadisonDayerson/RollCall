@@ -19,6 +19,14 @@ extension Store {
         }
     }
 
+    /// Follows Facebook's calendar of your events (replacing an older link), after checking Facebook sends it.
+    @MainActor
+    func followFacebookCalendar(_ feed: Feed) async throws {
+        _ = try await Fetcher.download(feed.url)
+        state.feeds.removeAll { $0.id == feed.id }
+        state.feeds.append(feed)
+    }
+
     func forgetFeed(_ id: String) {
         state.feeds.removeAll { $0.id == id }
         forgetReadings(id)

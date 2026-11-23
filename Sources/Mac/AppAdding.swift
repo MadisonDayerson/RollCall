@@ -36,14 +36,12 @@ extension AppDelegate {
         }
         Task {
             do {
-                _ = try await Fetcher.download(feed.url)
+                try await store.followFacebookCalendar(feed)
             } catch {
                 Dialogs.info("Facebook didn't send your events",
                              "\(error.localizedDescription)\n\nCopy the link from Facebook again and paste it. Until then, you can still add Facebook events one at a time with + → Add a Ride.")
                 return
             }
-            store.state.feeds.removeAll { $0.id == feed.id }
-            store.state.feeds.append(feed)
             store.save()
             await checkFeed(feed.id)
         }

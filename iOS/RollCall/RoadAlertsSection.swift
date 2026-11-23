@@ -5,17 +5,14 @@ import SwiftUI
 struct RoadAlertsSection: View {
     @Environment(PhoneModel.self) private var model
     @State private var key = ""
-    @State private var saved = Keychain.roads.read() != nil
 
     var body: some View {
         let shown = model.state.settings.roadAlertsShown
+        let saved = model.roadAlertsKeySaved
         Section {
             if saved {
                 LabeledContent("Key", value: "Saved in your keychain")
-                Button("Remove key", role: .destructive) {
-                    RoadAlerts.removeKey()
-                    saved = false
-                }
+                Button("Remove key", role: .destructive) { model.removeRoadAlertsKey() }
             } else {
                 HStack {
                     SecureField("Paste your key", text: $key).onSubmit(save).submitLabel(.done)
@@ -43,8 +40,6 @@ struct RoadAlertsSection: View {
     }
 
     private func save() {
-        guard RoadAlerts.saveKey(key) else { return }
-        key = ""
-        saved = true
+        if model.saveRoadAlertsKey(key) { key = "" }
     }
 }

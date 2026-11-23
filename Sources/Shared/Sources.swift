@@ -34,7 +34,7 @@ extension FeedLinks {
 
     /// Facebook's private calendar of the events you're Going or Interested in (Events → Add to calendar →
     /// Copy Link), like facebook.com/events/ical/upcoming/?uid=…&key=…. It's Facebook's own export, read like any
-    /// calendar link; the key makes it private, so it stays on this Mac.
+    /// calendar link; the key makes it private, so it only goes to your own devices.
     static func facebookCalendar(_ raw: String) -> Feed? {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.lowercased().hasPrefix("webcal://") { s = "https://" + s.dropFirst("webcal://".count) }
