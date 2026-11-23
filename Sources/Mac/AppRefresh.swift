@@ -71,16 +71,10 @@ extension AppDelegate {
     /// The start, stops and destination of a ride, checked with Apple Maps, saved so its map can be drawn.
     /// Rides whose details already give the route (a maps link or labelled lines) don't need it.
     func findRoute(for ride: RideEvent) async {
-        let from = Route.fingerprint(ride)
-        // Nothing to work out when the details already give the route: a full maps link, or labelled places. The
-        // organiser's link comes first, so a short one is always followed, even when the post also lists places.
-        let given = Route.link(in: ride.notes).map(Route.linkPlaces) ?? Route.places(meetingPlace: ride.location, notes: ride.notes)
-        guard given.count < 2, store.state.foundRoutes[ride.id]?.from != from, !findingRoutes.contains(ride.id) else { return }
+        guard !findingRoutes.contains(ride.id) else { return }
         findingRoutes.insert(ride.id)
         defer { findingRoutes.remove(ride.id) }
-        let s = store.state.settings
-        store.state.foundRoutes[ride.id] = await RouteFinder.find(ride, home: CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude))
-        store.save()
+        if await store.findRoute(for: ride) { store.save() }
     }
 
     /// Reads one source and keeps what it found. Returns the ids of rides that changed.

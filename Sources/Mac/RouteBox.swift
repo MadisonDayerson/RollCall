@@ -73,8 +73,7 @@ struct RouteBox: View {
     }
 
     private func load(_ places: [String], avoidHighways: Bool) async {
-        let s = model.store.state.settings
-        let home = CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude)
+        let home = model.store.homeSpot
         if route.value == nil { state.value = .planning }
         guard let planned = await RoutePlanner.plan(places, near: home, avoidHighways: avoidHighways),
               let map = await RouteMapImage.draw(planned, size: Self.size, dark: scheme == .dark) else {

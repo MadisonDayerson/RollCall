@@ -64,6 +64,22 @@ extension Store {
         }
     }
 
+    /// Works out a ride's start, stops and destination with Apple Maps (and the on-device model), unless its details
+    /// already give the route or it was worked out from these details before. Returns whether it found a new one.
+    func findRoute(for ride: RideEvent) async -> Bool {
+        // Nothing to work out when the details already give the route: a full maps link, or labelled places. The
+        // organiser's link comes first, so a short one is always followed, even when the post also lists places.
+        let given = Route.link(in: ride.notes).map(Route.linkPlaces) ?? Route.places(meetingPlace: ride.location, notes: ride.notes)
+        guard given.count < 2, state.foundRoutes[ride.id]?.from != Route.fingerprint(ride) else { return false }
+        state.foundRoutes[ride.id] = await RouteFinder.find(ride, home: homeSpot)
+        return true
+    }
+
+    /// The rough spot of your suburb, for finding places near you.
+    var homeSpot: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: state.settings.homeLatitude, longitude: state.settings.homeLongitude)
+    }
+
     /// The link that opens a ride's route: the organiser's shared route, or else directions from your suburb in the
     /// maps app you pick (or the one chosen in Settings). Automatic uses Apple Maps for a simple trip when it's there,
     /// and Google Maps for stops.
@@ -85,7 +101,7 @@ extension Store {
         case .waze:
             return Route.waze(to: first)
         case .kurviger:
-            let spot = CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude)
+            let spot = homeSpot
             let found = await RoutePlanner.locate(places, near: spot) ?? []
             // A place Apple Maps couldn't find: Google Maps can still search for it by name.
             guard !found.isEmpty else { return Route.googleMaps(from: home, through: places) }

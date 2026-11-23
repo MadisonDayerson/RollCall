@@ -121,6 +121,16 @@ final class PhoneModel {
         }
     }
 
+    /// The places a ride's route goes through, read from the state SwiftUI watches so the map redraws when they're found.
+    func route(_ ride: RideEvent) -> (places: [String], avoidHighways: Bool) {
+        _ = state.foundRoutes[ride.id]
+        return store.route(ride)
+    }
+
+    func findRoute(for ride: RideEvent) async {
+        if await store.findRoute(for: ride) { saved() }
+    }
+
     func directions(for ride: RideEvent, in app: MapsApp? = nil) async -> URL? {
         // Apple Maps comes with every iPhone and iPad.
         await store.directions(for: ride, in: app, hasAppleMaps: true).flatMap(URL.init(string:))
