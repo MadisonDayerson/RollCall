@@ -294,7 +294,7 @@ extension AppDelegate {
         guard let picked = Dialogs.pickChats(chats, watched: watched) else { return }
 
         for f in watchedFeeds where !picked.contains(Beeper.chatID(of: f)) {
-            forgetFeed(f.id)
+            store.forgetFeed(f.id)
         }
         var added: [Feed] = []
         for c in chats where picked.contains(c.id) && !watched.contains(c.id) {

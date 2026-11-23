@@ -32,31 +32,18 @@ extension AppDelegate {
     func syncCalendar(_ id: String) {
         // Taking pictures saves nothing, so a calendar event made then would be forgotten and made again later.
         guard !Store.picturesOnly else { return }
-        let attending = store.decision(id) == .attending
-        let existing = store.state.calendarItems[id]
-        if attending, let ride = store.state.events[id] {
-            guard calendar.authorised else {
-                Dialogs.info("Calendar access needed",
-                             "RollCall isn't allowed to add events to Calendar yet.\n\nOpen System Settings → Privacy & Security → Calendars, and switch on RollCall (choose Full Access). Then mark the ride Going again.")
-                return
-            }
-            do {
-                store.state.calendarItems[id] = try calendar.upsert(ride, existingID: existing, crewCard: crewCard(ride))
-            } catch {
-                Dialogs.info("Couldn't add to Calendar", error.localizedDescription)
-            }
-        } else if let existing {
-            calendar.remove(itemID: existing)
-            store.state.calendarItems[id] = nil
+        do {
+            try store.syncCalendar(id, using: calendar)
+        } catch SyncError.noAccess {
+            Dialogs.info("Calendar access needed",
+                         "RollCall isn't allowed to add events to Calendar yet.\n\nOpen System Settings → Privacy & Security → Calendars, and switch on RollCall (choose Full Access). Then mark the ride Going again.")
+        } catch {
+            Dialogs.info("Couldn't add to Calendar", error.localizedDescription)
         }
     }
 
     // MARK: - Riding together
 
-    func links(_ ride: RideEvent) -> CrewLinks? { store.state.crew[Crew.key(forSource: ride.source)] }
-    func crewCard(_ ride: RideEvent) -> [String] {
-        Crew.card(ride, together: store.state.settings.crew, links: links(ride))
-    }
     func setTogether(_ t: Together) {
         guard t != store.state.settings.crew else { return }
         store.state.settings.together = t

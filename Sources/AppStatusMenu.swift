@@ -166,33 +166,10 @@ extension AppDelegate {
     /// Opens the ride's route: the organiser's shared route, or else directions in the maps app you pick
     /// (or the one chosen in Settings).
     func openRoute(_ ride: RideEvent, in chosen: MapsApp? = nil) {
-        if chosen == nil, let link = Route.link(in: ride.notes) {
-            open(link.replacingOccurrences(of: "http://", with: "https://"))
-            return
-        }
-        // The maps apps already start from your suburb, so it isn't repeated as a stop.
-        let places = Array(store.routePlaces(ride).drop { $0 == store.homePlace })
-        guard let first = places.first else { return }
-        let home = store.state.settings.homeCity?.nilIfEmpty
-        var app = chosen ?? store.state.settings.mapsApp ?? .automatic
-        if app == .automatic { app = places.count == 1 && hasAppleMaps ? .apple : .google }
-        if app == .apple, !hasAppleMaps { app = .google }
-        switch app {
-        case .apple:
-            if let url = URL(string: Route.appleMaps(from: home, to: first)) { NSWorkspace.shared.open(url) }
-        case .waze:
-            open(Route.waze(to: first))
-        case .kurviger:
-            let s = store.state.settings
-            let home = CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude)
-            Task {
-                let found = await RoutePlanner.locate(places, near: home) ?? []
-                let points = ([home] + found).map { (latitude: $0.latitude, longitude: $0.longitude) }
-                // A place Apple Maps couldn't find: Google Maps can still search for it by name.
-                open(found.isEmpty ? Route.googleMaps(from: s.homeCity?.nilIfEmpty, through: places) : Route.kurviger(through: points))
-            }
-        default:
-            open(Route.googleMaps(from: home, through: places))
+        Task {
+            guard let link = await store.directions(for: ride, in: chosen, hasAppleMaps: hasAppleMaps) else { return }
+            // Apple Maps links open the Maps app; the others are web pages.
+            if link.hasPrefix("http") { open(link) } else if let url = URL(string: link) { NSWorkspace.shared.open(url) }
         }
     }
 }

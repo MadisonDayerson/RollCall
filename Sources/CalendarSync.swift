@@ -102,6 +102,11 @@ final class CalendarSync {
 }
 
 enum SyncError: LocalizedError {
-    case noCalendarAccount
-    var errorDescription: String? { "No calendar account was found to hold the RollCall calendar." }
+    case noCalendarAccount, noAccess
+    var errorDescription: String? {
+        switch self {
+        case .noCalendarAccount: "No calendar account was found to hold the RollCall calendar."
+        case .noAccess: "RollCall isn't allowed to add events to Calendar yet."
+        }
+    }
 }

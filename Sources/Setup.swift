@@ -187,7 +187,7 @@ final class SetupModel: ObservableObject {
                 self.store.save()
                 Task { await self.app.checkFeed(f.id) }
             } else {
-                self.app.forgetFeed(f.id)
+                self.app.store.forgetFeed(f.id)
                 self.store.save()
             }
         })

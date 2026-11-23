@@ -15,31 +15,13 @@ extension AppDelegate {
             guard Dialogs.confirm("Remove \(feed.name)?",
                                   "Its rides will disappear from the list. Rides you marked Going stay in your calendar.",
                                   ok: "Remove") else { return }
-            forgetFeed(id)
+            store.forgetFeed(id)
         } else {
             return
         }
         if ui.selectedSource == id { ui.selectedSource = nil }
         store.save()
         updateBadge()
-    }
-
-    func forgetFeed(_ id: String) {
-        store.state.feeds.removeAll { $0.id == id }
-        forgetReadings(id)
-    }
-
-    /// Forgets what was read from a source: its rides (except ones you're going to), posts, plans, problems and which
-    /// posts it had, so adding it again (or giving it a new link) reads it afresh.
-    private func forgetReadings(_ id: String) {
-        store.state.feedErrors[id] = nil
-        store.state.recentPosts[id] = nil
-        store.state.lastChecked[id] = nil
-        store.state.reviews = store.state.reviews.filter { $0.value.feedID != id }
-        store.state.seenPosts = store.state.seenPosts.filter { !$0.key.hasPrefix(id + ":") }
-        for (eid, e) in store.state.events where e.source == id && store.decision(eid) != .attending {
-            store.state.events[eid] = nil
-        }
     }
 
     /// Points a source at a new link (a club site that moved, a new calendar link), keeping its name, group links
@@ -59,7 +41,7 @@ extension AppDelegate {
                 feed.kind = found.kind
                 feed.keywordFilter = found.keywordFilter
                 store.state.feeds = store.state.feeds.map { $0.id == id ? feed : $0 }
-                forgetReadings(id)
+                store.forgetReadings(id)
                 store.save()
                 await checkFeed(id)
             } catch {
@@ -117,17 +99,8 @@ extension AppDelegate {
         }
     }
 
-    /// Removes the ride and every cross-posted copy of it. Rides from a source stay removed when it's checked again.
     func removeRide(id: String) {
-        guard let ride = store.state.events[id] else { return }
-        for e in [ride] + store.copies(of: ride) {
-            store.state.decisions[e.id] = .skip
-            syncCalendar(e.id)
-            store.state.events[e.id] = nil
-            store.state.decisions[e.id] = nil
-            store.state.rideEdits[e.id] = nil
-            store.state.removedRides[e.id] = e.start
-        }
+        store.removeRide(id) { syncCalendar($0) }
         store.save()
         NotificationCenter.default.post(name: Store.changed, object: nil)
         updateBadge()
@@ -159,17 +132,7 @@ extension AppDelegate {
                 store.save()
                 return "Couldn't find “\(place)”. Try a suburb or town with its state, like Ringwood VIC or Newtown NSW."
             }
-            // Only the suburb and a rough spot (about 1 km) are kept, never a street address.
-            store.state.settings.homeName = found.city ?? place
-            store.state.settings.homeLatitude = Store.rough(found.latitude)
-            store.state.settings.homeLongitude = Store.rough(found.longitude)
-            store.state.settings.homeCity = found.city
-            store.state.settings.homeRegion = found.region
-            store.state.settings.homeCountry = found.country
-            for (id, var e) in store.state.events {
-                e.distanceKm = store.distance(e)
-                store.state.events[id] = e
-            }
+            store.setHome(found, typed: place)
         }
         store.save()
         updateBadge()
