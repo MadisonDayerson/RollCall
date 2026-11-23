@@ -17,11 +17,11 @@ struct SourcesView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(feed.name).font(.headline)
                         Text(status(feed)).font(.subheadline)
-                            .foregroundStyle(model.state.feedErrors[feed.id] == nil ? Color.secondary : Color.red)
+                            .foregroundStyle(model.state.feedErrors[feed.id] == nil ? Color.secondary : Color.orange)
                     }
                     .contextMenu {
                         if let page = URL(string: feed.groupURL ?? feed.url), page.scheme?.hasPrefix("http") == true {
-                            Button("Open Group Page", systemImage: "safari") { openURL(page) }
+                            Button("Open website", systemImage: "safari") { openURL(page) }
                         }
                         Button("Remove", systemImage: "trash", role: .destructive) { model.removeSource(feed.id) }
                     }
@@ -31,12 +31,11 @@ struct SourcesView: View {
             .navigationTitle("Sources")
             .overlay {
                 if model.state.feeds.isEmpty {
-                    ContentUnavailableView("No sources", systemImage: "antenna.radiowaves.left.and.right",
-                                           description: Text("Add a club's calendar, a Meetup group, a forum or an event site."))
+                    EmptyState(text: "No sources yet.", detail: "Add a club's calendar, a Meetup group, a forum or an event site with +.")
                 }
             }
             .toolbar {
-                Button("Add Source", systemImage: "plus") { link = ""; adding = true }
+                Button("Add source", systemImage: "plus") { link = ""; adding = true }
             }
             .alert("Add a source", isPresented: $adding) {
                 TextField("Link", text: $link)

@@ -19,7 +19,7 @@ struct SetupView: View {
                                                             set: { on in if on { chosen.insert(feed.id) } else { chosen.remove(feed.id) } }))
                         }
                     } header: {
-                        Text("Sources near \(model.state.settings.homeName)")
+                        PatchLabel(text: "Sources near \(model.state.settings.homeName)")
                     } footer: {
                         Text("You can add your own clubs, calendars and event sites under Sources.")
                     }
@@ -30,9 +30,9 @@ struct SetupView: View {
                             .submitLabel(.next)
                             .onSubmit(next)
                     } header: {
-                        Text("Where do you ride from?")
+                        PatchLabel(text: "Where do you ride from?")
                     } footer: {
-                        if let problem { Text(problem).foregroundStyle(.red) } else {
+                        if let problem { Text(problem).foregroundStyle(.orange) } else {
                             Text("RollCall shows rides within 100 km of here. Only your suburb is kept, never your address.")
                         }
                     }

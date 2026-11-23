@@ -1,0 +1,57 @@
+import SwiftUI
+
+extension PhoneModel {
+    /// Reads every source (chats are read on the Mac), then finds where rides are and updates the calendar.
+    func refresh() async {
+        guard !refreshing else { return }
+        refreshing = true
+        defer { refreshing = false }
+        let started = Date()
+        var refreshed: Set<String> = []
+        var changed: [String] = []
+        // Problems from sources that have since been removed shouldn't linger.
+        store.state.feedErrors = store.state.feedErrors.filter { id, _ in store.state.feeds.contains { $0.id == id } }
+        for feed in store.state.feeds where feed.type != .chat {
+            if let (_, found, replied) = await store.read(feed) {
+                changed += found
+                for id in replied where calendar.authorised { syncCalendar(id) }
+                // Only calendar feeds list every event each time, so only they can show a ride was dropped.
+                if feed.type == .calendar { refreshed.insert(feed.id) }
+            }
+            state = store.state
+        }
+        store.prune(refreshedSources: refreshed, refreshStarted: started)
+        store.state.lastRefresh = Date()
+        saved()
+        await geocoder.fill(store)
+        if calendar.authorised {
+            for id in changed where store.decision(id) == .attending { syncCalendar(id) }
+        }
+        saved()
+    }
+
+    // MARK: - Sources
+
+    /// Adds a source from a link. Returns a problem to show, or nil when it was added.
+    func addSource(_ link: String) async -> String? {
+        do {
+            let feed = try await Web.discover(link)
+            if let existing = store.state.feeds.first(where: { $0.id == feed.id || $0.url == feed.url }) {
+                return "\(existing.name) is already one of your sources."
+            }
+            store.state.feeds.append(feed)
+            saved()
+            await refresh()
+            return nil
+        } catch FeedError.privateFeed where link.contains("meetup.com") {
+            return "This Meetup group's calendar is private. Join the group, then on its Events tab choose Subscribe / Add to calendar, and paste the link it gives you."
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    func removeSource(_ id: String) {
+        store.forgetFeed(id)
+        saved()
+    }
+}

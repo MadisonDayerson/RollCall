@@ -30,7 +30,7 @@ struct RootView: View {
         } message: {
             Text(model.problem ?? "")
         }
-        // Coming back to the app after a few hours reads the sources again.
+        // Takes in the Mac's changes every minute while RollCall is open.
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
@@ -39,6 +39,7 @@ struct RootView: View {
         }
         .onChange(of: phase) { _, now in
             if now == .active { model.shareNow() }
+            // Coming back to the app after a few hours reads the sources again.
             guard now == .active, model.state.setupDone,
                   (model.state.lastRefresh ?? .distantPast) < Date().addingTimeInterval(-3 * 3600) else { return }
             Task { await model.refresh() }

@@ -80,22 +80,10 @@ extension AppDelegate {
     /// Reads one source and keeps what it found. Returns the ids of rides that changed.
     func readFeed(_ feed: Feed) async -> [String] {
         lastTried[feed.id] = Date()
-        do {
-            let r = try await SourceReader.read(feed, store: store)
-            var changed = store.merge(r.events, source: feed.id, sourceName: feed.name)
-            changed += store.merge(r.guessed, source: feed.id, sourceName: feed.name, needsCheck: true)
-            if feed.id == FeedLinks.facebookCalendarID {
-                // Only your own Facebook calendar's replies are yours; other calendars' are someone else's.
-                for id in store.carryResponses(r.events, source: feed.id) where calendar.authorised { syncCalendar(id) }
-            }
-            addRecentPosts(r.undated, feed: feed)
-            await keepReviews(r.reviews, feed: feed)
-            store.state.feedErrors[feed.id] = nil
-            store.state.lastChecked[feed.id] = Date()
-            return changed
-        } catch {
-            store.state.feedErrors[feed.id] = error.localizedDescription
-            return []
-        }
+        guard let (r, changed, replied) = await store.read(feed) else { return [] }
+        for id in replied where calendar.authorised { syncCalendar(id) }
+        addRecentPosts(r.undated, feed: feed)
+        await keepReviews(r.reviews, feed: feed)
+        return changed
     }
 }

@@ -78,11 +78,13 @@ enum RoutePlanner {
         return try? await MKDirections(request: request).calculate().routes.first
     }
 
-    /// "123 km · about 2 h 10 min riding"
-    static func describe(_ p: Planned) -> String {
+    /// "123 km · about 2 h 10 min riding · Footscray → Healesville", or "the organiser's route" for a route link.
+    static func describe(_ p: Planned, places: [String], notes: String) -> String {
         let km = Int((p.metres / 1000).rounded())
         let minutes = Int((p.seconds / 60 / 5).rounded()) * 5
         let time = minutes >= 60 ? "\(minutes / 60) h" + (minutes % 60 > 0 ? " \(minutes % 60) min" : "") : "\(max(minutes, 5)) min"
-        return "\(km) km · about \(time) riding"
+        // A route link's stops are map points, so it's described rather than listed.
+        let through = Route.link(in: notes) != nil && places.contains { Route.point($0) != nil } ? "the organiser's route" : places.joined(separator: " → ")
+        return "\(km) km · about \(time) riding · \(through)"
     }
 }

@@ -47,9 +47,7 @@ struct RouteBox: View {
                         }
                         if let r = route.value {
                             let arriving = places.first == model.store.homePlace
-                            // A route link's stops are map points, so it's described rather than listed.
-                            Text(RoutePlanner.describe(r) + " · " + (Route.link(in: ride.notes) != nil && places.contains { Route.point($0) != nil }
-                                                                     ? "the organiser's route" : places.joined(separator: " → ")))
+                            Text(RoutePlanner.describe(r, places: places, notes: ride.notes))
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             Divider()
                             RouteWeatherView(route: r, ride: ride, places: places, arriving: arriving)

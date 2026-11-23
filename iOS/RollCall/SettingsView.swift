@@ -21,9 +21,9 @@ struct SettingsView: View {
                     Stepper("Up to \(s.daysAhead) days ahead", value: Binding(get: { s.daysAhead }, set: { v in model.change { $0.daysAhead = v } }),
                             in: 7...180, step: 7)
                 } header: {
-                    Text("Home")
+                    PatchLabel(text: "Home")
                 } footer: {
-                    if let problem { Text(problem).foregroundStyle(.red) } else { Text("Only your suburb is kept, never your address.") }
+                    if let problem { Text(problem).foregroundStyle(.orange) } else { Text("Only your suburb is kept, never your address.") }
                 }
 
                 Section {
@@ -40,23 +40,23 @@ struct SettingsView: View {
                         if let last = model.lastShared, model.shareProblem == nil {
                             LabeledContent("Last shared", value: last.formatted(.relative(presentation: .named)))
                         }
-                        Button("Stop Sharing", role: .destructive) { model.stopSharing() }
+                        Button("Stop sharing", role: .destructive) { model.stopSharing() }
                     } else {
                         Button("Share with RollCall on Mac…") { choosingFolder = true }
                     }
                     if let problem = model.shareProblem {
-                        Text("Couldn't share: \(problem)").foregroundStyle(.red)
+                        Label("Couldn't share: \(problem)", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                     }
                 } header: {
-                    Text("Mac")
+                    PatchLabel(text: "Mac")
                 } footer: {
                     Text(model.macFolder == nil
                          ? "On your Mac, open RollCall → Settings and turn on Share with RollCall on iPhone and iPad. Then tap above and choose the RollCall folder in iCloud Drive."
-                         : "Rides, Going/Maybe/Skip choices and sources are shared both ways. Rides from your group chats come from the Mac without their messages.")
+                         : "Your rides, Going/Maybe/Skip choices, ride changes and sources are shared with RollCall on your Mac, and it shares its own the same way. Rides from chats come without their messages: chats stay on the Mac.")
                 }
 
                 Section {
-                    Button("Delete All RollCall Data", role: .destructive) { confirmDelete = true }
+                    Button("Delete all data…", role: .destructive) { confirmDelete = true }
                 } footer: {
                     Text("Group chats are read by RollCall on your Mac.")
                 }
@@ -72,7 +72,7 @@ struct SettingsView: View {
             .confirmationDialog("Delete all RollCall data?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { model.deleteAllData() }
             } message: {
-                Text("Your rides, sources and settings are removed from this device. The RollCall calendar stays in Calendar.")
+                Text("This removes your saved rides, sources and settings from this device. It can't be undone.\n\nThe RollCall calendar stays in Calendar. You can delete it there if you like.")
             }
         }
     }

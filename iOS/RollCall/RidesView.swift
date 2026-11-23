@@ -30,17 +30,13 @@ struct RidesView: View {
             if let id = selected, let ride = model.state.events[id] {
                 RideDetail(ride: ride)
             } else {
-                ContentUnavailableView("Choose a ride", systemImage: "motorcycle")
+                EmptyState(text: "Choose a ride to see its details.")
             }
         }
     }
 
     private var empty: some View {
-        ContentUnavailableView {
-            Label(model.refreshing ? "Checking your sources…" : "No rides yet", systemImage: "motorcycle")
-        } description: {
-            Text(model.refreshing ? "Rides appear here as they're found." : "Pull down to check your sources, or add more under Sources.")
-        }
+        EmptyState(text: model.refreshing ? "Checking sources…" : "No rides yet. Pull down to check your sources, or add more under Sources.")
     }
 }
 
@@ -68,7 +64,7 @@ struct RideRow: View {
                 Button(decision == .attending ? "Undecided" : "Going", systemImage: decision == .attending ? "arrow.uturn.backward" : "checkmark") {
                     Task { await model.decide(ride.id, decision == .attending ? .undecided : .attending) }
                 }
-                .tint(decision == .attending ? .gray : .green)
+                .tint(decision == .attending ? .gray : .accentColor)
             }
         }
         .swipeActions(edge: .trailing) {
@@ -76,7 +72,7 @@ struct RideRow: View {
                 Button(decision == .skip ? "Undecided" : "Skip", systemImage: decision == .skip ? "arrow.uturn.backward" : "xmark") {
                     Task { await model.decide(ride.id, decision == .skip ? .undecided : .skip) }
                 }
-                .tint(decision == .skip ? .gray : .orange)
+                .tint(.gray)
             }
         }
         .contextMenu { DecisionButtons(id: ride.id) }
@@ -88,37 +84,15 @@ struct DecisionButtons: View {
     @Environment(PhoneModel.self) private var model
     let id: String
 
-    var body: some View {
-        ForEach(Format.choices, id: \.0) { d, name, icon in
-            Button(name, systemImage: icon) { Task { await model.decide(id, d) } }
-                .disabled(model.decision(id) == d)
-        }
-    }
-}
-
-enum Format {
     static let choices: [(Decision, String, String)] = [
         (.attending, "Going", "checkmark.circle"), (.maybe, "Maybe", "questionmark.circle"),
         (.skip, "Skip", "xmark.circle"), (.undecided, "Undecided", "circle"),
     ]
 
-    private static func fmt(_ pattern: String) -> DateFormatter {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_AU")
-        f.dateFormat = pattern
-        f.amSymbol = "am"
-        f.pmSymbol = "pm"
-        return f
-    }
-    static let day = fmt("EEEE d MMMM"), time = fmt("h:mm a")
-
-    static func when(_ ride: RideEvent) -> String {
-        ride.allDay ? "\(day.string(from: ride.start)), all day" : "\(day.string(from: ride.start)), \(time.string(from: ride.start))"
-    }
-
-    static func place(_ ride: RideEvent) -> String? {
-        let km = ride.distanceKm.map { "\(Int($0.rounded())) km away" }
-        let parts = [ride.location.isEmpty ? nil : ride.location, km].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    var body: some View {
+        ForEach(Self.choices, id: \.0) { d, name, icon in
+            Button(name, systemImage: icon) { Task { await model.decide(id, d) } }
+                .disabled(model.decision(id) == d)
+        }
     }
 }

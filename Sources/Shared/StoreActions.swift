@@ -64,6 +64,24 @@ extension Store {
         }
     }
 
+    /// Reads one source and keeps its rides, noting when it was checked or what went wrong. Returns what it gave (nil
+    /// after a problem), the rides that changed, and those whose reply on your Facebook calendar was taken in.
+    func read(_ feed: Feed) async -> (result: SourceResult, changed: [String], replied: [String])? {
+        do {
+            let r = try await SourceReader.read(feed, store: self)
+            var changed = merge(r.events, source: feed.id, sourceName: feed.name)
+            changed += merge(r.guessed, source: feed.id, sourceName: feed.name, needsCheck: true)
+            // Only your own Facebook calendar's replies are yours; other calendars' are someone else's.
+            let replied = feed.id == FeedLinks.facebookCalendarID ? carryResponses(r.events, source: feed.id) : []
+            state.feedErrors[feed.id] = nil
+            state.lastChecked[feed.id] = Date()
+            return (r, changed, replied)
+        } catch {
+            state.feedErrors[feed.id] = error.localizedDescription
+            return nil
+        }
+    }
+
     /// Works out a ride's start, stops and destination with Apple Maps (and the on-device model), unless its details
     /// already give the route or it was worked out from these details before. Returns whether it found a new one.
     func findRoute(for ride: RideEvent) async -> Bool {

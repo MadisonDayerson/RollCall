@@ -57,13 +57,15 @@ struct RideDetail: View {
             RoutePreview(ride: ride) { Task { await openRoute(in: nil) } }
 
             if !ride.notes.isEmpty {
-                Section("About") {
+                Section {
                     Text(ride.notes).textSelection(.enabled)
+                } header: {
+                    PatchLabel(text: "About")
                 }
             }
 
             Section {
-                Button("Remove Ride", systemImage: "trash", role: .destructive) { confirmRemove = true }
+                Button("Remove…", systemImage: "trash", role: .destructive) { confirmRemove = true }
             }
         }
         // Work out the route's start, stops and destination from the description; the map updates once they're found.

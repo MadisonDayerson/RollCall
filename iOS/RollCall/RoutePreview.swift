@@ -1,9 +1,9 @@
 import SwiftUI
 import MapKit
 
-/// The ride's route on its page, as on the Mac: a map of the road route from the meeting place through any stops to
-/// the destination (or from your suburb to a one-place ride), with the distance and riding time. Tapping the map
-/// opens the route in your maps app.
+/// The ride's route on its page, as on the Mac: a map in greys of the road route from the meeting place through any
+/// stops to the destination (or from your suburb to a one-place ride), with the distance and riding time. Tapping
+/// the map opens the route in your maps app.
 struct RoutePreview: View {
     @Environment(PhoneModel.self) private var model
     let ride: RideEvent
@@ -17,7 +17,7 @@ struct RoutePreview: View {
         let (places, avoidHighways) = model.route(ride)
         if places.count >= 2 {
             let key = places.joined(separator: "\n") + (avoidHighways ? "|no highways" : "")
-            Section("Route") {
+            Section {
                 switch loading {
                 case .planning:
                     HStack(spacing: 8) { ProgressView(); Text("Planning the route…").foregroundStyle(.secondary) }
@@ -28,12 +28,12 @@ struct RoutePreview: View {
                 case .done:
                     if let planned {
                         map(planned, places: places).id(key)
-                        // A route link's stops are map points, so it's described rather than listed.
-                        Text(RoutePlanner.describe(planned) + " · " + (Route.link(in: ride.notes) != nil && places.contains { Route.point($0) != nil }
-                                                                         ? "the organiser's route" : places.joined(separator: " → ")))
+                        Text(RoutePlanner.describe(planned, places: places, notes: ride.notes))
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
+            } header: {
+                PatchLabel(text: "Route")
             }
             .task(id: key) {
                 if planned == nil { loading = .planning }
@@ -43,26 +43,32 @@ struct RoutePreview: View {
         }
     }
 
+    /// The route in the text colour on a grey map, with the start filled in, the destination outlined and the stops
+    /// as small rings, as on the Mac.
     private func map(_ p: RoutePlanner.Planned, places: [String]) -> some View {
         Map(initialPosition: .automatic, interactionModes: []) {
             ForEach(p.legs.indices, id: \.self) { i in
-                MapPolyline(p.legs[i]).stroke(.blue, lineWidth: 4)
+                MapPolyline(p.legs[i]).stroke(.primary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             }
             ForEach(p.stops.indices, id: \.self) { i in
-                if p.named[i] {
-                    // Just the place, not its street address, so the pins don't cover the map.
-                    let name = i < places.count ? String(places[i].split(separator: ",").first ?? "") : ""
-                    Marker(name, systemImage: i == 0 ? "flag" : i == p.stops.count - 1 ? "flag.checkered" : "mappin",
-                           coordinate: p.stops[i])
-                        .tint(i == 0 ? .green : i == p.stops.count - 1 ? .red : .orange)
+                let end = i == 0 || i == p.stops.count - 1
+                if end || p.named[i] {
+                    Annotation("", coordinate: p.stops[i]) {
+                        Circle().fill(i == 0 ? Color.primary : DateBadge.paper)
+                            .stroke(.primary, lineWidth: 2.5)
+                            .frame(width: end ? 12 : 7, height: end ? 12 : 7)
+                    }
                 }
             }
         }
+        .mapStyle(.standard(emphasis: .muted, pointsOfInterest: .excludingAll))
+        .saturation(0)
         .frame(height: 220)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
+        .accessibilityElement()
         .accessibilityLabel("Map of the route from \(places.first ?? "") to \(places.last ?? "")")
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Opens the route in your maps app")
