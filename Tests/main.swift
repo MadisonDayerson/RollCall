@@ -260,6 +260,12 @@ if let t = ld.first(where: { $0.title == "Toy Run 2026" }) {
     check(t.latitude == -37.81 && t.longitude == 145.23, "geo read from strings and numbers")
     check(t.url == "https://club.example.org/events/toy-run", "relative url made absolute")
 }
+let fullStreet = Web.event(from: ["@type": "Event", "name": "Launch night", "startDate": "2026-12-02T18:00:00+11:00", "location": [
+    "name": "Example Lane", "address": ["streetAddress": "12 Example Street, Exampleville, VIC 3999", "addressLocality": "Exampleville", "addressRegion": "VIC"]]], base: base)
+check(fullStreet?.location == "Example Lane, 12 Example Street, Exampleville, VIC 3999", "suburb and state already in the street aren't repeated: \(fullStreet?.location ?? "")")
+let lake = Web.event(from: ["@type": "Event", "name": "Lake run", "startDate": "2026-12-02", "location": [
+    "name": "Exampleville Lake", "address": ["streetAddress": "VIC Street", "addressLocality": "Exampleville", "addressRegion": "VIC"]]], base: base)
+check(lake?.location == "Exampleville Lake, VIC Street, Exampleville, VIC", "a name that only contains the suburb keeps it: \(lake?.location ?? "")")
 check(ld.first { $0.title == "Bike night & BBQ" }?.allDay == true, "date-only event, entity decoded, array @type")
 check(Web.pageTitle(page) == "Club events", "page title")
 check(Web.calendarLink(#"<a href="/events/?ical=1">Export</a>"#, base: base) == "https://club.example.org/events/?ical=1", "finds ?ical=1 links")

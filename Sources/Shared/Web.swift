@@ -139,8 +139,14 @@ enum Web {
                 parts += ["streetAddress", "addressLocality", "addressRegion"].compactMap { a[$0] as? String }
             }
             var unique: [String] = []
-            for p in parts.map({ decodeEntities($0).trimmingCharacters(in: .whitespaces) }) where !p.isEmpty && !unique.contains(p) {
+            // A street can already end with the suburb and state ("73 Rupert Street, Collingwood, VIC 3066").
+            var given = Set<String>()
+            for p in parts.map({ decodeEntities($0).trimmingCharacters(in: .whitespaces) }) where !p.isEmpty && !given.contains(p) {
                 unique.append(p)
+                given.insert(p)
+                for piece in p.components(separatedBy: ",") {
+                    given.insert(piece.replacingOccurrences(of: #"\s+\d{4,5}\s*$"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces))
+                }
             }
             location = unique.joined(separator: ", ")
             if let g = loc["geo"] as? [String: Any] {
