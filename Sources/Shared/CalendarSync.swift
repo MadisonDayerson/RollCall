@@ -71,6 +71,7 @@ final class CalendarSync {
     func upsert(_ ride: RideEvent, existingID: String?, crewCard: [String] = []) throws -> String {
         let cal = try rideCalendar()
         let ev = existingID.flatMap { eventStore.calendarItem(withIdentifier: $0) as? EKEvent }
+            ?? sameRide(ride, in: cal)
             ?? EKEvent(eventStore: eventStore)
         ev.calendar = cal
         ev.title = ride.title
@@ -93,6 +94,14 @@ final class CalendarSync {
         }
         try eventStore.save(ev, span: .thisEvent, commit: true)
         return ev.calendarItemIdentifier
+    }
+
+    /// The ride's event when another device already added it to a shared RollCall calendar (iCloud), so it isn't added twice.
+    private func sameRide(_ ride: RideEvent, in cal: EKCalendar) -> EKEvent? {
+        let day: TimeInterval = 86400
+        let near = eventStore.predicateForEvents(withStart: ride.start.addingTimeInterval(-day), end: ride.finish.addingTimeInterval(day), calendars: [cal])
+        let link = ride.url.flatMap(URL.init(string:))
+        return eventStore.events(matching: near).first { $0.title == ride.title || (link != nil && $0.url == link) }
     }
 
     func remove(itemID: String) {

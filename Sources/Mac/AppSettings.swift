@@ -102,6 +102,7 @@ extension AppDelegate {
     func removeRide(id: String) {
         store.removeRide(id) { syncCalendar($0) }
         store.save()
+        syncDevices()
         NotificationCenter.default.post(name: Store.changed, object: nil)
         updateBadge()
     }

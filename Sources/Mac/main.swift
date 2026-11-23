@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     var lastTried: [String: Date] = [:]
     /// Rides whose route is being worked out now.
     var findingRoutes: Set<String> = []
+    /// Why sharing with iPhone and iPad last failed, for Settings.
+    var syncProblem: String?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         Net.removeOldCache()
@@ -74,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         // Every minute: Facebook downloads, and any source whose own interval has passed.
         timers.append(Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.scanDownloads(); await self?.refresh(dueOnly: true) }
+            Task { @MainActor in self?.scanDownloads(); self?.syncDevices(); await self?.refresh(dueOnly: true) }
         })
         // New versions: shortly after opening, then daily.
         if !CommandLine.arguments.contains("--snapshots") {

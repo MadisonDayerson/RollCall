@@ -10,12 +10,12 @@ rm -rf "$APP" build/MotoRides.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 if [[ "${1:-}" == "--share" ]]; then
-  swiftc -O -target arm64-apple-macos14 Sources/*.swift -o build/RollCall-arm64
-  swiftc -O -target x86_64-apple-macos14 Sources/*.swift -o build/RollCall-x86_64
+  swiftc -O -target arm64-apple-macos14 Sources/Shared/*.swift Sources/Mac/*.swift -o build/RollCall-arm64
+  swiftc -O -target x86_64-apple-macos14 Sources/Shared/*.swift Sources/Mac/*.swift -o build/RollCall-x86_64
   lipo -create build/RollCall-arm64 build/RollCall-x86_64 -output "$APP/Contents/MacOS/RollCall"
   rm build/RollCall-arm64 build/RollCall-x86_64
 else
-  swiftc -O -target arm64-apple-macos14 Sources/*.swift -o "$APP/Contents/MacOS/RollCall"
+  swiftc -O -target arm64-apple-macos14 Sources/Shared/*.swift Sources/Mac/*.swift -o "$APP/Contents/MacOS/RollCall"
 fi
 cp Info.plist "$APP/Contents/Info.plist"
 

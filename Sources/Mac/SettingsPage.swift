@@ -43,6 +43,18 @@ struct SettingsPage: View {
                     model.later { Task { await app.setUpBeeper() } }
                 }
             }
+            Section("iPhone and iPad") {
+                Toggle("Share with RollCall on iPhone and iPad", isOn: Binding(
+                    get: { model.store.state.settings.syncDevices == true }, set: { app.setSyncDevices($0) }))
+                    .disabled(Sync.macFolder == nil)
+                Text(Sync.macFolder == nil
+                     ? "Turn on iCloud Drive first, in System Settings → your name → iCloud."
+                     : "Your rides, Going/Maybe/Skip choices, ride changes and sources go to a RollCall folder in iCloud Drive, and RollCall on your iPhone and iPad shares theirs the same way. Rides from chats go without their messages: chats stay on this Mac.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let problem = app.syncProblem {
+                    Label("Couldn't share: \(problem)", systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.callout)
+                }
+            }
             Section("Facebook") {
                 FacebookCalendarBox(app: app, connected: app.facebookCalendarConnected, later: model.later)
                 Toggle("Pick up Facebook event downloads automatically", isOn: Binding(
@@ -72,7 +84,7 @@ struct SettingsPage: View {
                 Button("Run setup…") { model.later { app.showSetup() } }
             }
             Section("Privacy") {
-                Text("Your rides, chats and settings stay on this Mac, readable only by you. RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
+                Text((model.store.state.settings.syncDevices == true ? "Your chats stay on this Mac, readable only by you; rides, choices and sources are also shared with your iPhone and iPad through your iCloud Drive." : "Your rides, chats and settings stay on this Mac, readable only by you.") + " RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Picker("Keep past rides and plans", selection: Binding(
                     get: { model.store.state.settings.keepDays },

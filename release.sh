@@ -11,9 +11,12 @@ REPO=MadisonDayerson/rollcall
 security find-certificate -c "RollCall Signing" >/dev/null 2>&1 || { echo "Run ./make_signing_key.sh once first."; exit 1; }
 
 # Tests first, so a broken build never reaches anyone.
-./test.sh | tail -1 | grep -q "All tests passed" || { echo "Tests failed; not releasing."; exit 1; }
+mkdir -p build
+./test.sh > build/test.log 2>&1 || { tail -20 build/test.log; echo "Tests failed; not releasing."; exit 1; }
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Info.plist
+# The iPhone and iPad app carries the same version number.
+sed -i '' "s/MARKETING_VERSION = .*;/MARKETING_VERSION = $VERSION;/" iOS/RollCall.xcodeproj/project.pbxproj
 BUILD=$(( $(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist) + 1 ))
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" Info.plist
 ./build.sh --share

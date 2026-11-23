@@ -31,7 +31,14 @@ struct RootView: View {
             Text(model.problem ?? "")
         }
         // Coming back to the app after a few hours reads the sources again.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                if phase == .active { model.shareNow() }
+            }
+        }
         .onChange(of: phase) { _, now in
+            if now == .active { model.shareNow() }
             guard now == .active, model.state.setupDone,
                   (model.state.lastRefresh ?? .distantPast) < Date().addingTimeInterval(-3 * 3600) else { return }
             Task { await model.refresh() }

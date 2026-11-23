@@ -210,6 +210,9 @@ tags in the calendar event rather than showing friends' locations or posting for
   it checks this project's GitHub page for updates. An update is only installed if it comes from those
   releases and its seal shows it hasn't been changed. When you open a ride's route, your suburb
   (never your street) and the ride's stops go to your maps app (Apple Maps, Google Maps, Waze or Kurviger) to plan the route.
+- **Sharing with your iPhone and iPad** (only if you turn it on). Your rides, choices, ride changes and sources
+  (including private calendar links) go to a RollCall folder in your own iCloud Drive, where RollCall on your
+  iPhone and iPad reads them. Chat messages don't: rides from chats are shared without them.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
   choose. Text from chat messages isn't added, except a detail Refresh found that you add yourself.
 
@@ -230,6 +233,9 @@ Run the tests:
 ./test.sh
 ```
 
+- The code is in three folders: `Sources/Shared` (used by both apps: reading sources, rides, routes, calendar,
+  sync), `Sources/Mac` (the Mac app's windows and menus) and `iOS/RollCall` (the iPhone and iPad screens).
+  `./test.sh` also checks the iPhone app still builds, and `release.sh` gives both apps the same version number.
 - Data is saved in `~/Library/Application Support/RollCall/state.json`; the Beeper token is in your
   login keychain.
 - `--snapshots <folder>` saves a picture of every page; `--check-chats` shows how chat messages are read;
@@ -243,8 +249,14 @@ Run the tests:
 ## iPhone and iPad (in progress)
 
 `iOS/RollCall.xcodeproj` is a first iPhone and iPad version. It reads the same clubs, calendars, forums and
-event sites by itself (group chats stay on the Mac) and puts rides you're going to in a RollCall calendar. It
-uses the shared code in `Sources/`; the Mac-only files are left out in the project's "Shared" folder settings.
+event sites by itself (group chats stay on the Mac) and puts rides you're going to in a RollCall calendar.
+
+**Sharing with the Mac.** On the Mac, turn on Settings → iPhone and iPad → **Share with RollCall on iPhone and
+iPad** (iCloud Drive needs to be on). That makes a RollCall folder in iCloud Drive. On the iPhone, tap Settings →
+**Share with RollCall on Mac…** and choose that folder. From then on, rides, Going/Maybe/Skip choices, ride
+changes and sources go both ways: each device keeps its own file in the folder and reads the others', and the
+later change wins. Rides from your group chats reach the iPhone without the messages they came from. Rides you're
+going to are added to the RollCall calendar once, even when both devices add them.
 
 To put it on your own iPhone or iPad with a free Apple account:
 

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var home = ""
     @State private var problem: String?
     @State private var confirmDelete = false
+    @State private var choosingFolder = false
 
     var body: some View {
         let s = model.state.settings
@@ -34,6 +35,27 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    if let folder = model.macFolder {
+                        LabeledContent("Sharing through", value: "\(folder.lastPathComponent) folder")
+                        if let last = model.lastShared, model.shareProblem == nil {
+                            LabeledContent("Last shared", value: last.formatted(.relative(presentation: .named)))
+                        }
+                        Button("Stop Sharing", role: .destructive) { model.stopSharing() }
+                    } else {
+                        Button("Share with RollCall on Mac…") { choosingFolder = true }
+                    }
+                    if let problem = model.shareProblem {
+                        Text("Couldn't share: \(problem)").foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Mac")
+                } footer: {
+                    Text(model.macFolder == nil
+                         ? "On your Mac, open RollCall → Settings and turn on Share with RollCall on iPhone and iPad. Then tap above and choose the RollCall folder in iCloud Drive."
+                         : "Rides, Going/Maybe/Skip choices and sources are shared both ways. Rides from your group chats come from the Mac without their messages.")
+                }
+
+                Section {
                     Button("Delete All RollCall Data", role: .destructive) { confirmDelete = true }
                 } footer: {
                     Text("Group chats are read by RollCall on your Mac.")
@@ -41,6 +63,12 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .onAppear { home = s.homeName }
+            .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
+                switch result {
+                case .success(let folder): model.shareWithMac(in: folder)
+                case .failure(let error): model.shareProblem = error.localizedDescription
+                }
+            }
             .confirmationDialog("Delete all RollCall data?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { model.deleteAllData() }
             } message: {

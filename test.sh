@@ -1,10 +1,20 @@
 #!/bin/zsh
-# Builds and runs the tests: every source file except the app's windows, menus and startup.
+# Builds and runs the tests: the shared code (Sources/Shared) and a little of the Mac app's, then checks the iPhone app
+# still builds with the shared code (when Xcode is installed).
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p build
-swiftc Sources/ICS.swift Sources/Model.swift Sources/Sources.swift Sources/Web.swift Sources/TextDetect.swift Sources/Refresh.swift \
-  Sources/Beeper.swift Sources/Keychain.swift Sources/RidePlan.swift Sources/Plans.swift Sources/AppleModel.swift Sources/RideDetails.swift \
-  Sources/CrossPost.swift Sources/Crew.swift Sources/Route.swift Sources/RouteWeather.swift Sources/RoadAlerts.swift Sources/RoadAlertMatching.swift Sources/RoadAlertDownloads.swift Sources/AlertSummary.swift Sources/Brief.swift Sources/Updater.swift Sources/Poster.swift Sources/RideSearch.swift \
+swiftc Sources/Shared/*.swift Sources/Mac/Updater.swift Sources/Mac/Poster.swift \
   Tests/main.swift -o build/tests
 build/tests
+
+# The iPhone and iPad app uses the same shared code, so a change for the Mac mustn't break it.
+if [[ -d /Applications/Xcode.app ]]; then
+  if ! xcodebuild -quiet -project iOS/RollCall.xcodeproj -scheme RollCall -destination "generic/platform=iOS Simulator" \
+      -derivedDataPath build/ios build > build/ios.log 2>&1; then
+    grep -E "error:" build/ios.log | head -20
+    echo "The iPhone app doesn't build"
+    exit 1
+  fi
+  echo "iPhone app builds"
+fi

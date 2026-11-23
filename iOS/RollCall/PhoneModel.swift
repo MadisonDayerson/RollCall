@@ -17,9 +17,64 @@ final class PhoneModel {
         calendar.checkAccess()
     }
 
+    /// Saves, and shares the change with RollCall on the Mac (taking in its changes too) when that's set up.
     private func saved() {
+        share()
         store.save()
         state = store.state
+    }
+
+    // MARK: - Sharing with the Mac
+
+    /// The RollCall folder in iCloud Drive that RollCall on the Mac shares, once chosen in Settings.
+    private(set) var macFolder: URL? = PhoneModel.savedFolder()
+    private(set) var lastShared: Date?
+    var shareProblem: String?
+
+    private static let folderKey = "macFolder"
+    private static func savedFolder() -> URL? {
+        guard let data = UserDefaults.standard.data(forKey: folderKey) else { return nil }
+        var stale = false
+        return try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
+    }
+
+    func shareWithMac(in folder: URL) {
+        let allowed = folder.startAccessingSecurityScopedResource()
+        defer { if allowed { folder.stopAccessingSecurityScopedResource() } }
+        guard let bookmark = try? folder.bookmarkData() else {
+            shareProblem = "Couldn't keep access to that folder. Choose it again."
+            return
+        }
+        UserDefaults.standard.set(bookmark, forKey: Self.folderKey)
+        macFolder = folder
+        saved()
+    }
+
+    func stopSharing() {
+        UserDefaults.standard.removeObject(forKey: Self.folderKey)
+        macFolder = nil
+        lastShared = nil
+        shareProblem = nil
+    }
+
+    /// Takes in what the Mac changed since (called every minute while RollCall is open).
+    func shareNow() {
+        guard macFolder != nil else { return }
+        saved()
+    }
+
+    private func share() {
+        guard let folder = macFolder else { return }
+        let allowed = folder.startAccessingSecurityScopedResource()
+        defer { if allowed { folder.stopAccessingSecurityScopedResource() } }
+        do {
+            let changed = try Sync.run(store, folder: folder, name: UIDevice.current.model)
+            if calendar.authorised { for id in changed { syncCalendar(id) } }
+            lastShared = Date()
+            shareProblem = nil
+        } catch {
+            shareProblem = error.localizedDescription
+        }
     }
 
     // MARK: - Rides
@@ -164,6 +219,7 @@ final class PhoneModel {
     /// Removes the rides, sources and settings kept on this device, and starts setup again. The RollCall calendar
     /// stays in Calendar.
     func deleteAllData() {
+        stopSharing()
         try? FileManager.default.removeItem(at: store.file)
         store.state = AppState()
         state = store.state

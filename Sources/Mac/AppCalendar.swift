@@ -9,6 +9,7 @@ extension AppDelegate {
         syncCalendar(id)
         store.save()
         updateBadge()
+        syncDevices()
         if d == .attending, let ride = store.state.events[id], ride.url != nil,
            ride.isFacebook || ride.url!.contains("meetup.com") {
             // Facebook and Meetup only count you in when you press Going there yourself.

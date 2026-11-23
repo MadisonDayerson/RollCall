@@ -1254,5 +1254,55 @@ do {
     check(RideSearch.ride(for: plan, chatName: "Example chat") == nil, "a plan without a day can't be searched for yet")
 }
 
+// Sync: each device shares its own file, and the later change wins.
+do {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-sync-test-\(UUID().uuidString)")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let mac = Store(file: dir.appendingPathComponent("mac.json")), phone = Store(file: dir.appendingPathComponent("phone.json"))
+    let start = now.addingTimeInterval(3 * 86400)
+    func ride(_ id: String, source: String, notes: String = "Meet at the servo.") -> RideEvent {
+        RideEvent(id: id, title: "Ride \(id)", start: start, end: nil, allDay: false, location: "Example Servo", notes: notes, url: nil,
+                  source: source, sourceName: "Example", latitude: nil, longitude: nil, distanceKm: nil, lastSeen: now)
+    }
+    mac.state.events["a"] = ride("a", source: "club")
+    mac.state.events["chat"] = ride("chat", source: "beeper-x", notes: "A made-up chat message")
+    mac.state.feeds = [Feed(id: "club", name: "Example club", url: "https://example.com/club.ics", groupURL: nil),
+                       Feed(id: "beeper-x", name: "Example chat", url: "beeper://x", groupURL: nil, kind: .chat)]
+    mac.state.decisions["a"] = .attending
+    let macFile = mac.exchange(previous: nil, others: [], now: now).file
+    check(macFile.rides["chat"]?.notes == "" && macFile.rides["a"]?.notes == "Meet at the servo.", "a chat ride is shared without its message")
+    check(macFile.feeds.keys.sorted() == ["club"], "chats aren't shared as sources")
+
+    var r = phone.exchange(previous: nil, others: [macFile], now: now.addingTimeInterval(60))
+    check(phone.state.events["a"] != nil && phone.state.events["chat"] != nil && phone.state.decisions["a"] == .attending
+          && phone.state.feeds.map(\.id) == ["club"] && r.changed == ["a"], "the phone takes in the Mac's rides, choices and sources")
+
+    // The phone skips the ride later; the Mac takes that in, and its own older choice doesn't win back.
+    phone.state.decisions["a"] = .skip
+    let phoneFile = phone.exchange(previous: r.file, others: [macFile], now: now.addingTimeInterval(120)).file
+    let back = mac.exchange(previous: macFile, others: [phoneFile], now: now.addingTimeInterval(180))
+    check(mac.state.decisions["a"] == .skip && back.changed == ["a"], "the later choice wins")
+    check(mac.state.events["chat"]?.notes == "A made-up chat message", "the Mac keeps its own chat message")
+    r = phone.exchange(previous: phoneFile, others: [back.file], now: now.addingTimeInterval(240))
+    check(phone.state.decisions["a"] == .skip && r.changed.isEmpty, "nothing bounces back")
+
+    // A source removed on the phone goes on the Mac too; a ride removed on the Mac goes on the phone.
+    phone.state.feeds = []
+    mac.state.removedRides["a"] = start; mac.state.events["a"] = nil
+    let p2 = phone.exchange(previous: r.file, others: [back.file], now: now.addingTimeInterval(300)).file
+    let m2 = mac.exchange(previous: back.file, others: [p2], now: now.addingTimeInterval(360))
+    check(mac.state.feeds.map(\.id) == ["beeper-x"] && m2.file.rides["a"] == nil, "a removed source and ride stay removed")
+    _ = phone.exchange(previous: p2, others: [m2.file], now: now.addingTimeInterval(420))
+    check(phone.state.events["a"] == nil, "a ride removed on the Mac goes from the phone")
+
+    // Through the folder: each device writes only its own file.
+    _ = try? Sync.run(mac, folder: dir, name: "Mac", now: now.addingTimeInterval(480))
+    _ = try? Sync.run(phone, folder: dir, name: "iPhone", now: now.addingTimeInterval(540))
+    check(FileManager.default.fileExists(atPath: dir.appendingPathComponent("Mac.json").path)
+          && FileManager.default.fileExists(atPath: dir.appendingPathComponent("iPhone.json").path), "each device writes its own file")
+    check(Sync.otherFiles(in: dir, besides: "Mac.json").map(\.lastPathComponent).contains("iPhone.json"), "the Mac finds the phone's file")
+}
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

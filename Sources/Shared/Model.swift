@@ -187,6 +187,8 @@ struct Settings: Codable {
     /// Days to keep past rides and the messages of plans you dismissed, then they're deleted (nil means 7; 0 keeps
     /// none; at most 14). Named for what it first covered.
     var keepDismissedDays: Int? = nil
+    /// Share rides, choices and sources with RollCall on iPhone and iPad through iCloud Drive (Mac only; nil means no).
+    var syncDevices: Bool? = nil
 
     var crew: Together { together ?? Together() }
     var roadAlertsShown: RoadAlertsShown { roadAlerts ?? .currentAndPlanned }

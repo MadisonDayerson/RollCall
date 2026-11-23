@@ -10,46 +10,6 @@
 		A10000000000000000000001 /* RollCall.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RollCall.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A10000000000000000000020 /* Mac-only files */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				AddSheet.swift,
-				AppAdding.swift,
-				AppCalendar.swift,
-				AppFormatting.swift,
-				AppMenu.swift,
-				AppRefresh.swift,
-				AppReviews.swift,
-				AppRideSearch.swift,
-				AppSettings.swift,
-				AppStatusMenu.swift,
-				AppUpdates.swift,
-				AppWindow.swift,
-				BeeperGuide.swift,
-				Dialogs.swift,
-				Poster.swift,
-				ReviewPage.swift,
-				RidesPage.swift,
-				RoadAlertMarks.swift,
-				RoadAlertsView.swift,
-				RouteBox.swift,
-				RouteMapImage.swift,
-				RouteWeatherView.swift,
-				SettingsPage.swift,
-				Setup.swift,
-				SetupSteps.swift,
-				SourcesPage.swift,
-				UIModel.swift,
-				Updater.swift,
-				Window.swift,
-				Wordmark.swift,
-				main.swift,
-			);
-			target = A10000000000000000000030 /* RollCall */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000000000000000000010 /* RollCall */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -58,11 +18,8 @@
 		};
 		A10000000000000000000011 /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A10000000000000000000020 /* Mac-only files */,
-			);
 			name = Shared;
-			path = ../Sources;
+			path = ../Sources/Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -218,7 +175,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = au.madiday.rollcall.ios;
 				PRODUCT_NAME = RollCall;
 				SWIFT_VERSION = 5.0;
@@ -239,7 +196,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = au.madiday.rollcall.ios;
 				PRODUCT_NAME = RollCall;
 				SWIFT_VERSION = 5.0;
