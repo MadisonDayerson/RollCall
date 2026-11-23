@@ -68,6 +68,12 @@ extension AppDelegate {
         if ui.rides().isEmpty { ui.rideFilter = .skipped }
         ui.selectedRide = ui.rides().first?.id
         await snap("1-rides", window)
+        // A ride Refresh is looking up more details for, with its spinner (only shown).
+        if let id = ui.rides().first?.id {
+            ui.lookups[id] = .looking("Looking through your sources…")
+            await snap("1-rides-looking", window)
+            ui.lookups[id] = nil
+        }
         // Sample finds from Refresh (made up; they're only shown).
         if let id = ui.selectedRide {
             ui.lookups[id] = .done([

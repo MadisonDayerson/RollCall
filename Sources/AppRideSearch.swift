@@ -15,7 +15,7 @@ extension AppDelegate {
         // Finds you haven't dealt with yet stay as they are, so ones you left out don't come back.
         for ride in detailsToFind() where ui.lookups[ride.id] == nil {
             let id = ride.id
-            ui.lookups[id] = .looking("Looking through your sources…")
+            withAnimation(.easeOut(duration: 0.2)) { ui.lookups[id] = .looking("Looking through your sources…") }
             let (found, checked) = await moreDetails(for: ride) { self.ui.lookups[id] = .looking($0) }
             // Fades in on the ride's page, rather than pushing what you're reading down all at once.
             withAnimation(.easeOut(duration: 0.25)) { ui.lookups[id] = found.isEmpty ? nil : .done(found, checked: checked) }

@@ -181,6 +181,13 @@ struct RideRow: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(decisionName(decision, needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
+            // Refresh is looking for more details about this ride.
+            if case .looking(let step)? = model.lookups[ride.id] {
+                ProgressView().controlSize(.small).padding(.top, 2)
+                    .help(step)
+                    .accessibilityLabel("Looking for more details")
+                    .transition(.opacity)
+            }
             RideActions(ride: ride, model: model)
                 .opacity(showMenu ? 1 : 0)
         }
