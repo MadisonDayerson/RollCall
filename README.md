@@ -239,3 +239,24 @@ Run the tests:
   Releases are signed with RollCall's own certificate instead (run `./make_signing_key.sh` once on the Mac
   that makes releases; `release.sh` won't run without it), so macOS treats every update as the same app and
   doesn't ask for keychain, calendar or Downloads access again. Without it, `build.sh` signs ad-hoc.
+
+## iPhone and iPad (in progress)
+
+`iOS/RollCall.xcodeproj` is a first iPhone and iPad version. It reads the same clubs, calendars, forums and
+event sites by itself (group chats stay on the Mac) and puts rides you're going to in a RollCall calendar. It
+uses the shared code in `Sources/`; the Mac-only files are left out in the project's "Shared" folder settings.
+
+To put it on your own iPhone or iPad with a free Apple account:
+
+1. Open `iOS/RollCall.xcodeproj` in Xcode.
+2. Xcode → Settings → Apple Accounts → **+** → Apple Account, and sign in with your Apple ID.
+3. Click the blue RollCall project at the top of the file list, choose the **RollCall** target, then
+   **Signing & Capabilities**. Leave "Automatically manage signing" on and choose your name (Personal Team)
+   under Team.
+4. Plug the iPhone in with a cable, unlock it and tap **Trust** if it asks.
+5. On the iPhone: Settings → Privacy & Security → **Developer Mode** → on, then restart it when asked.
+6. In Xcode, choose the iPhone from the device menu at the top of the window and press ▶ (Run).
+7. The first time, the iPhone says the developer isn't trusted: Settings → General → VPN & Device Management →
+   your Apple ID → **Trust**. Then open RollCall.
+
+With a free account the app stops opening after 7 days: plug in and press ▶ again to renew it.
