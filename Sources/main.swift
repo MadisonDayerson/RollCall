@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import ServiceManagement
 import UserNotifications
+import CoreLocation
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate, UNUserNotificationCenterDelegate {
@@ -82,38 +83,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         timers.append(Timer.scheduledTimer(withTimeInterval: 24 * 3600, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.checkForUpdates(manual: false) }
         })
-    }
-}
-
-extension RideEvent {
-    var hasRoute: Bool { !location.isEmpty || Route.link(in: notes) != nil }
-
-    /// The first item in a ride's ⋯ menu: where its link goes, in a few words.
-    var openLabel: String {
-        guard let url else { return "Open event (no link)" }
-        return isFacebook ? "Open on Facebook"
-            : url.contains("meetup.com") ? "Open on Meetup"
-            : url.contains("instagram.com") ? "Open on Instagram"
-            : Beeper.chatParts(url) != nil ? "Open in Beeper"
-            : needsCheck == true ? "Open post" : "Open event page"
-    }
-}
-
-import CoreLocation
-
-enum CLGeocoderShim {
-    struct Found { var latitude: Double; var longitude: Double; var city: String?; var region: String?; var country: String?; var label: String }
-
-    /// Looks a place up, preferring matches in the Mac's own country (so "Ringwood" is the Victorian one here).
-    @MainActor
-    static func find(_ place: String) async throws -> Found? {
-        let marks = try await CLGeocoder().geocodeAddressString(place)
-        let here = Locale.current.region?.identifier
-        guard let m = marks.first(where: { $0.isoCountryCode == here }) ?? marks.first,
-              let c = m.location?.coordinate else { return nil }
-        let label = [m.locality ?? m.name, m.administrativeArea, m.country].compactMap { $0 }.joined(separator: ", ")
-        return Found(latitude: c.latitude, longitude: c.longitude, city: m.locality ?? m.subAdministrativeArea,
-                     region: m.administrativeArea, country: m.country, label: label)
     }
 }
 

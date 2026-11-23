@@ -176,3 +176,19 @@ final class Geocoder {
         }
     }
 }
+
+enum CLGeocoderShim {
+    struct Found { var latitude: Double; var longitude: Double; var city: String?; var region: String?; var country: String?; var label: String }
+
+    /// Looks a place up, preferring matches in the Mac's own country (so "Ringwood" is the Victorian one here).
+    @MainActor
+    static func find(_ place: String) async throws -> Found? {
+        let marks = try await CLGeocoder().geocodeAddressString(place)
+        let here = Locale.current.region?.identifier
+        guard let m = marks.first(where: { $0.isoCountryCode == here }) ?? marks.first,
+              let c = m.location?.coordinate else { return nil }
+        let label = [m.locality ?? m.name, m.administrativeArea, m.country].compactMap { $0 }.joined(separator: ", ")
+        return Found(latitude: c.latitude, longitude: c.longitude, city: m.locality ?? m.subAdministrativeArea,
+                     region: m.administrativeArea, country: m.country, label: label)
+    }
+}

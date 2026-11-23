@@ -24,9 +24,9 @@ enum AppleModel {
         var text: String { ([heading] + lines).joined(separator: "\n") }
     }
 
-    /// Apple Intelligence is on and the model is ready (macOS 26 or later).
+    /// Apple Intelligence is on and the model is ready (macOS or iOS 26 or later).
     static var available: Bool {
-        guard #available(macOS 26, *) else { return false }
+        guard #available(macOS 26, iOS 26, *) else { return false }
         if case .available = SystemLanguageModel.default.availability { return true }
         return false
     }
@@ -35,7 +35,7 @@ enum AppleModel {
     static let maxChars = 6000
 
     static func ask(instructions: String, _ input: Input) async -> String? {
-        guard available, #available(macOS 26, *) else { return nil }
+        guard available, #available(macOS 26, iOS 26, *) else { return nil }
         await turn.enter()
         defer { Task { await turn.leave() } }
         var input = input
@@ -65,7 +65,7 @@ enum AppleModel {
         return nil
     }
 
-    @available(macOS 26, *)
+    @available(macOS 26, iOS 26, *)
     private static func once(_ instructions: String, _ prompt: String) async -> Result<String, Failure> {
         let model = SystemLanguageModel(guardrails: .permissiveContentTransformations)
         let session = LanguageModelSession(model: model, instructions: instructions)
@@ -77,10 +77,10 @@ enum AppleModel {
         }
     }
 
-    /// macOS 26 and 27 name the model's errors differently.
-    @available(macOS 26, *)
+    /// Version 26 and 27 of macOS and iOS name the model's errors differently.
+    @available(macOS 26, iOS 26, *)
     static func failure(_ error: Error) -> Failure {
-        if #available(macOS 27, *) {
+        if #available(macOS 27, iOS 27, *) {
             if let e = error as? LanguageModelError {
                 switch e {
                 case .contextSizeExceeded: return .tooLong

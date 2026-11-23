@@ -318,3 +318,17 @@ extension Route {
     /// 3: shared maps.app.goo.gl routes, which lead to Google's older from/to: links.
     static let finderVersion = 3
 }
+
+extension RideEvent {
+    var hasRoute: Bool { !location.isEmpty || Route.link(in: notes) != nil }
+
+    /// The first item in a ride's ⋯ menu: where its link goes, in a few words.
+    var openLabel: String {
+        guard let url else { return "Open event (no link)" }
+        return isFacebook ? "Open on Facebook"
+            : url.contains("meetup.com") ? "Open on Meetup"
+            : url.contains("instagram.com") ? "Open on Instagram"
+            : Beeper.chatParts(url) != nil ? "Open in Beeper"
+            : needsCheck == true ? "Open post" : "Open event page"
+    }
+}
