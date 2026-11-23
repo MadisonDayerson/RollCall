@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// "Roll Call" in the logo's gothic lettering, at the foot of the sidebar. While the sources are checked it fills
-/// from left to right with glowing blue letters, like a neon sign warming up, and pulses blue when it's done.
+/// from left to right with glowing blue letters, like a neon sign warming up, whose glow gently breathes while it
+/// works, and pulses blue when it's done.
 struct Wordmark: View {
     /// How far the check has got, 0 to 1; nil when it isn't checking.
     @ObservedObject var progress: Box<Double?>
@@ -9,6 +10,8 @@ struct Wordmark: View {
     @StateObject private var lit = Box(0.0)
     /// The whole wordmark's glow when the check finishes.
     @StateObject private var pulse = Box(0.0)
+    /// The lit letters' glow breathing in and out while checking, 0 to 1.
+    @StateObject private var breath = Box(0.0)
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Near-white blue letters in a deep blue haze.
@@ -23,7 +26,7 @@ struct Wordmark: View {
             letters
                 .foregroundStyle(.secondary)
                 .overlay {
-                    glowing(letters.foregroundStyle(Self.core).mask(alignment: .leading) { reveal })
+                    glowing(letters.foregroundStyle(Self.core).mask(alignment: .leading) { reveal }, breath: breath.value)
                 }
                 .overlay { glowing(letters.foregroundStyle(Self.core)).opacity(pulse.value) }
                 .frame(maxWidth: 120, maxHeight: 34)
@@ -47,16 +50,22 @@ struct Wordmark: View {
         }
     }
 
-    private func glowing(_ v: some View) -> some View {
-        v.shadow(color: Self.haze, radius: 2).shadow(color: Self.haze, radius: 6)
+    /// The blue haze around the letters; `breath` softens it and spreads it a little further.
+    private func glowing(_ v: some View, breath: Double = 0) -> some View {
+        v.shadow(color: Self.haze, radius: 2)
+            .shadow(color: Self.haze.opacity(1 - 0.5 * breath), radius: 6 + 4 * breath)
     }
 
     private func changed(from old: Double?, to new: Double?) {
         if let new {
             withAnimation(.easeOut(duration: 0.6)) { lit.value = new }
+            if old == nil, !reduceMotion {
+                withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { breath.value = 1 }
+            }
             return
         }
         guard old != nil else { return }
+        withAnimation(.easeOut(duration: 0.25)) { breath.value = 0 }
         // Done: the rest lights up, the whole wordmark glows, then it fades back to its usual grey.
         guard !reduceMotion else { lit.value = 0; return }
         withAnimation(.easeOut(duration: 0.25)) { lit.value = 1; pulse.value = 1 }
