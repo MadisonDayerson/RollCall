@@ -4,8 +4,9 @@ import SwiftUI
 struct RideDetail: View {
     @Environment(PhoneModel.self) private var model
     @Environment(\.openURL) private var openURL
-    @Environment(\.dismiss) private var dismiss
     let ride: RideEvent
+    /// Leaves the page, once its ride is removed.
+    let close: () -> Void
     @State private var confirmRemove = false
 
     var body: some View {
@@ -70,12 +71,10 @@ struct RideDetail: View {
         }
         // Work out the route's start, stops and destination from the description; the map updates once they're found.
         .task(id: Route.fingerprint(ride)) { await model.findRoute(for: ride) }
-        .navigationTitle(ride.title)
-        .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Remove this ride?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 model.remove(ride.id)
-                dismiss()
+                close()
             }
         } message: {
             Text("It won't come back when its source is checked again.")

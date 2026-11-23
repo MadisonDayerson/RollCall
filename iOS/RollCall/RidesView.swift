@@ -1,37 +1,61 @@
 import SwiftUI
 
-/// Upcoming rides in Undecided, Going, Skipped and Past, with each ride's details beside the list on iPad.
+/// Upcoming rides in Undecided, Going, Skipped and Past. With room (most iPad windows) a ride's page is beside the
+/// list, under one title bar: a split view has its own bars, which ended up under the floating tabs when an iPad
+/// window changed shape. Otherwise the page opens over the list.
 struct RidesView: View {
     @Environment(PhoneModel.self) private var model
+    @Environment(\.horizontalSizeClass) private var width
     @State private var selected: String?
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $selected) {
-                ForEach(model.sections) { section in
-                    if !section.rides.isEmpty {
-                        Section {
-                            ForEach(section.rides, id: \.id) { ride in
-                                RideRow(ride: ride, past: section.name == "Past").tag(ride.id)
-                            }
-                        } header: {
-                            PatchLabel(text: section.name, count: section.rides.count)
+        NavigationStack {
+            if width == .regular {
+                HStack(spacing: 0) {
+                    list.frame(width: 320)
+                    Divider()
+                    page(selected).frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .background(Color(.systemGroupedBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                // Two lists scroll under the bar, so it's kept solid: otherwise what's scrolled shows around the tabs.
+                .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
+                .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+            } else {
+                list.navigationDestination(item: $selected) { id in
+                    page(id).navigationTitle(model.state.events[id]?.title ?? "").navigationBarTitleDisplayMode(.inline)
+                }
+            }
+        }
+    }
+
+    private var list: some View {
+        List(selection: $selected) {
+            ForEach(model.sections) { section in
+                if !section.rides.isEmpty {
+                    Section {
+                        ForEach(section.rides, id: \.id) { ride in
+                            RideRow(ride: ride, past: section.name == "Past").tag(ride.id)
                         }
+                    } header: {
+                        PatchLabel(text: section.name, count: section.rides.count)
                     }
                 }
             }
-            .navigationTitle("Rides")
-            .refreshable { await model.refresh() }
-            .overlay { if model.sections.allSatisfy(\.rides.isEmpty) { empty } }
-            .toolbar {
-                if model.refreshing { ToolbarItem { ProgressView() } }
-            }
-        } detail: {
-            if let id = selected, let ride = model.state.events[id] {
-                RideDetail(ride: ride)
-            } else {
-                EmptyState(text: "Choose a ride to see its details.")
-            }
+        }
+        .navigationTitle("Rides")
+        .refreshable { await model.refresh() }
+        .overlay { if model.sections.allSatisfy(\.rides.isEmpty) { empty } }
+        .toolbar {
+            if model.refreshing { ToolbarItem { ProgressView() } }
+        }
+    }
+
+    @ViewBuilder private func page(_ id: String?) -> some View {
+        if let id, let ride = model.state.events[id] {
+            RideDetail(ride: ride) { selected = nil }.id(id)
+        } else {
+            EmptyState(text: "Choose a ride to see its details.")
         }
     }
 
