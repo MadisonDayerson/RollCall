@@ -11,7 +11,7 @@ it can be fixed or taken out without touching the others.
 - **The route's places** come from `Route.places(meetingPlace:notes:)` (meeting place, stops, destination),
   which Route already uses. Nothing new is read from chats or posts.
 - **No new accounts or tracking.** Only Task 3 needs a key, and it's the user's own, kept in the keychain.
-- **Privacy:** each task adds its line to the README's "What goes online", and nothing it fetches is saved
+- **Privacy:** each task adds its line to docs/PRIVACY.md's "What goes online", and nothing it fetches is saved
   to disk except what the ride already holds, and Task 3's booked roadworks (public road data, nothing personal).
 
 ---
