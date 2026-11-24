@@ -1,8 +1,9 @@
 import SwiftUI
 
 extension View {
-    /// Pull down to refresh, with the logo in the space that opens at the top (in place of the usual spinner). It fills
-    /// with blue as the sources are checked. `refreshing` is on while the list is held down for it.
+    /// Pull down to refresh, with the logo in the space that opens at the top (in place of the usual spinner). It's grey
+    /// until the pull is long enough to refresh, then fills with blue as the sources are checked. `refreshing` is on while
+    /// the list is held down for it.
     func pullToRefresh(progress: Box<Double?>, refreshing: Binding<Bool>, _ action: @escaping () async -> Void) -> some View {
         modifier(PullToRefresh(progress: progress, refreshing: refreshing, action: action))
     }
@@ -19,6 +20,8 @@ private struct PullToRefresh: ViewModifier {
     @Environment(\.horizontalSizeClass) private var width
     @Environment(\.verticalSizeClass) private var height
 
+    /// Keeps the logo grey on a pull too short to refresh, even if a check is already going.
+    private static let unlit = Box<Double?>(nil)
     /// How far the list is held down while it refreshes.
     private static let held: CGFloat = 60
     /// The space opens above a large title, which is under the bar on an upright iPhone.
@@ -38,6 +41,8 @@ private struct PullToRefresh: ViewModifier {
             .refreshable {
                 refreshing = true
                 await action()
+                // A check that was already going is followed to its end.
+                while progress.value != nil, !Task.isCancelled { try? await Task.sleep(for: .seconds(0.2)) }
                 // Held down long enough to see the logo's glow when it's done.
                 try? await Task.sleep(for: .seconds(0.7))
                 // It springs back once this returns.
@@ -53,7 +58,7 @@ private struct PullToRefresh: ViewModifier {
                 if !refreshing, firstRow <= top { restingTop = top }
             }
             .overlay(alignment: .top) {
-                Wordmark(picture: Image("Wordmark"), progress: progress)
+                Wordmark(picture: Image("Wordmark"), progress: refreshing ? progress : Self.unlit)
                     .frame(height: max(space, Self.held))
                     .opacity(min(1, max(0, space / Self.held * 2 - 1)))
                     .padding(.top, restingTop - (width == .compact && height == .regular ? Self.largeTitle : 0))
