@@ -6,7 +6,11 @@ extension PhoneModel {
     func refresh(dueOnly: Bool = false) async {
         guard !refreshing else { return }
         refreshing = true
-        defer { refreshing = false }
+        refreshProgress.value = 0
+        defer {
+            refreshing = false
+            refreshProgress.value = nil
+        }
         let started = Date()
         var refreshed: Set<String> = []
         var changed: [String] = []
@@ -18,9 +22,11 @@ extension PhoneModel {
             feeds = feeds.filter { $0.due(lastChecked: checked[$0.id], lastTried: nil) }
                 .sorted { checked[$0.id] ?? .distantPast < checked[$1.id] ?? .distantPast }
         }
-        for feed in feeds {
+        for (i, feed) in feeds.enumerated() {
             // A background check that ran out of time: what it read is kept, and the rest is left for the next one.
             if Task.isCancelled { break }
+            // The sources are most of the work; the last bit is for places and the calendar.
+            refreshProgress.value = 0.9 * Double(i) / Double(feeds.count)
             if let (_, found, replied) = await store.read(feed) {
                 changed += found
                 for id in replied where calendar.authorised { syncCalendar(id) }
@@ -29,6 +35,7 @@ extension PhoneModel {
             }
             state = store.state
         }
+        refreshProgress.value = 0.9
         store.prune(refreshedSources: refreshed, refreshStarted: started)
         store.state.lastRefresh = Date()
         saved()

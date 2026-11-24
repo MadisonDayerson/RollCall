@@ -7,6 +7,7 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
   kept for meaning and for Apple's standard controls: the person's own accent colour on the sidebar, filled
   buttons and links (as Apple's guidelines expect), orange for warnings and problems, and one neon blue glow: while the sources are checked, the sidebar's "Roll Call"
   fills with glowing blue letters from left to right as a progress bar, then pulses blue when it's done (`Wordmark`).
+  On iPhone and iPad it's in the space above the rides list while that's pulled down to refresh, in place of a spinner.
   Nothing else is coloured.
   The selected ride in the list is a light grey band with rounded corners, so the list stays black and white.
 - **The patch.** A rounded rectangle with a single 1.5pt line (`DateBadge`, which stays crisp), kept simple so a list of
@@ -20,7 +21,7 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
   bold sentence case, and everything else is the system font.
 - **Maps in greys.** Route maps use Apple's muted map turned to greys, with the route in the text colour, so they
   sit in the black and white.
-- **Gothic lettering, sparingly.** Only "Roll Call" at the foot of the sidebar and at the top of every dialog
+- **Gothic lettering, sparingly.** Only "Roll Call" at the foot of the sidebar, above the list on iPhone and iPad and at the top of every dialog
   (in place of the app icon, `Dialogs.run`), and "RC" on empty pages
   (`Brand.wordmark`, `Brand.monogram`). They're pictures drawn by `make_wordmark.swift`, because the
   font's licence doesn't allow shipping it. Never use it for text people need to read, numbers included.

@@ -7,6 +7,8 @@ struct RidesView: View {
     @Environment(PhoneModel.self) private var model
     @Environment(\.horizontalSizeClass) private var width
     @State private var selected: String?
+    /// The list is held down to refresh, where the logo shows how far it's got.
+    @State private var pulledDown = false
 
     var body: some View {
         NavigationStack {
@@ -49,10 +51,10 @@ struct RidesView: View {
             }
         }
         .navigationTitle("Rides")
-        .refreshable { await model.refresh() }
+        .pullToRefresh(progress: model.refreshProgress, refreshing: $pulledDown) { await model.refresh() }
         .overlay { if model.sections.allSatisfy(\.rides.isEmpty) { empty } }
         .toolbar {
-            if model.refreshing { ToolbarItem { ProgressView() } }
+            if model.refreshing, !pulledDown { ToolbarItem { ProgressView() } }
         }
     }
 

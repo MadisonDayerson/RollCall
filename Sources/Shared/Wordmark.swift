@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// "Roll Call" in the logo's gothic lettering, at the foot of the sidebar. While the sources are checked it fills
-/// from left to right with glowing blue letters, like a neon sign warming up, whose glow gently breathes while it
-/// works, and pulses blue when it's done.
+/// "Roll Call" in the logo's gothic lettering, at the foot of the Mac's sidebar and above the rides list when it's
+/// pulled down to refresh on iPhone and iPad. While the sources are checked it fills from left to right with glowing blue
+/// letters, like a neon sign warming up, whose glow gently breathes while it works, and pulses blue when it's done.
 struct Wordmark: View {
+    /// The lettering (Design/Wordmark.png), which each app keeps in its own way.
+    let picture: Image
     /// How far the check has got, 0 to 1; nil when it isn't checking.
     @ObservedObject var progress: Box<Double?>
     /// How much of it glows, following the progress smoothly.
@@ -21,21 +23,19 @@ struct Wordmark: View {
     private static let edge: CGFloat = 14
 
     var body: some View {
-        if let img = Brand.wordmark {
-            let letters = Image(nsImage: img).renderingMode(.template).resizable().scaledToFit()
-            letters
-                .foregroundStyle(.secondary)
-                .overlay {
-                    glowing(letters.foregroundStyle(Self.core).mask(alignment: .leading) { reveal }, breath: breath.value)
-                }
-                .overlay { glowing(letters.foregroundStyle(Self.core)).opacity(pulse.value) }
-                .frame(maxWidth: 120, maxHeight: 34)
-                .frame(maxWidth: .infinity)
-                .accessibilityElement()
-                .accessibilityLabel("Roll Call")
-                .accessibilityValue(progress.value.map { "Checking sources, \(Int($0 * 100)) percent" } ?? "")
-                .onChange(of: progress.value) { old, new in changed(from: old, to: new) }
-        }
+        let letters = picture.renderingMode(.template).resizable().scaledToFit()
+        letters
+            .foregroundStyle(.secondary)
+            .overlay {
+                glowing(letters.foregroundStyle(Self.core).mask(alignment: .leading) { reveal }, breath: breath.value)
+            }
+            .overlay { glowing(letters.foregroundStyle(Self.core)).opacity(pulse.value) }
+            .frame(maxWidth: 120, maxHeight: 34)
+            .frame(maxWidth: .infinity)
+            .accessibilityElement()
+            .accessibilityLabel("Roll Call")
+            .accessibilityValue(progress.value.map { "Checking sources, \(Int($0 * 100)) percent" } ?? "")
+            .onChange(of: progress.value) { old, new in changed(from: old, to: new) }
     }
 
     /// Lit up to how far the check has got, fading out at the leading edge.

@@ -1,6 +1,6 @@
 // Draws the gothic lettering the window uses: black letters on a clear background, which the app tints to
 // match the text around it, so it suits light and dark mode.
-// Run: swift Design/make_wordmark.swift Design/Wordmark.png              ("Roll Call", foot of the sidebar)
+// Run: swift Design/make_wordmark.swift Design/Wordmark.png              ("Roll Call", foot of the sidebar; pull to refresh on iPhone and iPad)
 //      swift Design/make_wordmark.swift Design/Monogram.png RC           (the "RC" on empty pages)
 //      … [text] [font file or font name]
 import AppKit

@@ -21,7 +21,9 @@ struct MainView: View {
                 Label("Settings", systemImage: "gearshape").tag(UIModel.Page.settings)
             }
             .navigationSplitViewColumnWidth(min: 150, ideal: 190)
-            .safeAreaInset(edge: .bottom) { Wordmark(progress: model.app.refreshProgress).padding(.bottom, 14) }
+            .safeAreaInset(edge: .bottom) {
+                if let img = Brand.wordmark { Wordmark(picture: Image(nsImage: img), progress: model.app.refreshProgress).padding(.bottom, 14) }
+            }
         } detail: {
             switch model.page {
             case .rides: RidesPage(model: model)

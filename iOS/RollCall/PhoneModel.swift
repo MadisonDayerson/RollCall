@@ -9,6 +9,8 @@ final class PhoneModel {
     let geocoder = Geocoder()
     var state: AppState
     var refreshing = false
+    /// How far Refresh has got, 0 to 1; nil when it isn't checking.
+    let refreshProgress = Box<Double?>(nil)
     /// A problem to show, such as the calendar not being allowed.
     var problem: String?
     var tab: PhoneTab = .rides
