@@ -24,8 +24,9 @@ private struct PullToRefresh: ViewModifier {
     private static let unlit = Box<Double?>(nil)
     /// How far the list is held down while it refreshes.
     private static let held: CGFloat = 60
-    /// The space opens above a large title, which is under the bar on an upright iPhone.
-    private static let largeTitle: CGFloat = 52
+    /// The space opens above a large title, which is under the bar on an upright iPhone. The bar is empty then, so the
+    /// logo has its room too.
+    private static let largeTitle: CGFloat = 52, bar: CGFloat = 44
 
     init(progress: Box<Double?>, refreshing: Binding<Bool>, action: @escaping () async -> Void) {
         self.progress = progress
@@ -37,6 +38,7 @@ private struct PullToRefresh: ViewModifier {
 
     func body(content: Content) -> some View {
         let space = firstRow - restingTop
+        let largeTitle = width == .compact && height == .regular
         content
             .refreshable {
                 refreshing = true
@@ -57,14 +59,16 @@ private struct PullToRefresh: ViewModifier {
             .onScrollGeometryChange(for: [CGFloat].self) { [$0.contentInsets.top, -$0.contentOffset.y] } action: { _, new in
                 let top = new[0]
                 firstRow = new[1]
-                // Pulled far enough, the list is moved down before the refresh starts.
-                if !refreshing, firstRow <= top { restingTop = top }
+                // Pulled far enough, the list is moved down before the refresh starts. A smaller change is the large title
+                // opening, when the pull starts with the list scrolled.
+                if !refreshing, firstRow <= top || top < restingTop + Self.held - 1 { restingTop = top }
             }
             .overlay(alignment: .top) {
-                Wordmark(picture: Image("Wordmark"), progress: refreshing ? progress : Self.unlit)
-                    .frame(height: max(space, Self.held))
-                    .opacity(min(1, max(0, space / Self.held * 2 - 1)))
-                    .padding(.top, restingTop - (width == .compact && height == .regular ? Self.largeTitle : 0))
+                Wordmark(picture: Image("Wordmark"), progress: refreshing ? progress : Self.unlit, width: 200)
+                    .frame(height: max(space, Self.held) + (largeTitle ? Self.bar : 0))
+                    // Once there's nearly room for it above the title.
+                    .opacity(min(1, max(0, space / Self.held * 3 - 2)))
+                    .padding(.top, restingTop - (largeTitle ? Self.largeTitle + Self.bar : 0))
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
             }

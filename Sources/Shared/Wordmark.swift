@@ -8,6 +8,7 @@ struct Wordmark: View {
     let picture: Image
     /// How far the check has got, 0 to 1; nil when it isn't checking.
     @ObservedObject var progress: Box<Double?>
+    var width: CGFloat = 120
     /// How much of it glows, following the progress smoothly.
     @StateObject private var lit = Box(0.0)
     /// The whole wordmark's glow when the check finishes.
@@ -30,7 +31,7 @@ struct Wordmark: View {
                 glowing(letters.foregroundStyle(Self.core).mask(alignment: .leading) { reveal }, breath: breath.value)
             }
             .overlay { glowing(letters.foregroundStyle(Self.core)).opacity(pulse.value) }
-            .frame(maxWidth: 120, maxHeight: 34)
+            .frame(maxWidth: width)
             .frame(maxWidth: .infinity)
             .accessibilityElement()
             .accessibilityLabel("Roll Call")
