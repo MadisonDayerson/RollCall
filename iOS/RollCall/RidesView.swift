@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// How the Rides tab shows the rides.
+enum RidesLayout: String, CaseIterable {
+    case list, week, month
+    var name: String { rawValue.capitalized }
+}
+
 /// The rides as a list, or the week's or month's in a calendar. With room (most iPad windows) a ride's page is beside the
 /// list, under one title bar: a split view has its own bars, which ended up under the floating tabs when an iPad
 /// window changed shape. Otherwise the page opens over the list.
@@ -78,7 +84,7 @@ struct RidesView: View {
     }
 }
 
-/// One ride in the list: its date patch, name, time and place. Swipe for Going or Skip.
+/// One ride in the list. Swipe for Going or Skip.
 struct RideRow: View {
     @Environment(PhoneModel.self) private var model
     let ride: RideEvent
@@ -86,16 +92,7 @@ struct RideRow: View {
 
     var body: some View {
         let decision = model.decision(ride.id)
-        HStack(spacing: 12) {
-            DateBadge(date: ride.start, decision: decision, needsCheck: ride.needsCheck == true, past: past)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(ride.title).font(.headline).lineLimit(2)
-                Text(Format.when(ride)).font(.subheadline).foregroundStyle(.secondary)
-                if let place = Format.place(ride) {
-                    Text(place).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-        }
+        RideSummary(ride: ride, past: past)
         .padding(.vertical, 2)
         .swipeActions(edge: .leading) {
             if !past {

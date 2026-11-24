@@ -23,7 +23,7 @@ Taken from the icon: a white gothic "RC" on black, inside a thin double frame, l
   bold sentence case, and everything else is the system font.
 - **Maps in greys.** Route maps use Apple's muted map turned to greys, with the route in the text colour, so they
   sit in the black and white.
-- **Gothic lettering, sparingly.** Only "Roll Call" at the foot of the sidebar, above the list on iPhone and iPad and at the top of every dialog
+- **Gothic lettering, sparingly.** Only "Roll Call" at the foot of the sidebar, above Home and the rides list on iPhone and iPad, and at the top of every dialog
   (in place of the app icon, `Dialogs.run`), and "RC" on empty pages
   (`Brand.wordmark`, `Brand.monogram`). They're pictures drawn by `make_wordmark.swift`, because the
   font's licence doesn't allow shipping it. Never use it for text people need to read, numbers included.

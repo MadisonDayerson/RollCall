@@ -175,17 +175,17 @@ extension AppDelegate {
 
     func demoReview() -> PlanReview {
         let now = Date()
-        let lines = [("Alex", "Thinking about going for a ride Saturday arvo. Anyone want to join?"),
+        let lines = [("Riley", "Thinking about going for a ride Saturday arvo. Anyone want to join?"),
                      ("Jordan", "Keen! Could meet at Shell Coldstream 2pm and do the Black Spur?"),
-                     ("Alex", "Sounds good, see you there"),
+                     ("Riley", "Sounds good, see you there"),
                      ("Casey", "Might join if the weather holds")].enumerated().map { i, m in
             ChatLine(id: "demo\(i)", sender: m.0, sent: now.addingTimeInterval(Double(i - 4) * 300), text: m.1,
                      mentionsWhen: PlanFinder.mentionsWhen(m.1))
         }
         let saturday = Calendar.current.nextDate(after: now, matching: DateComponents(hour: 14, weekday: 7), matchingPolicy: .nextTime)
         let summary = PlanSummary(title: "Saturday Black Spur ride", when: "Saturday afternoon, 2pm", start: saturday, hasTime: true,
-                                  place: "Shell Coldstream", who: ["Alex", "Jordan"], undecided: "Whether Casey is coming",
-                                  summary: "Alex suggested a Saturday afternoon ride. Jordan proposed meeting at Shell Coldstream at 2pm and riding the Black Spur, and Alex agreed.",
+                                  place: "Shell Coldstream", who: ["Riley", "Jordan"], undecided: "Whether Casey is coming",
+                                  summary: "Riley suggested a Saturday afternoon ride. Jordan proposed meeting at Shell Coldstream at 2pm and riding the Black Spur, and Riley agreed.",
                                   isPlan: true, byAI: true)
         return PlanReview(id: "plan:demo", feedID: store.state.feeds.first { $0.type == .chat }?.id ?? "", chatID: "demo",
                           lines: lines, summary: summary, status: .open, created: now, updated: now)

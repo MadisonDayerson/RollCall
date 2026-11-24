@@ -10,6 +10,12 @@ enum Web {
         link.lowercased().hasPrefix("http") || link.hasPrefix(Beeper.chatLinkPrefix) ? link : "https://" + link
     }
 
+    /// A link that can be opened. Links come from feeds and chats, so only web links (never a file or an app).
+    static func link(_ link: String?) -> URL? {
+        guard let link, let url = URL(string: link), ["https", "http"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+        return url
+    }
+
     static func get(_ urlString: String) async throws -> (text: String, contentType: String, finalURL: URL) {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
         var req = URLRequest(url: url, timeoutInterval: 30)

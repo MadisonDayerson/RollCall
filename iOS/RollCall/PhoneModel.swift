@@ -45,9 +45,12 @@ final class PhoneModel {
 
     // MARK: - Rides
 
+    /// The list's headings, as on the Mac.
+    enum Group: String { case undecided = "Undecided", going = "Going", skipped = "Skipped", past = "Past" }
+
     struct Section: Identifiable {
-        var id: String { name }
-        var name: String
+        var id: Group { group }
+        var group: Group
         var rides: [RideEvent]
     }
 
@@ -55,11 +58,16 @@ final class PhoneModel {
         _ = state  // redraw when the rides change
         let all = store.upcoming()
         return [
-            Section(name: "Undecided", rides: all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }),
-            Section(name: "Going", rides: all.filter { store.decision($0.id) == .attending }),
-            Section(name: "Skipped", rides: all.filter { store.decision($0.id) == .skip }),
-            Section(name: "Past", rides: store.past()),
+            Section(group: .undecided, rides: all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }),
+            Section(group: .going, rides: all.filter { store.decision($0.id) == .attending }),
+            Section(group: .skipped, rides: all.filter { store.decision($0.id) == .skip }),
+            Section(group: .past, rides: store.past()),
         ]
+    }
+
+    /// The rides a calendar shows: coming up and not skipped, and those you went on.
+    var calendarRides: [RideEvent] {
+        sections.filter { $0.group != .skipped }.flatMap(\.rides).sorted { $0.start < $1.start }
     }
 
     func decision(_ id: String) -> Decision { state.decisions[id] ?? .undecided }
@@ -104,5 +112,8 @@ final class PhoneModel {
         // Apple Maps comes with every iPhone and iPad.
         await store.directions(for: ride, in: app, hasAppleMaps: true).flatMap(URL.init(string:))
     }
+}
 
+extension [PhoneModel.Section] {
+    func rides(_ group: PhoneModel.Group) -> [RideEvent] { first { $0.group == group }?.rides ?? [] }
 }

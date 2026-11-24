@@ -1,1 +1,3 @@
 xcuserdata/
+# Your Apple team, for signing (see Signing.xcconfig).
+MyTeam.xcconfig

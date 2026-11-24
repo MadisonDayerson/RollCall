@@ -443,11 +443,11 @@ func msgAt(_ id: String, _ who: String, _ day: Int, _ h: Int, _ m: Int, _ text: 
     return ChatLine(id: id, sender: who, sent: sent, text: text, mentionsWhen: PlanFinder.mentionsWhen(text))
 }
 let thread = [
-    msgAt("a1", "Alex", 1, 8, 2, "Thinking about going for a ride this arvo/evening. Anyone want to join? Have no destination set."),
+    msgAt("a1", "Riley", 1, 8, 2, "Thinking about going for a ride this arvo/evening. Anyone want to join? Have no destination set."),
     msgAt("a2", "Jordan", 1, 8, 3, "A couple of us were thinking about heading out a bit later on, could meet somewhere?"),
-    msgAt("a3", "Alex", 1, 8, 16, "I'm in the west. Happy to ride anywhere."),
+    msgAt("a3", "Riley", 1, 8, 16, "I'm in the west. Happy to ride anywhere."),
     msgAt("a4", "Sam", 1, 8, 30, "Keen! How about meet at Shell Coldstream 2pm"),
-    msgAt("a5", "Alex", 1, 8, 31, "Sounds good"),
+    msgAt("a5", "Riley", 1, 8, 31, "Sounds good"),
     msgAt("b1", "Jo", 1, 14, 0, "nice bike! what tyres are those"),
     msgAt("c1", "Jo", 1, 18, 0, "dinner at 7pm tonight anyone?"),
 ]
@@ -458,7 +458,7 @@ check(found.count == 1 && found.first?.lines.count == 5, "one conversation to re
 let plan = found.first?.summary
 check(plan?.start.map { comps($0).day == 1 && comps($0).hour == 14 } == true && plan?.hasTime == true, "agreed time is the latest one (2pm)")
 check(plan?.place?.contains("Shell Coldstream") == true, "meeting point from a reply")
-check(plan?.who == ["Alex", "Sam"], "who's in: the proposer and people who said yes")
+check(plan?.who == ["Riley", "Sam"], "who's in: the proposer and people who said yes")
 check(found.first?.id == "plan:beeper-x:a1" && found.first?.keyMessage?.id == "a4", "review id and the message to jump to")
 check(PlanFinder.find(thread, newIDs: ["a3", "a5"], feedID: "x", chatID: "x", now: now).isEmpty, "not raised again unless a new message names a time")
 check(PlanFinder.find(thread, newIDs: Set(thread.map(\.id)), feedID: "x", chatID: "x",
@@ -482,7 +482,7 @@ do {
 }
 // Conversations keep growing as the details are settled (made-up messages).
 do {
-    let start = [msgAt("f1", "Alex", 2, 9, 0, "Ride Sunday anyone?"), msgAt("f2", "Sam", 2, 9, 5, "Keen")]
+    let start = [msgAt("f1", "Riley", 2, 9, 0, "Ride Sunday anyone?"), msgAt("f2", "Sam", 2, 9, 5, "Keen")]
     let monday = cal.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 10))!
     var review = PlanFinder.find(start, newIDs: ["f1", "f2"], feedID: "x", chatID: "!x", now: monday)
     check(review.count == 1, "a ride on Sunday is raised")
@@ -490,7 +490,7 @@ do {
     r.updated = monday
     let later = start + [
         msgAt("f3", "Jo", 3, 19, 0, "anyone selling a helmet?"),
-        msgAt("f4", "Alex", 4, 12, 0, "Let's meet at Example Servo, 9am"),
+        msgAt("f4", "Riley", 4, 12, 0, "Let's meet at Example Servo, 9am"),
         msgAt("f5", "Sam", 4, 12, 4, "perfect"),
     ]
     let wed = cal.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 13))!
@@ -549,13 +549,13 @@ TITLE: Sunday arvo ride
 WHEN: Sunday 1 November, 2pm
 DATE: 2026-11-01 14:00
 WHERE: Shell Coldstream
-WHO: Alex, Sam
+WHO: Riley, Sam
 UNDECIDED: Nothing
-SUMMARY: Alex suggested an afternoon ride and Sam proposed meeting at Shell Coldstream at 2pm, which Alex agreed to.
+SUMMARY: Riley suggested an afternoon ride and Sam proposed meeting at Shell Coldstream at 2pm, which Riley agreed to.
 """
 let parsed = PlanSummariser.parse(aiReply, fallback: fallback, now: now)
 check(parsed?.isPlan == true && parsed?.byAI == true && parsed?.title == "Sunday arvo ride", "model reply read")
-check(parsed?.start.map { comps($0).hour == 14 } == true && parsed?.undecided == nil && parsed?.who == ["Alex", "Sam"], "model reply fields")
+check(parsed?.start.map { comps($0).hour == 14 } == true && parsed?.undecided == nil && parsed?.who == ["Riley", "Sam"], "model reply fields")
 check(PlanSummariser.parse("PLAN: no\nSUMMARY: Just chat about tyres.", fallback: fallback, now: now)?.isPlan == false, "model can say it isn't a plan")
 check(PlanSummariser.parse("Sorry, I can't help with that.", fallback: fallback, now: now) == nil, "a reply in the wrong format is ignored")
 check(PlanSummariser.parse("PLAN: yes\nDATE: 2019-01-01 10:00\nSUMMARY: x", fallback: fallback, now: now)?.start == fallback.start, "a far-off date from the model isn't trusted")
@@ -629,7 +629,7 @@ check(Updater.isOurDownload("https://github.com/MadisonDayerson/RollCall/release
       "updates only download from RollCall's own GitHub releases")
 check(RidePlan.place(in: "this is going to hurt me more then it will you") == nil, "lower-case words aren't a destination")
 
-check(PlanSummariser.prompt(Array(thread.prefix(2)), chatName: "Sunday Crew").contains("Alex: Thinking about going for a ride"), "conversation goes into the prompt")
+check(PlanSummariser.prompt(Array(thread.prefix(2)), chatName: "Sunday Crew").contains("Riley: Thinking about going for a ride"), "conversation goes into the prompt")
 check(TextDetect.scan("ride this Sunday 9am", now: Date(), absoluteOnly: true).start == nil, "old message: 'this Sunday' ignored")
 // A week ahead, so the date never falls into the past.
 let aheadText: String = { let f = DateFormatter(); f.locale = Locale(identifier: "en_AU"); f.dateFormat = "EEEE d MMM"
@@ -678,9 +678,9 @@ check(Store.facebookShareLink("https://www.facebook.com/groups/123") == nil, "gr
 
 // Calendar notes describe the plan without quoting the chat.
 let ruleNote = PlanSummary(title: "Sunday ride", when: "Sunday 8 November, 8:30 am", start: nil, hasTime: true, place: "Shell Coldstream",
-                           who: ["Alex", "Jordan"], undecided: nil, summary: "Alex wrote: “Sunday ride 8:30 at Shell Coldstream?”",
+                           who: ["Riley", "Jordan"], undecided: nil, summary: "Riley wrote: “Sunday ride 8:30 at Shell Coldstream?”",
                            isPlan: true, byAI: false).calendarNote
-check(ruleNote == "Ride plan: Sunday ride, Sunday 8 November, 8:30 am. Meeting at Shell Coldstream. Going: Alex, Jordan.", "rule-based plan described (\(ruleNote))")
+check(ruleNote == "Ride plan: Sunday ride, Sunday 8 November, 8:30 am. Meeting at Shell Coldstream. Going: Riley, Jordan.", "rule-based plan described (\(ruleNote))")
 check(!ruleNote.contains("wrote") && !ruleNote.contains("“"), "no chat message quoted in calendar notes")
 let aiNote = PlanSummary(title: "x", when: "y", start: nil, hasTime: false, place: nil, who: [], undecided: nil,
                          summary: "A group ride to Marysville on Sunday morning.", isPlan: true, byAI: true).calendarNote
@@ -766,7 +766,7 @@ do {
     CHILL SPOT: NO AFTER RIDE THIS TIME
     OUR SOCIALS BELOW:
     FACEBOOK: https://www.facebook.com/groups/example
-    BY JOINING THIS EVENT YOU ACKNOWLEDGE THE FOLLOWING:
+    BY COMING ALONG YOU AGREE TO THESE MADE-UP RULES:
     Ride safe. Times: approximate.
     """
     check(Brief.items(in: long) == [
@@ -1239,6 +1239,8 @@ do {
     check(Beeper.chatParts(chatLink)?.chat == "!abc:example" && Beeper.chatParts(chatLink)?.message == "m1"
           && Beeper.chatParts("https://example.com") == nil, "a ride added from a plan knows its chat from its link")
     check(Beeper.chatParts("https://" + chatLink)?.chat == "!abc:example", "...even after Edit… put https:// in front of it")
+    check(Web.link("https://example.com/ride") != nil && Web.link(chatLink) == nil && Web.link("file:///etc/hosts") == nil && Web.link(nil) == nil,
+          "only web links open")
     check(Web.withScheme(chatLink) == chatLink && Web.withScheme("example.com/ride") == "https://example.com/ride",
           "Edit… adds https:// to web links but leaves a chat link alone")
 

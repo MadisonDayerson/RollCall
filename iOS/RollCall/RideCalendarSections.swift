@@ -4,6 +4,7 @@ import SwiftUI
 /// rides; choosing it again goes back to all of them.
 struct RideCalendarSections: View {
     @Environment(PhoneModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let span: RideCalendar.Span
     @Binding var day: Date
     @Binding var oneDay: Bool
@@ -44,32 +45,33 @@ struct RideCalendarSections: View {
     }
 
     private var heading: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 0) {
             Text(Format.span(span, at: day)).font(.headline)
             Spacer()
             if !RideCalendar.days(of: span, at: day).contains(Calendar.current.startOfDay(for: Date())) {
-                Button("Today") { withAnimation { day = Date(); oneDay = false } }
+                Button("Today") { show(Date()) }.padding(.trailing, 12)
             }
-            Button("Previous \(name)", systemImage: "chevron.left") { move(-1) }
-            Button("Next \(name)", systemImage: "chevron.right") { move(1) }
+            arrow("Previous \(name)", "chevron.left", -1)
+            arrow("Next \(name)", "chevron.right", 1)
         }
-        .labelStyle(.iconOnly)
         .buttonStyle(.borderless)
+    }
+
+    private func arrow(_ title: String, _ icon: String, _ n: Int) -> some View {
+        Button { move(n) } label: {
+            Label(title, systemImage: icon).labelStyle(.iconOnly).frame(width: 44, height: 44).contentShape(Rectangle())
+        }
     }
 
     private var name: String { span == .week ? "week" : "month" }
 
-    private func move(_ n: Int) {
-        withAnimation {
-            day = RideCalendar.move(day, by: n, span)
+    private func move(_ n: Int) { show(RideCalendar.move(day, by: n, span)) }
+
+    /// Goes to the week or month with the day in it.
+    private func show(_ new: Date) {
+        withAnimation(reduceMotion ? nil : .default) {
+            day = new
             oneDay = false
         }
-    }
-}
-
-extension PhoneModel {
-    /// The rides a calendar shows: coming up and not skipped, and those you went on.
-    var calendarRides: [RideEvent] {
-        (sections.filter { $0.name != "Skipped" }.flatMap(\.rides)).sorted { $0.start < $1.start }
     }
 }

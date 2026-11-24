@@ -10,6 +10,11 @@ REPO=MadisonDayerson/rollcall
 # Every release is signed with the same certificate, so people's permissions carry over the update.
 security find-certificate -c "RollCall Signing" >/dev/null 2>&1 || { echo "Run ./make_signing_key.sh once first."; exit 1; }
 
+# The project is public, so your Apple team stays out of it (see iOS/Signing.xcconfig).
+if grep -q DEVELOPMENT_TEAM iOS/RollCall.xcodeproj/project.pbxproj; then
+  echo "Move DEVELOPMENT_TEAM from iOS/RollCall.xcodeproj/project.pbxproj to iOS/MyTeam.xcconfig first."; exit 1
+fi
+
 # Tests first, so a broken build never reaches anyone.
 mkdir -p build
 ./test.sh > build/test.log 2>&1 || { tail -20 build/test.log; echo "Tests failed; not releasing."; exit 1; }

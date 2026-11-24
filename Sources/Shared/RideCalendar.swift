@@ -28,7 +28,7 @@ enum RideCalendar {
         return days
     }
 
-    /// The month in whole weeks, with nil for days outside it.
+    /// The week, or the month in whole weeks with nil for days outside it.
     static func grid(of span: Span, at day: Date, in calendar: Calendar = .current) -> [[Date?]] {
         let days = days(of: span, at: day, in: calendar)
         guard let first = days.first else { return [] }

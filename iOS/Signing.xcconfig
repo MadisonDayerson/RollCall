@@ -1,0 +1,3 @@
+// Who signs the app is kept out of this public project: put your team in iOS/MyTeam.xcconfig, which git ignores.
+// DEVELOPMENT_TEAM = your team's ID
+#include? "MyTeam.xcconfig"

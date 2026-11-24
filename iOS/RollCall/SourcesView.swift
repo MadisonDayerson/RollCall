@@ -20,7 +20,7 @@ struct SourcesView: View {
                             .foregroundStyle(model.state.feedErrors[feed.id] == nil ? Color.secondary : Color.orange)
                     }
                     .contextMenu {
-                        if let page = URL(string: feed.groupURL ?? feed.url), page.scheme?.hasPrefix("http") == true {
+                        if let page = Web.link(feed.groupURL ?? feed.url) {
                             Button("Open website", systemImage: "safari") { openURL(page) }
                         }
                         Button("Remove", systemImage: "trash", role: .destructive) { model.removeSource(feed.id) }

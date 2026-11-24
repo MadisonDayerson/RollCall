@@ -148,9 +148,7 @@ extension AppDelegate {
             }
             return
         }
-        // Links come from feeds and chats, so only web links open (never a file or an app on this Mac).
-        guard let link, let url = URL(string: link), ["https", "http"].contains(url.scheme?.lowercased() ?? "") else { return }
-        NSWorkspace.shared.open(url)
+        if let url = Web.link(link) { NSWorkspace.shared.open(url) }
     }
 
     @objc func openMaps(_ sender: NSMenuItem) {

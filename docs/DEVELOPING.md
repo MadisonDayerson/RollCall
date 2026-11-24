@@ -33,7 +33,9 @@ To put it on your own iPhone or iPad with a free Apple account:
 2. Xcode → Settings → Apple Accounts → **+** → Apple Account, and sign in with your Apple ID.
 3. Click the blue RollCall project at the top of the file list, choose the **RollCall** target, then
    **Signing & Capabilities**. Leave "Automatically manage signing" on and choose your name (Personal Team)
-   under Team.
+   under Team. Xcode writes your team's ID into the project, which is public: move its `DEVELOPMENT_TEAM` line from
+   `iOS/RollCall.xcodeproj/project.pbxproj` to `iOS/MyTeam.xcconfig` (git ignores that file), as
+   `DEVELOPMENT_TEAM = your ID`. `release.sh` won't publish while it's in the project.
 4. Plug the iPhone in with a cable, unlock it and tap **Trust** if it asks.
 5. On the iPhone: Settings → Privacy & Security → **Developer Mode** → on, then restart it when asked.
 6. In Xcode, choose the iPhone from the device menu at the top of the window and press ▶ (Run).

@@ -90,7 +90,7 @@ enum RoutePlanner {
         return try? await MKDirections(request: request).calculate().routes.first
     }
 
-    /// "123 km · about 2 h 10 min riding · Footscray → Healesville", or "the organiser's route" for a route link.
+    /// "123 km · about 2 h 10 min riding · Frankston → Healesville", or "the organiser's route" for a route link.
     static func describe(_ p: Planned, places: [String], notes: String) -> String {
         let km = Int((p.metres / 1000).rounded())
         let minutes = Int((p.seconds / 60 / 5).rounded()) * 5

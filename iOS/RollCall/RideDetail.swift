@@ -39,7 +39,7 @@ struct RideDetail: View {
             }
 
             Section {
-                if let link = ride.url.flatMap(URL.init(string:)) {
+                if let link = Web.link(ride.url) {
                     Button(ride.openLabel, systemImage: "safari") { openURL(link) }
                 }
                 if ride.hasRoute {
