@@ -28,6 +28,7 @@ extension PhoneModel {
             macFolder = nil
             return
         }
+        store.noteRides()
         UserDefaults.standard.set(bookmark, forKey: Self.folderKey)
         store.save()
         state = store.state

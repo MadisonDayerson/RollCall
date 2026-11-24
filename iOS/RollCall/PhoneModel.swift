@@ -11,6 +11,11 @@ final class PhoneModel {
     var refreshing = false
     /// A problem to show, such as the calendar not being allowed.
     var problem: String?
+    var tab: PhoneTab = .rides
+    /// A ride to open, from its notification.
+    var rideToOpen: String?
+    /// Nil until you've been asked.
+    var notificationsAllowed: Bool?
     /// The RollCall folder in iCloud Drive that RollCall on the Mac shares, once chosen in Settings.
     var macFolder: URL? = PhoneModel.savedFolder()
     var lastShared: Date?
@@ -25,9 +30,11 @@ final class PhoneModel {
         checkCalendar()
     }
 
-    /// Saves, and shares the change with RollCall on the Mac (taking in its changes too) when that's set up.
+    /// Saves, shares the change with RollCall on the Mac (taking in its changes too) when that's set up, and tells you
+    /// about new rides.
     func saved() {
         share()
+        _ = RideNotice.announce(store)  // saved just below
         store.save()
         state = store.state
     }

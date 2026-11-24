@@ -2,15 +2,19 @@ import SwiftUI
 
 @main
 struct RollCallApp: App {
-    @State private var model = PhoneModel()
+    @UIApplicationDelegateAdaptor private var delegate: PhoneDelegate
 
     var body: some Scene {
+        let model = delegate.model
         WindowGroup {
             RootView()
                 .environment(model)
         }
+        .backgroundTask(.appRefresh(PhoneModel.backgroundCheck)) { await model.checkInBackground() }
     }
 }
+
+enum PhoneTab { case rides, sources, settings }
 
 /// Rides, Sources and Settings: tabs on iPhone, a sidebar on iPad.
 struct RootView: View {
@@ -18,10 +22,11 @@ struct RootView: View {
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
-        TabView {
-            Tab("Rides", systemImage: "motorcycle") { RidesView() }
-            Tab("Sources", systemImage: "antenna.radiowaves.left.and.right") { SourcesView() }
-            Tab("Settings", systemImage: "gearshape") { SettingsView() }
+        @Bindable var model = model
+        TabView(selection: $model.tab) {
+            Tab("Rides", systemImage: "motorcycle", value: .rides) { RidesView() }
+            Tab("Sources", systemImage: "antenna.radiowaves.left.and.right", value: .sources) { SourcesView() }
+            Tab("Settings", systemImage: "gearshape", value: .settings) { SettingsView() }
         }
         .tabViewStyle(.sidebarAdaptable)
         .fullScreenCover(isPresented: .constant(!model.state.setupDone || model.settingUp)) { SetupView() }
@@ -41,7 +46,9 @@ struct RootView: View {
             if now == .active {
                 model.shareNow()
                 model.checkCalendar()
+                Task { await model.checkNotifications() }
             }
+            if now == .background { model.scheduleCheck() }
             // Coming back to the app after a few hours reads the sources again.
             guard now == .active, model.state.setupDone,
                   (model.state.lastRefresh ?? .distantPast) < Date().addingTimeInterval(-3 * 3600) else { return }

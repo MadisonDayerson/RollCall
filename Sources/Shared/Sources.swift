@@ -165,6 +165,7 @@ final class Geocoder {
             var coords = store.state.geocodeCache[key]
             if coords == nil {
                 let found = (try? await geocoder.geocodeAddressString(e.location, in: region)) ?? []
+                if Task.isCancelled { return }  // a search that was stopped doesn't mean there's no such place
                 coords = Self.nearest(found.compactMap { $0.location?.coordinate }, homeLatitude: s.homeLatitude, homeLongitude: s.homeLongitude)
                 store.state.geocodeCache[key] = coords
                 try? await Task.sleep(nanoseconds: 1_200_000_000)  // be gentle with Apple's rate limit

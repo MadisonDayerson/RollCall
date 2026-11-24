@@ -14,6 +14,7 @@ struct WelcomeStep: View {
                     point("Follow clubs, Meetup groups, forums and your Facebook events", "person.3")
                     point("See road alerts on your routes", "exclamationmark.triangle")
                     point("Put your rides in your calendar", "calendar")
+                    point("Be told about new rides", "bell")
                 }
                 .padding(.vertical, 8)
                 Text("No accounts, no tracking, no online AI. RollCall never posts, sends messages or RSVPs for you.")

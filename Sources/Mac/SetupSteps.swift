@@ -434,14 +434,14 @@ struct FinishStep: View {
             HStack {
                 switch model.notificationsAllowed {
                 case .some(true):
-                    Label("Notifications are on: RollCall tells you when a chat plans a ride", systemImage: "bell.fill").foregroundStyle(.primary)
+                    Label("Notifications are on: RollCall tells you about new rides and plans in your chats", systemImage: "bell.fill").foregroundStyle(.primary)
                 case .some(false):
-                    Text("Notifications are off, so RollCall can't tell you about plans in your chats.")
+                    Text("Notifications are off, so RollCall can't tell you about new rides and plans in your chats.")
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Button("Open Settings…") { model.openNotificationSettings() }
                 case .none:
                     Button("Allow notifications") { model.allowNotifications() }
-                    Text("so RollCall can tell you when a chat plans a ride").foregroundStyle(.secondary)
+                    Text("so RollCall can tell you about new rides and plans in your chats").foregroundStyle(.secondary)
                 }
             }
             Text("You can run this setup again any time from the menu bar: Set up RollCall…")

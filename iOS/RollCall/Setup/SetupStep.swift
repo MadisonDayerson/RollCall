@@ -3,9 +3,9 @@ import Foundation
 /// The steps of setup, in order. Sharing with the Mac comes early because the Mac's sources, Facebook calendar and chat
 /// rides come with it.
 enum SetupStep: Int, CaseIterable {
-    case home, mac, chats, groups, facebook, roads, calendar, finish
+    case home, mac, chats, groups, facebook, roads, calendar, notifications, finish
 
-    /// The steps counted in "Step 2 of 7"; the last page isn't.
+    /// The steps counted in "Step 2 of 8"; the last page isn't.
     static let counted = allCases.filter { $0 != .finish }
 
     var next: SetupStep? { SetupStep(rawValue: rawValue + 1) }
@@ -20,6 +20,7 @@ enum SetupStep: Int, CaseIterable {
         case .facebook: "Facebook events"
         case .roads: "Road alerts"
         case .calendar: "Calendar"
+        case .notifications: "Notifications"
         case .finish: "All set"
         }
     }
@@ -36,6 +37,7 @@ extension PhoneModel {
         case .facebook: facebookConnected
         case .roads: roadAlertsKeySaved
         case .calendar: calendarAllowed
+        case .notifications: notificationsAllowed == true
         case .finish: true
         }
     }

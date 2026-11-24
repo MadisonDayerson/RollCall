@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import UserNotifications
 
 extension AppDelegate {
     // MARK: - Plans to review
@@ -78,49 +77,6 @@ extension AppDelegate {
         store.state.reviews.values.filter { $0.status == .open && CrossPost.samePlan(r, $0) }.sorted { $0.id < $1.id }
     }
 
-    func notify(_ r: PlanReview, chatName: String) {
-        guard Bundle.main.bundleIdentifier != nil else { return }
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        let content = UNMutableNotificationContent()
-        content.title = "Possible ride plan: " + r.summary.title
-        content.subtitle = chatName
-        content.body = [r.summary.when, r.summary.place].compactMap { $0 }.joined(separator: " · ")
-        content.userInfo = ["review": r.id]
-        center.add(UNNotificationRequest(identifier: r.id, content: content, trigger: nil))
-    }
-
-    func notifyRideChanged(_ title: String, change: String, chatName: String, rideID: String) {
-        guard Bundle.main.bundleIdentifier != nil else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "Ride updated: " + title
-        content.subtitle = "From the conversation in " + chatName
-        content.body = change
-        content.userInfo = ["ride": rideID]
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "ride-" + rideID, content: content, trigger: nil))
-    }
-
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
-                                            withCompletionHandler done: @escaping () -> Void) {
-        let id = response.notification.request.content.userInfo["review"] as? String
-        let isUpdate = response.notification.request.content.userInfo["update"] != nil
-        let ride = response.notification.request.content.userInfo["ride"] as? String
-        DispatchQueue.main.async {
-            MainActor.assumeIsolated {
-                if isUpdate { self.updateMenu(); return }
-                if let ride { self.ui.selectedRide = ride; self.showWindow(page: .rides); return }
-                self.ui.selectedReview = id
-                self.showWindow(page: .review)
-            }
-        }
-        done()
-    }
-
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
-                                            withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
-        done([.banner, .sound])
-    }
-
     /// Turns a reviewed plan into a ride, after the user checks the details. Apple Intelligence (when it's on)
     /// reads the conversation first, to fill in as much of the form as it can.
     func addRide(fromReview id: String) {
@@ -134,40 +90,71 @@ extension AppDelegate {
         }
     }
 
-    private func addRide(fromReview id: String, details d: RideDetails.Details?, chatName: String) {
-        guard var r = store.state.reviews[id] else { return }
+    /// The ride a plan makes: from its summary, what Apple Intelligence read and what Refresh found. `hasTime` is false
+    /// when no time was agreed.
+    private func planRide(_ r: PlanReview, details d: RideDetails.Details?, chatName: String) -> (form: Dialogs.ManualRide, hasTime: Bool) {
         let s = r.summary
         var start = s.start ?? Dialogs.nextSundayMorning()
         var hasTime = s.hasTime
         // RollCall's own rules read a time written in the messages reliably; otherwise the model's reading is used.
         if let ds = d?.start, !s.hasTime || s.start == nil { start = ds; hasTime = d?.hasTime ?? false }
         if s.start != nil || d?.start != nil, !hasTime { start = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: start) ?? start }
-        let link = Beeper.chatLink(chatID: r.chatID, messageID: r.keyMessage?.id)
         // The plan's own on-device summary already names the ride and place well; the form's reading fills the rest.
         var parts = [s.byAI && !s.summary.isEmpty ? s.summary : d?.details ?? s.calendarNote]
         if let d, !d.stops.isEmpty { parts.append("Stops: " + d.stops.joined(separator: "; ")) }
         if let dest = d?.destination { parts.append("Destination: " + dest) }
         if let l = d?.link { parts.append("Link: " + l) }
-        var notes = parts.joined(separator: "\n")
-        var intro = d != nil ? "Apple Intelligence filled this in from the conversation in \(chatName), on this Mac. Check it before adding."
-                             : "From the conversation in \(chatName). Check the time and meeting place."
         // Where it starts and ends names a chat ride better than "Sam's ride".
-        var form = RideEvent(id: id, title: RideDetails.routeTitle(from: d?.meet, to: d?.destination) ?? (s.byAI ? s.title : d?.title ?? s.title),
+        var form = RideEvent(id: r.id, title: RideDetails.routeTitle(from: d?.meet, to: d?.destination) ?? (s.byAI ? s.title : d?.title ?? s.title),
                              start: start, end: start.addingTimeInterval((d?.hours ?? 3) * 3600), allDay: false,
-                             location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", notes: notes, url: nil,
+                             location: (s.byAI ? s.place : nil) ?? d?.meet ?? s.place ?? "", notes: parts.joined(separator: "\n"), url: nil,
                              source: "manual", sourceName: chatName, lastSeen: Date())
         // What Refresh found about the plan and you kept.
-        let found = keptFindings(id)
+        let found = keptFindings(r.id)
         for f in found { form = form.applying(RideSearch.edit(form, adding: f)) }
         if found.contains(where: { $0.field == .time }) { hasTime = true }
-        if !found.isEmpty { intro += " The details Refresh found are filled in too." }
+        let link = Beeper.chatLink(chatID: r.chatID, messageID: r.keyMessage?.id)
+        return (.init(title: form.title, start: form.start, hours: (form.end ?? form.finish).timeIntervalSince(form.start) / 3600,
+                      location: form.location, link: form.url ?? link, notes: form.notes), hasTime)
+    }
+
+    private func addRide(fromReview id: String, details d: RideDetails.Details?, chatName: String) {
+        guard let r = store.state.reviews[id] else { return }
+        let (form, hasTime) = planRide(r, details: d, chatName: chatName)
+        var intro = d != nil ? "Apple Intelligence filled this in from the conversation in \(chatName), on this Mac. Check it before adding."
+                             : "From the conversation in \(chatName). Check the time and meeting place."
+        if !keptFindings(id).isEmpty { intro += " The details Refresh found are filled in too." }
         guard let ride = Dialogs.manualRide(
-            prefill: .init(title: form.title, start: form.start, hours: (form.end ?? form.finish).timeIntervalSince(form.start) / 3600,
-                           location: form.location, link: form.url ?? link, notes: form.notes),
+            prefill: form,
             note: intro + (hasTime ? "" : " No time was agreed, so 9am is filled in.")) else { return }
-        ui.lookups[id] = nil
-        // Only the summary goes in the ride (and so the calendar): the chat's messages stay in the chat.
-        notes = ride.notes
+        let rideID = keep(r, as: ride, chatName: chatName)
+        if Dialogs.confirm("Ride added", "Are you going to “\(ride.title)”?", ok: "Yes, add to calendar") {
+            decide(rideID, .attending)
+        }
+    }
+
+    /// Going, from a plan's notification: adds the ride as the plan gives it, without the form. Opens the plan instead
+    /// when it has changed since and isn't complete any more.
+    func confirmPlan(_ id: String) async {
+        guard let r = store.state.reviews[id], r.status == .open, r.summary.isReady else {
+            if let added = store.state.reviews[id]?.rideID { confirmRide(added) } else { openReview(id) }
+            return
+        }
+        let chatName = store.state.feeds.first { $0.id == r.feedID }?.name ?? "a chat"
+        let d = await RideDetails.extract(RideDetails.input(r.lines, chatName: chatName))
+        // It may have been added or dismissed while that was read.
+        guard let now = store.state.reviews[id], now.status == .open else { return }
+        var ride = planRide(now, details: d, chatName: chatName).form
+        // Meeting where the notification said, unless you've kept a place Refresh found.
+        if let place = now.summary.place, !keptFindings(id).contains(where: { $0.field == .place }) { ride.location = place }
+        confirmRide(keep(now, as: ride, chatName: chatName))
+    }
+
+    /// Keeps a plan as a ride, and returns the ride's id. Only the summary goes in the ride (and so the calendar): the
+    /// chat's messages stay in the chat.
+    private func keep(_ r: PlanReview, as ride: Dialogs.ManualRide, chatName: String) -> String {
+        ui.lookups[r.id] = nil
+        let notes = ride.notes
         let item = ICSEvent(uid: "plan-" + stableHash(r.id), title: ride.title, start: ride.start,
                             end: ride.start.addingTimeInterval(ride.hours * 3600), allDay: false, location: ride.location,
                             notes: notes.count > 1500 ? String(notes.prefix(1500)) + "…" : notes,
@@ -179,15 +166,12 @@ extension AppDelegate {
             store.state.reviews[other.id]?.status = .added
             store.state.reviews[other.id]?.rideID = rideID
         }
-        r.status = .added
-        r.rideID = rideID
-        store.state.reviews[id] = r
+        store.state.reviews[r.id]?.status = .added
+        store.state.reviews[r.id]?.rideID = rideID
         store.save()
         Task { await geocoder.fill(store); store.save() }
         updateBadge()
-        if Dialogs.confirm("Ride added", "Are you going to “\(ride.title)”?", ok: "Yes, add to calendar") {
-            decide(rideID, .attending)
-        }
+        return rideID
     }
 
     /// Not a ride: the plan moves to Reviewed, where it stays for as long as Settings → Privacy says.
@@ -229,6 +213,7 @@ extension AppDelegate {
         await geocoder.fill(store)
         for id in changed where store.decision(id) == .attending { syncCalendar(id) }
         store.save()
+        announceNewRides()
         updateBadge()
     }
 

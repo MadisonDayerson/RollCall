@@ -33,6 +33,14 @@ struct SettingsView: View {
                     Text("Automatic uses Apple Maps for a simple trip and Google Maps for rides with stops. A route the organiser shared always opens as it is.")
                 }
 
+                Section {
+                    NotificationSettings()
+                } header: {
+                    PatchLabel(text: "Notifications")
+                } footer: {
+                    Text("For new rides from your sources and your Mac. Touch and hold one to choose Going or Review.")
+                }
+
                 RoadAlertsSection()
 
                 Section {

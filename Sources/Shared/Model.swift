@@ -269,6 +269,8 @@ struct AppState: Codable {
     var responses: [String: Decision] = [:]
     /// How many chats RollCall on the Mac reads, on an iPhone or iPad that shares with it.
     var macChats: Int?
+    /// Rides already here (id -> when it's over), so only new ones are notified. Nil until the first look.
+    var knownRides: [String: Date]?
 
     init() {}
 
@@ -299,6 +301,7 @@ struct AppState: Codable {
         foundRoutes = get(.foundRoutes, [:])
         responses = get(.responses, [:])
         macChats = get(.macChats, nil)
+        knownRides = get(.knownRides, nil)
         let savedVersion: Int = get(.starterVersion, 1)
         instagram = get(.instagram, savedVersion < 2 ? [] : Starter.instagram)
         starterVersion = savedVersion

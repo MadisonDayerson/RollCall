@@ -290,7 +290,7 @@ final class SetupModel: ObservableObject {
 
     func allowNotifications() {
         Task {
-            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
             await checkNotifications()
         }
     }

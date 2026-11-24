@@ -58,6 +58,7 @@ extension PhoneModel {
     func deleteAllData() {
         stopSharing()
         removeRoadAlertsKey()
+        RideNotice.clear()
         try? FileManager.default.removeItem(at: store.file)
         store.state = AppState()
         state = store.state

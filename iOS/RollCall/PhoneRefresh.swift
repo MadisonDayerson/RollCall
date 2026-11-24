@@ -1,8 +1,9 @@
 import SwiftUI
 
 extension PhoneModel {
-    /// Reads every source (chats are read on the Mac), then finds where rides are and updates the calendar.
-    func refresh() async {
+    /// Reads every source (chats are read on the Mac), or with `dueOnly` those whose interval has passed, longest ago
+    /// first. Then finds where rides are and updates the calendar.
+    func refresh(dueOnly: Bool = false) async {
         guard !refreshing else { return }
         refreshing = true
         defer { refreshing = false }
@@ -11,7 +12,15 @@ extension PhoneModel {
         var changed: [String] = []
         // Problems from sources that have since been removed shouldn't linger.
         store.state.feedErrors = store.state.feedErrors.filter { id, _ in store.state.feeds.contains { $0.id == id } }
-        for feed in store.state.feeds where feed.type != .chat {
+        var feeds = store.state.feeds.filter { $0.type != .chat }
+        if dueOnly {
+            let checked = store.state.lastChecked
+            feeds = feeds.filter { $0.due(lastChecked: checked[$0.id], lastTried: nil) }
+                .sorted { checked[$0.id] ?? .distantPast < checked[$1.id] ?? .distantPast }
+        }
+        for feed in feeds {
+            // A background check that ran out of time: what it read is kept, and the rest is left for the next one.
+            if Task.isCancelled { break }
             if let (_, found, replied) = await store.read(feed) {
                 changed += found
                 for id in replied where calendar.authorised { syncCalendar(id) }
@@ -29,7 +38,7 @@ extension PhoneModel {
         }
         saved()
         // Booked roadworks take a minute to download: fetched now, so a ride's road alerts are ready when opened.
-        if store.state.settings.roadAlertsShown == .currentAndPlanned { Task { _ = try? await RoadAlerts.fetchBooked() } }
+        if !dueOnly, store.state.settings.roadAlertsShown == .currentAndPlanned { Task { _ = try? await RoadAlerts.fetchBooked() } }
     }
 
     // MARK: - Sources

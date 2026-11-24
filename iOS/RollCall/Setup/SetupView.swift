@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Setup, one step per page: your area, sharing with the Mac (and the chats it reads), groups and websites, Facebook
-/// events, road alerts and the calendar. Every step after your area can be skipped, and Settings → Run setup… opens it
+/// events, road alerts, the calendar and notifications. Every step after your area can be skipped, and Settings → Run setup… opens it
 /// again.
 struct SetupView: View {
     @Environment(PhoneModel.self) private var model
@@ -29,6 +29,7 @@ struct SetupView: View {
         case .facebook: SetupPage(step: .facebook, next: next) { FacebookStep() }
         case .roads: SetupPage(step: .roads, next: next) { RoadsStep() }
         case .calendar: SetupPage(step: .calendar, next: next) { CalendarStep() }
+        case .notifications: SetupPage(step: .notifications, next: next) { NotificationsStep() }
         case .finish:
             Form { FinishStep(open: back) }
                 .modifier(SetupFooter(title: "Start") { Task { await model.finishSetup() } })
@@ -66,7 +67,7 @@ struct SetupPage<Content: View>: View {
     }
 }
 
-/// "Step 2 of 7" in the title bar.
+/// "Step 2 of 8" in the title bar.
 struct StepCount: ViewModifier {
     let step: SetupStep
 

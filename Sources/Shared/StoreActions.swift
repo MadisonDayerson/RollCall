@@ -82,9 +82,13 @@ extension Store {
             // Only your own Facebook calendar's replies are yours; other calendars' are someone else's.
             let replied = feed.id == FeedLinks.facebookCalendarID ? carryResponses(r.events, source: feed.id) : []
             state.feedErrors[feed.id] = nil
+            // Everything in a source you've just added is new, so none of it is news.
+            if state.lastChecked[feed.id] == nil { noteRides(from: feed.id) }
             state.lastChecked[feed.id] = Date()
             return (r, changed, replied)
         } catch {
+            // Stopped part way (a background check that ran out of time): nothing's wrong with the source.
+            if Task.isCancelled { return nil }
             state.feedErrors[feed.id] = error.localizedDescription
             return nil
         }

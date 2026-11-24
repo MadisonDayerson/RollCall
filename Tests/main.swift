@@ -1330,5 +1330,51 @@ do {
     check(mac.state.decisions["b"] == .skip, "once joined, its later choices count")
 }
 
+// New rides, told about once.
+do {
+    let now = Date()
+    func ride(_ id: String, title: String? = nil, source: String = "club", days: Double = 5, km: Double? = 10, place: String = "Pretend Park") -> RideEvent {
+        RideEvent(id: id, title: title ?? "Ride \(id)", start: now.addingTimeInterval(days * 86400), end: nil, allDay: false, location: place, notes: "",
+                  url: nil, source: source, sourceName: "Example club", latitude: km == nil ? nil : -37.8, longitude: km == nil ? nil : 145,
+                  distanceKm: km, lastSeen: now)
+    }
+    let store = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("new-rides.json"))
+    func add(_ r: RideEvent...) { r.forEach { store.state.events[$0.id] = $0 } }
+    func new() -> [String] { store.newRides(now: now).map(\.id).sorted() }
+    add(ride("old", title: "Weekly Wednesday wander"))
+    check(new().isEmpty, "rides already there the first time aren't new")
+    add(ride("a", title: "Alpine loop", days: 6))
+    check(new() == ["a"] && new().isEmpty, "a new ride is told about once")
+    add(ride("far", days: 7, km: 900), ride("mine", source: "manual", days: 8), ride("going", days: 9))
+    store.state.decisions["going"] = .attending
+    check(new().isEmpty, "not ones too far away, added by you or already decided")
+    add(ride("copy", title: "The Alpine loop ride", source: "forum", days: 6), ride("next", title: "Weekly Wednesday wander", days: 12))
+    check(new().isEmpty, "not another posting of a ride, or a regular ride's next date")
+    add(ride("beeper-1", title: "Ride", source: "beeper-x", days: 13, place: ""))
+    _ = new()
+    add(ride("beeper-2", title: "Ride", source: "beeper-x", days: 20, place: ""))
+    check(new() == ["beeper-2"], "chat rides with the same short name are different rides")
+    add(ride("later", title: "Summer rally", days: 90), ride("lost", title: "Mystery run", days: 14, km: nil, place: "Nowhere Hall"))
+    check(new().isEmpty, "not past the days shown, or before its place is looked up")
+    store.state.geocodeCache["nowhere hall"] = []
+    store.state.settings.daysAhead = 120
+    check(new() == ["later", "lost"], "but once they're shown and looked up")
+    add(ride("s1", source: "added", days: 30))
+    store.noteRides(from: "added")
+    check(new().isEmpty, "rides that come with a source just added aren't news")
+
+    let r = ride("a", title: "Alpine loop")
+    let c = RideNotice.new(r)
+    check(c.title == "New ride: Alpine loop" && c.subtitle == "Example club" && c.body.hasSuffix("Pretend Park · 10 km away"), "a new ride's notification")
+    check(RideNotice.reply(button: "going", info: c.userInfo) == .going("a") && RideNotice.reply(button: "review", info: c.userInfo) == .review("a")
+          && RideNotice.reply(button: "com.apple.UNNotificationDefaultActionIdentifier", info: c.userInfo) == .review("a"), "Going confirms; Review or a tap opens it")
+    let many = RideNotice.several((1...5).map { ride("\($0)") })
+    check(many.title == "5 new rides" && many.body == "Ride 1\nRide 2\nRide 3\nand 2 more" && RideNotice.reply(button: "x", info: many.userInfo) == .list, "many at once make one")
+    check(RideNotice.going(r, inCalendar: true).body.hasSuffix("\nIt's in your RollCall calendar."), "Going is confirmed")
+    var fb = r; fb.url = "https://www.facebook.com/events/123456789"
+    check(RideNotice.going(fb, inCalendar: true).body.contains("press Going on the event page"), "with what's left to do on Facebook")
+    check(RideNotice.going(r, inCalendar: false).body.contains("isn't in your calendar yet"), "and a calendar that isn't allowed")
+}
+
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

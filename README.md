@@ -16,8 +16,8 @@ Needs macOS 14 or newer (Apple silicon or Intel).
 3. Open RollCall. The first time, your Mac blocks it because it isn't from the App Store:
    go to **System Settings → Privacy & Security**, click **Open Anyway**, and enter your password.
 
-Setup asks for each permission once, at the step that needs it: your calendar, and notifications for plans
-found in chats. RollCall updates itself (choose **Update now**
+Setup asks for each permission once, at the step that needs it: your calendar, and notifications for new
+rides and plans found in chats. RollCall updates itself (choose **Update now**
 in the menu) and keeps those permissions over updates.
 
 ## Set up
@@ -37,6 +37,13 @@ A setup guide opens the first time (re-open it any time with **Set up RollCall�
 
 Click **RC** in the menu bar to see upcoming rides and mark them **Going**, **Maybe** or **Skip**.
 Going adds the ride to your **RollCall** calendar, with a reminder the evening before.
+
+RollCall **notifies you** once about each new ride from your sources, and each complete plan in a chat (on the Mac).
+**Going** on the notification puts it straight in your calendar, and a second notification says so; **Review** (or
+clicking the notification) opens it in RollCall. On the Mac the buttons show when you point at the notification; on
+iPhone and iPad, touch and hold it. More than three new rides at once make one notification. You aren't told about rides too far away, ones you
+added yourself, another posting of a ride you have, a regular ride's next date, or what was already in a source you've
+just added. Once you've decided on a ride, on any device, its notification goes.
 
 The full window opens when you open RollCall (or choose **Open RollCall…** in the menu). While it's open,
 RollCall has its own menus at the top of the screen, and ⌘1–⌘4 switch pages:
@@ -256,10 +263,14 @@ Road alerts need your key on each device, pasted into **Settings → Road alerts
 and isn't shared between them).
 
 **Setup.** The first time it opens, RollCall goes through your area, sharing with your Mac, your group chats, groups and
-websites to follow, your Facebook events, your road alerts key and your calendar, one step at a time. Every step after
+websites to follow, your Facebook events, your road alerts key, your calendar and notifications, one step at a time. Every step after
 your area can be skipped, and Settings → **Run setup…** opens it again. Beeper only lets other apps read chats on a
 computer, so the Chats step sets it up on your Mac and says when the Mac is connected (it shares how many chats it
 checks, not which).
+
+**Notifications** work as on the Mac (Settings → **Notifications** turns them on). While RollCall is closed, iOS lets it
+check your sources and take in the Mac's rides now and then: it decides when, from how often you open RollCall, so a new
+ride can take a few hours to show up. Swiping RollCall away in the app switcher stops those checks until it's opened again.
 
 **Sharing with the Mac.** On the Mac, turn on Settings → iPhone and iPad → **Share with RollCall on iPhone and
 iPad** (iCloud Drive needs to be on). That makes a RollCall folder in iCloud Drive. On the iPhone, tap Settings →

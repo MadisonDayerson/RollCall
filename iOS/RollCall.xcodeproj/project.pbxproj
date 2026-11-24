@@ -169,6 +169,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RollCall;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "RollCall puts the rides you're going to in a RollCall calendar.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -190,6 +191,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RollCall;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "RollCall puts the rides you're going to in a RollCall calendar.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

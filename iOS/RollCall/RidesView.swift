@@ -27,6 +27,11 @@ struct RidesView: View {
                 }
             }
         }
+        .onChange(of: model.rideToOpen, initial: true) { _, id in
+            guard let id else { return }
+            selected = id
+            model.rideToOpen = nil
+        }
     }
 
     private var list: some View {

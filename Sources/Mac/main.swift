@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         } else {
             statusItem.button?.title = "🏍"
         }
-        if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
+        if Bundle.main.bundleIdentifier != nil { RideNotice.setUp(self) }
         let menu = NSMenu()
         menu.delegate = self
         menu.autoenablesItems = false
@@ -76,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         // Every minute: Facebook downloads, and any source whose own interval has passed.
         timers.append(Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.scanDownloads(); self?.syncDevices(); await self?.refresh(dueOnly: true) }
+            Task { @MainActor in self?.scanDownloads(); self?.syncDevices(); self?.announceNewRides(); await self?.refresh(dueOnly: true) }
         })
         // New versions: shortly after opening, then daily.
         if !CommandLine.arguments.contains("--snapshots") {
