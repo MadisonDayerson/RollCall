@@ -186,8 +186,11 @@ The iPhone and iPad version is in progress. To put it on your own device, see
 [how to install it](DEVELOPING.md#iphone-and-ipad).
 
 It reads the same clubs, calendars, forums and event sites by itself, with the same route map, weather, road alerts and
-notifications. Pulling the list down refreshes it and, with Apple Intelligence on, looks for more details (not in chats).
+notifications. Pulling Home or the rides down refreshes them and, with Apple Intelligence on, looks for more details (not in chats).
 
+- **Home** has your next ride, this week and next, rides to decide on and the others you're going to.
+- **Rides** has a **List**, whose headings open and close with a tap, and a **Week** and **Month** of the rides coming up
+  and those you're going to. Tap a day for just its rides, and swipe or use the arrows to move on.
 - **Setup** goes through everything one step at a time; every step after your area can be skipped. Settings → **Run
   setup…** opens it again.
 - **Group chats** are read on the Mac only, because Beeper only lets other apps read chats on a computer. Rides from

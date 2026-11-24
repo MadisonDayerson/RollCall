@@ -40,11 +40,14 @@ private struct PullToRefresh: ViewModifier {
         content
             .refreshable {
                 refreshing = true
-                await action()
-                // A check that was already going is followed to its end.
-                while progress.value != nil, !Task.isCancelled { try? await Task.sleep(for: .seconds(0.2)) }
-                // Held down long enough to see the logo's glow when it's done.
-                try? await Task.sleep(for: .seconds(0.7))
+                // In a task of its own: SwiftUI cancels this one when the page redraws, which checking makes it do.
+                await Task {
+                    await action()
+                    // A check that was already going is followed to its end.
+                    while progress.value != nil { try? await Task.sleep(for: .seconds(0.2)) }
+                    // Held down long enough to see the logo's glow when it's done.
+                    try? await Task.sleep(for: .seconds(0.7))
+                }.value
                 // It springs back once this returns.
                 Task {
                     try? await Task.sleep(for: .seconds(0.5))

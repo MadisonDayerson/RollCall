@@ -13,9 +13,11 @@ final class PhoneModel {
     let refreshProgress = Box<Double?>(nil)
     /// A problem to show, such as the calendar not being allowed.
     var problem: String?
-    var tab: PhoneTab = .rides
-    /// A ride to open, from its notification.
+    var tab: PhoneTab = .home
+    /// A ride to open on the Rides tab, from its notification.
     var rideToOpen: String?
+    /// A day to show on the Rides tab, from Home.
+    var dayToOpen: Date?
     /// Nil until you've been asked.
     var notificationsAllowed: Bool?
     /// The RollCall folder in iCloud Drive that RollCall on the Mac shares, once chosen in Settings.

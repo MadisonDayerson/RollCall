@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// Upcoming rides in Undecided, Going, Skipped and Past. With room (most iPad windows) a ride's page is beside the
+/// The rides as a list, or the week's or month's in a calendar. With room (most iPad windows) a ride's page is beside the
 /// list, under one title bar: a split view has its own bars, which ended up under the floating tabs when an iPad
 /// window changed shape. Otherwise the page opens over the list.
 struct RidesView: View {
     @Environment(PhoneModel.self) private var model
     @Environment(\.horizontalSizeClass) private var width
+    @AppStorage("ridesLayout") private var layout = RidesLayout.list
     @State private var selected: String?
+    /// The day the calendar is at, and whether only that day's rides are listed.
+    @State private var day = Date()
+    @State private var oneDay = false
     /// The list is held down to refresh, where the logo shows how far it's got.
     @State private var pulledDown = false
 
@@ -16,7 +20,7 @@ struct RidesView: View {
                 HStack(spacing: 0) {
                     list.frame(width: 320)
                     Divider()
-                    page(selected).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    RidePage(id: selected) { selected = nil }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .background(Color(.systemGroupedBackground))
                 .navigationBarTitleDisplayMode(.inline)
@@ -25,7 +29,7 @@ struct RidesView: View {
                 .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             } else {
                 list.navigationDestination(item: $selected) { id in
-                    page(id).navigationTitle(model.state.events[id]?.title ?? "").navigationBarTitleDisplayMode(.inline)
+                    RidePage(id: id) { selected = nil }.navigationTitle(model.state.events[id]?.title ?? "").navigationBarTitleDisplayMode(.inline)
                 }
             }
         }
@@ -34,35 +38,38 @@ struct RidesView: View {
             selected = id
             model.rideToOpen = nil
         }
+        .onChange(of: model.dayToOpen, initial: true) { _, new in
+            guard let new else { return }
+            day = new
+            oneDay = true
+            if layout == .list { layout = .week }
+            selected = nil
+            model.dayToOpen = nil
+        }
     }
 
     private var list: some View {
         List(selection: $selected) {
-            ForEach(model.sections) { section in
-                if !section.rides.isEmpty {
-                    Section {
-                        ForEach(section.rides, id: \.id) { ride in
-                            RideRow(ride: ride, past: section.name == "Past").tag(ride.id)
-                        }
-                    } header: {
-                        PatchLabel(text: section.name, count: section.rides.count)
-                    }
+            Section {
+                Picker("Show", selection: $layout) {
+                    ForEach(RidesLayout.allCases, id: \.self) { Text($0.name).tag($0) }
                 }
+                .pickerStyle(.segmented).labelsHidden()
+                .listRowBackground(Color.clear).listRowInsets(EdgeInsets())
+            }
+            switch layout {
+            case .list:
+                ForEach(model.sections) { if !$0.rides.isEmpty { RideSection(section: $0) } }
+            case .week, .month:
+                RideCalendarSections(span: layout == .week ? .week : .month, day: $day, oneDay: $oneDay)
             }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle("Rides")
         .pullToRefresh(progress: model.refreshProgress, refreshing: $pulledDown) { await model.refresh() }
-        .overlay { if model.sections.allSatisfy(\.rides.isEmpty) { empty } }
+        .overlay { if layout == .list, model.sections.allSatisfy(\.rides.isEmpty) { empty } }
         .toolbar {
             if model.refreshing, !pulledDown { ToolbarItem { ProgressView() } }
-        }
-    }
-
-    @ViewBuilder private func page(_ id: String?) -> some View {
-        if let id, let ride = model.state.events[id] {
-            RideDetail(ride: ride) { selected = nil }.id(id)
-        } else {
-            EmptyState(text: "Choose a ride to see its details.")
         }
     }
 

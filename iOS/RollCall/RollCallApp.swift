@@ -14,9 +14,9 @@ struct RollCallApp: App {
     }
 }
 
-enum PhoneTab { case rides, sources, settings }
+enum PhoneTab { case home, rides, sources, settings }
 
-/// Rides, Sources and Settings: tabs on iPhone, a sidebar on iPad.
+/// Home, Rides, Sources and Settings: tabs on iPhone, a sidebar on iPad.
 struct RootView: View {
     @Environment(PhoneModel.self) private var model
     @Environment(\.scenePhase) private var phase
@@ -24,6 +24,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var model = model
         TabView(selection: $model.tab) {
+            Tab("Home", systemImage: "house", value: .home) { HomeView() }
             Tab("Rides", systemImage: "motorcycle", value: .rides) { RidesView() }
             Tab("Sources", systemImage: "antenna.radiowaves.left.and.right", value: .sources) { SourcesView() }
             Tab("Settings", systemImage: "gearshape", value: .settings) { SettingsView() }

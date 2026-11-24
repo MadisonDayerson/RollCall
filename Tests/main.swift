@@ -209,6 +209,28 @@ check(Store(file: tmp).state.settings.roadAlertsShown == .current, "your road al
 try? FileManager.default.removeItem(at: tmp)
 
 
+// MARK: - Week and month views
+
+do {
+    var monday = cal; monday.firstWeekday = 2
+    func at(_ month: Int, _ day: Int, _ hour: Int = 0) -> Date { cal.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour))! }
+    func ride(_ start: Date, end: Date? = nil, allDay: Bool = false) -> RideEvent {
+        RideEvent(id: "x", title: "Example", start: start, end: end, allDay: allDay, location: "", notes: "", url: nil,
+                  source: "manual", sourceName: "", latitude: nil, longitude: nil, distanceKm: nil, lastSeen: now)
+    }
+    check(RideCalendar.days(ride(at(11, 28, 22), end: at(11, 29, 1)), in: monday) == [at(11, 28)], "A ride past midnight is on the day it starts")
+    check(RideCalendar.days(ride(at(12, 11), end: at(12, 14), allDay: true), in: monday) == [at(12, 11), at(12, 12), at(12, 13)], "A weekend away is on each of its days")
+    check(RideCalendar.days(ride(at(12, 11, 9), end: at(12, 12, 17)), in: monday) == [at(12, 11), at(12, 12)], "So is a ride with times over two days")
+    let november = RideCalendar.grid(of: .month, at: at(11, 25), in: monday)
+    check(november.count == 6 && november.allSatisfy { $0.count == 7 }, "A month is shown in whole weeks")
+    check(november[0] == Array(repeating: nil, count: 6) + [at(11, 1)] && november[5][0] == at(11, 30) && november[5][1] == nil,
+          "with its days under the right weekday")
+    var sunday = cal; sunday.firstWeekday = 1
+    check(RideCalendar.grid(of: .month, at: at(11, 25), in: sunday)[0][0] == at(11, 1), "Weeks start on Sunday where that's usual")
+    check(RideCalendar.grid(of: .week, at: at(11, 25), in: monday) == [(23...29).map { at(11, $0) }], "A week is seven days")
+    check(RideCalendar.move(at(10, 31), by: 1, .month, in: monday) == at(11, 30), "A month on from the 31st is the next month")
+}
+
 // MARK: - New sources
 
 // Date/time/place in an Instagram-style caption
