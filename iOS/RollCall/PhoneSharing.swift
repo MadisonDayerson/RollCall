@@ -23,8 +23,7 @@ extension PhoneModel {
             return
         }
         macFolder = folder
-        share(joining: true)
-        guard shareProblem == nil else {
+        guard share(joining: true) else {
             macFolder = nil
             return
         }
@@ -35,6 +34,11 @@ extension PhoneModel {
     }
 
     func stopSharing() {
+        if let folder = macFolder {
+            let allowed = folder.startAccessingSecurityScopedResource()
+            Sync.forget(folder: folder, name: UIDevice.current.model)
+            if allowed { folder.stopAccessingSecurityScopedResource() }
+        }
         UserDefaults.standard.removeObject(forKey: Self.folderKey)
         macFolder = nil
         lastShared = nil
@@ -49,17 +53,21 @@ extension PhoneModel {
         saved()
     }
 
-    func share(joining: Bool = false) {
-        guard let folder = macFolder else { return }
+    /// False when nothing was shared. `shareProblem` says why, or which device's file was left for next time.
+    @discardableResult
+    func share(joining: Bool = false) -> Bool {
+        guard let folder = macFolder else { return false }
         let allowed = folder.startAccessingSecurityScopedResource()
         defer { if allowed { folder.stopAccessingSecurityScopedResource() } }
         do {
-            let changed = try Sync.run(store, folder: folder, name: UIDevice.current.model, joining: joining)
+            let (changed, problem) = try Sync.run(store, folder: folder, name: UIDevice.current.model, joining: joining)
             if calendar.authorised { for id in changed { syncCalendar(id) } }
             lastShared = Date()
-            shareProblem = nil
+            shareProblem = problem
+            return true
         } catch {
-            shareProblem = error.localizedDescription
+            shareProblem = "Couldn't share: \(error.localizedDescription)"
+            return false
         }
     }
 }

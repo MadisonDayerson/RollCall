@@ -13,7 +13,7 @@ extension AppDelegate {
             store.state.instagram.removeAll { $0.handle == h }
         } else if let feed = store.state.feeds.first(where: { $0.id == id }) {
             guard Dialogs.confirm("Remove \(feed.name)?",
-                                  "Its rides will disappear from the list. Rides you marked Going stay in your calendar.",
+                                  store.removalNote(feed, shared: store.state.settings.syncDevices == true),
                                   ok: "Remove") else { return }
             store.forgetFeed(id)
         } else {
@@ -82,20 +82,12 @@ extension AppDelegate {
 
     /// Saves your change to a ride. It stays through refreshes and goes to the calendar.
     func saveEdit(_ edit: RideEdit, to ride: RideEvent) {
-        // Every copy of a cross-posted ride gets the change, so the copies still match and show as one ride.
-        var e = ride
-        for copy in [ride] + store.copies(of: ride) {
-            store.state.rideEdits[copy.id] = edit
-            e = copy.applying(edit)
-            e.distanceKm = store.distance(e)
-            store.state.events[copy.id] = e
-            syncCalendar(copy.id)
-        }
+        store.saveEdit(edit, to: ride).forEach(syncCalendar)
         store.save()
-        NotificationCenter.default.post(name: Store.changed, object: nil)
+        syncDevices()
         updateBadge()
-        if e.latitude == nil, !e.location.isEmpty {
-            Task { await geocoder.fill(store); store.save(); NotificationCenter.default.post(name: Store.changed, object: nil) }
+        if let e = store.state.events[ride.id], e.latitude == nil, !e.location.isEmpty {
+            Task { await geocoder.fill(store); store.save() }
         }
     }
 
@@ -103,7 +95,6 @@ extension AppDelegate {
         store.removeRide(id) { syncCalendar($0) }
         store.save()
         syncDevices()
-        NotificationCenter.default.post(name: Store.changed, object: nil)
         updateBadge()
     }
 
@@ -129,7 +120,7 @@ extension AppDelegate {
         if days > 0 { store.state.settings.daysAhead = days }
         let place = place.trimmingCharacters(in: .whitespaces)
         if !place.isEmpty, force || place != store.state.settings.homeName || store.state.settings.homeRegion == nil {
-            guard let found = try? await CLGeocoderShim.find(place) else {
+            guard let found = try? await Places.home(place) else {
                 store.save()
                 return "Couldn't find “\(place)”. Try a suburb or town with its state, like Ringwood VIC or Newtown NSW."
             }
@@ -173,6 +164,7 @@ extension AppDelegate {
                               ok: "Delete and Quit") else { return }
         setOpensAtLogin(false)
         RideNotice.clear()
+        if store.state.settings.syncDevices == true, let folder = Sync.macFolder { Sync.forget(folder: folder, name: Sync.macName) }
         Keychain.beeper.delete()
         Keychain.roads.delete()
         try? FileManager.default.removeItem(at: Store.folder)

@@ -139,16 +139,6 @@ struct SectionRideRow: View {
     }
 }
 
-/// A ride's decision in words, for VoiceOver.
-@MainActor func decisionName(_ d: Decision, needsCheck: Bool) -> String {
-    switch d {
-    case .attending: return "Going"
-    case .maybe: return "Maybe"
-    case .skip: return "Skipped"
-    case .undecided: return needsCheck ? "New, check the date" : "New"
-    }
-}
-
 @MainActor func rideWhen(_ r: RideEvent, long: Bool = false) -> String {
     if long {
         var s = r.allDay ? AppDelegate.longDayFmt.string(from: r.start) : AppDelegate.longFmt.string(from: r.start)
@@ -180,7 +170,7 @@ struct RideRow: View {
                 Spacer(minLength: 0)
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(decisionName(decision, needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
+            .accessibilityLabel("\(decision.spoken(needsCheck: ride.needsCheck == true)): \(ride.title), \(rideWhen(ride, long: true))")
             // Refresh is looking for more details about this ride.
             if case .looking(let step)? = model.lookups[ride.id] {
                 ProgressView().controlSize(.small).padding(.top, 2)
@@ -209,9 +199,7 @@ struct RideDetail: View {
                               past: model.isPast(ride), scale: 1.5)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(ride.title).font(.title2).fontWeight(.bold).textSelection(.enabled)
-                        // A ride posted in several places shows once; this says everywhere it was.
-                        let sources = ([ride] + model.store.copies(of: ride)).map(\.sourceName).uniqued()
-                        Text((sources.count > 1 ? "Sources: " : "Source: ") + sources.joined(separator: ", "))
+                        Text(model.store.sourceLine(ride))
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }
@@ -282,9 +270,7 @@ struct RideActionItems: View {
                 Divider()
             }
             ForEach(MapsApp.allCases.filter { $0 != .automatic && ($0 != .apple || app.hasAppleMaps) }, id: \.self) { maps in
-                Button(maps.name + (maps.holdsStops || Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 ? "" : " (meeting place only)")) {
-                    app.openRoute(ride, in: maps)
-                }
+                Button(maps.title(for: ride)) { app.openRoute(ride, in: maps) }
             }
         }
         .disabled(!ride.hasRoute)
@@ -306,10 +292,7 @@ struct RideAbout: View {
     @StateObject private var more = Box(false)
 
     var body: some View {
-        let notes = ride.notes
-        let full = Web.readableNotes(notes)
-        let summarise = !notes.isEmpty && Brief.needsSummary(notes)
-        let items = summarise ? Brief.items(in: notes, location: ride.location) : []
+        let about = Brief.summary(of: ride.notes, location: ride.location)
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
@@ -323,27 +306,26 @@ struct RideAbout: View {
                                     Text(String(format: "%.0f km from %@", km, model.store.state.settings.homeName))
                                         .font(.caption).foregroundStyle(.secondary)
                                 }
+                                if let note = model.store.meetingNote(ride) {
+                                    Text(note).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                         }
                     }
-                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    ForEach(Array(about.items.enumerated()), id: \.offset) { _, item in
                         GridRow {
                             Text(item.label).foregroundStyle(.secondary)
                             Text(item.value).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
-                if !notes.isEmpty {
-                    if !summarise {
+                if let text = about.text { Text(text).font(.callout).textSelection(.enabled) }
+                if let full = about.more {
+                    Button(more.value ? "See less" : "See more") { more.value.toggle() }
+                        .buttonStyle(.link)
+                    if more.value {
+                        Divider()
                         Text(full).font(.callout).textSelection(.enabled)
-                    } else {
-                        if items.isEmpty { Text(Brief.opening(notes)).font(.callout).textSelection(.enabled) }
-                        Button(more.value ? "See less" : "See more") { more.value.toggle() }
-                            .buttonStyle(.link)
-                        if more.value {
-                            Divider()
-                            Text(full).font(.callout).textSelection(.enabled)
-                        }
                     }
                 }
             }
@@ -360,7 +342,7 @@ struct RideAbout: View {
 /// fill in its Add ride form, apart from any you leave out.
 struct RideFindings: View {
     let id: String
-    let lookup: UIModel.Lookup
+    let lookup: RideSearch.Lookup
     let forPlan: Bool
     @ObservedObject var model: UIModel
 

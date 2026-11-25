@@ -65,7 +65,7 @@ extension AppDelegate {
         }
         let when = ride.allDay ? Self.dayFmt.string(from: ride.start) : Self.dayTimeFmt.string(from: ride.start)
         let item = NSMenuItem(title: "\(when)  ·  \(ride.title)", action: nil, keyEquivalent: "")
-        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: decisionName(d, needsCheck: ride.needsCheck == true))
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: d.spoken(needsCheck: ride.needsCheck == true))
         let sub = NSMenu()
         sub.autoenablesItems = false
 
@@ -155,9 +155,6 @@ extension AppDelegate {
         if let id = sender.representedObject as? String, let ride = store.state.events[id] { openRoute(ride) }
     }
 
-    /// Directions for a ride: the organiser's own route if the description has one, otherwise from your
-    /// suburb to the meeting place, any stops and the destination, in the maps app chosen in Settings.
-    /// Automatic uses Apple Maps for a simple trip when it's on this Mac, and Google Maps for stops.
     /// Apple Maps is on this Mac (it can be removed).
     var hasAppleMaps: Bool { NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Maps") != nil }
 

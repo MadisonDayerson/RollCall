@@ -149,6 +149,8 @@ struct RideEvent: Codable {
     var lastSeen: Date
     /// Date and place were read from a post's text, so they may be wrong.
     var needsCheck: Bool? = nil
+    /// Its place is the one the post gives for its week of the month (see `MeetingPlaces`).
+    var placeByWeek: Bool? = nil
 
     var isFacebook: Bool { url?.contains("facebook.com") ?? false }
 
@@ -198,6 +200,8 @@ struct Settings: Codable {
     }
     var roadAlertsShown: RoadAlertsShown { roadAlerts ?? .currentAndPlanned }
     var keepDays: Int { min(keepDismissedDays ?? 7, Store.maxKeepDays) }
+    /// How long past rides can be kept, for Settings.
+    static let keepChoices = [(0, "Don't keep"), (1, "1 day"), (7, "1 week"), (14, "2 weeks")]
 }
 
 /// A ride's route as RollCall worked it out: places Apple Maps could find, in order. `from` is a fingerprint of
@@ -224,7 +228,8 @@ struct RideEdit: Codable, Equatable {
 extension RideEvent {
     func applying(_ edit: RideEdit) -> RideEvent {
         var e = self
-        if edit.location != location { e.latitude = nil; e.longitude = nil; e.distanceKm = nil }  // to be found again
+        // A new place: to be found again.
+        if edit.location != location { e.latitude = nil; e.longitude = nil; e.distanceKm = nil; e.placeByWeek = nil }
         e.title = edit.title; e.start = edit.start; e.end = edit.end; e.allDay = edit.allDay
         e.location = edit.location; e.notes = edit.notes; e.url = edit.url
         return e
@@ -345,8 +350,25 @@ final class Store {
         if let data = try? Data(contentsOf: file),
            let s = try? Store.decoder.decode(AppState.self, from: data) {
             state = s
+            separateDates()
         } else {
             state = AppState()
+        }
+    }
+
+    /// Every date of a repeating Facebook event used to share the event's id, so a choice for one date counted for the
+    /// next too. Each date has its own id now: saved ones move to it.
+    func separateDates() {
+        for (old, ride) in state.events where old.hasPrefix("facebook:") {
+            guard let number = ride.url.flatMap(Store.facebookEventID), old != "facebook:\(number)" else { continue }
+            let new = "facebook:\(number)"
+            func move<T>(_ kept: WritableKeyPath<AppState, [String: T]>) {
+                // What's already under the date's own id is newer (the old one can come back from a device not updated yet).
+                if let value = state[keyPath: kept].removeValue(forKey: old), state[keyPath: kept][new] == nil { state[keyPath: kept][new] = value }
+            }
+            move(\.events); move(\.decisions); move(\.calendarItems); move(\.rideEdits); move(\.foundRoutes); move(\.responses)
+            state.events[new]?.id = new
+            if let over = state.knownRides?.removeValue(forKey: old) { state.knownRides?[new] = over }
         }
     }
 
@@ -423,9 +445,15 @@ final class Store {
         }
     }
 
-    /// The same ride posted elsewhere, for "From" on the ride's page.
+    /// The same ride posted elsewhere.
     func copies(of ride: RideEvent) -> [RideEvent] {
         state.events.values.filter { CrossPost.sameRide(ride, $0) }.sorted { $0.sourceName < $1.sourceName }
+    }
+
+    /// Where the ride is from, under its title. One posted in several places shows once; this says everywhere it was.
+    func sourceLine(_ ride: RideEvent) -> String {
+        let sources = ([ride] + copies(of: ride)).map(\.sourceName).uniqued()
+        return (sources.count > 1 ? "Sources: " : "Source: ") + sources.joined(separator: ", ")
     }
 
     private func rank(_ e: RideEvent) -> [Int] {
@@ -449,11 +477,12 @@ final class Store {
                 source: source, sourceName: sourceName,
                 latitude: item.latitude, longitude: item.longitude, distanceKm: nil, lastSeen: now,
                 needsCheck: needsCheck ? true : nil)
+            e = MeetingPlaces.settled(e, old: state.events[id])
             // Your changes win over what the source says.
             if let edit = state.rideEdits[id] { e = e.applying(edit) }
             // Calendar feeds still list rides that are over. Ones pruned already stay gone, or each check would
             // bring them back, carry your Facebook Going across and put them in Calendar again.
-            if e.finish < now.addingTimeInterval(-Double(state.settings.keepDays) * 86400) { continue }
+            if e.finish < keptSince(now) { continue }
             if let old = state.events[id] {
                 // Keep things we worked out earlier.
                 if e.latitude == nil, old.location == e.location {
@@ -499,7 +528,8 @@ final class Store {
 
     static func facebookEventID(_ s: String) -> String? {
         // https://www.facebook.com/events/1234567890/  or UID e1234567890@facebook.com
-        for pattern in [#"facebook\.com/events/(?:[^/]+/)*?(\d{6,})"#, #"^e(\d{6,})@facebook\.com"#, #"[?&]eid=(\d{6,})"#] {
+        // Each date of a repeating event has its own number after the event's.
+        for pattern in [#"[?&]event_time_id=(\d{6,})"#, #"facebook\.com/events/(?:[^/]+/)*?(\d{6,})"#, #"^e(\d{6,})@facebook\.com"#, #"[?&]eid=(\d{6,})"#] {
             if let r = s.range(of: pattern, options: .regularExpression) {
                 let match = String(s[r])
                 if let digits = match.range(of: #"\d{6,}"#, options: .regularExpression) {
@@ -533,12 +563,15 @@ final class Store {
         return 2 * r * asin(min(1, sqrt(a)))
     }
 
+    /// Rides that were over before this aren't kept.
+    func keptSince(_ now: Date) -> Date { now.addingTimeInterval(-Double(state.settings.keepDays) * 86400) }
+
     /// Drops rides that have been over for longer than Settings → Privacy keeps them (ones you went on wait under
     /// Past rides until then), plus feed events that vanished from their feed (cancelled or removed) unless you're
     /// going. Calendar events stay in Calendar.
     func prune(refreshedSources: Set<String>, refreshStarted: Date, now: Date = Date()) {
         let weekAgo = now.addingTimeInterval(-7 * 86400)
-        let kept = now.addingTimeInterval(-Double(state.settings.keepDays) * 86400)
+        let kept = keptSince(now)
         for (id, e) in state.events {
             let past = e.finish < kept
             let vanished = refreshedSources.contains(e.source) && e.lastSeen < refreshStarted && e.start > now

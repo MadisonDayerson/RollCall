@@ -38,6 +38,9 @@ Going adds the ride to your **RollCall** calendar, with a reminder the evening b
 - **About** has when, where and a plain summary; **See more** shows the whole description.
 - **⋯** on a ride in the list (or a right-click) has **Open**, **Open route in**, **Edit…** and **Remove**.
   Your edits stay when the source is checked again. Remove takes the ride away for good, even if its source still lists it.
+- A regular ride that meets somewhere else depending on the week ("2nd & 4th Thursday: …") shows the meeting place for
+  its date. If the post doesn't make it clear, its page says to check the post.
+- Each date of a repeating Facebook event is a ride of its own.
 - Rides you went on move to **Past**, and are deleted after a week (up to two: Settings → Privacy).
 
 **To review** holds plans from your chats.
@@ -141,7 +144,7 @@ app chosen in Settings.
 
 - **The route** is the organiser's own Google Maps or Apple Maps route when they shared one. Otherwise RollCall works it
   out from the ride's title and description, and leaves out places it can't find. A ride at one place, like a track
-  day, shows the trip there from your suburb.
+  day, or one whose destination is decided on the night, shows the trip there from your suburb.
 - **Open route in** gives directions in Apple Maps, Google Maps, Waze or Kurviger. Apple Maps and Waze only take the
   meeting place. The organiser's own route is at the top of the list when there is one.
 - **Weather** shows the temperature, chance of rain and wind every 40 to 50 km, for when you'd be there. Likely rain and
@@ -204,5 +207,10 @@ notifications. Pulling Home or the rides down refreshes them and, with Apple Int
    That makes a RollCall folder in iCloud Drive.
 2. On the iPhone or iPad, tap Settings → **Share with RollCall on Mac…** and choose that folder.
 
-A device that joins takes on what the Mac has. Rides, choices, ride changes and sources then go both ways, and the later
-change wins. A ride you're going to is added to the RollCall calendar once, even when both devices add it.
+A device that joins takes on what the Mac has. Rides, choices, ride changes, sources, riding-together
+details and how long past rides are kept then go both ways, and the later change wins. A ride you're going to is added to
+the RollCall calendar once, even when both devices add it. A source you remove on one device goes from the others too.
+
+If a device can't read what another shared (it's offline, say), Settings shows why. The rest carries on, and it keeps
+trying. When it can't read its own file, it shares nothing until it can, so older choices don't replace newer ones.
+Devices can be on different versions of RollCall: anything a version doesn't know is left as it is.

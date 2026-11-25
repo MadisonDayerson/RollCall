@@ -30,3 +30,15 @@ struct DecisionPicker: View {
         .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
     }
 }
+
+extension Decision {
+    /// In words, for VoiceOver.
+    func spoken(needsCheck: Bool) -> String {
+        switch self {
+        case .attending: return "Going"
+        case .maybe: return "Maybe"
+        case .skip: return "Skipped"
+        case .undecided: return needsCheck ? "New, check the date" : "New"
+        }
+    }
+}

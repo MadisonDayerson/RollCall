@@ -6,12 +6,12 @@ import CoreLocation
 @MainActor
 extension Store {
     /// Your home area, kept as just the suburb and a rough spot (about 1 km), never a street address.
-    func setHome(_ found: CLGeocoderShim.Found, typed place: String) {
+    func setHome(_ found: Places.Found, typed place: String) {
         state.settings.homeName = found.city ?? place
-        state.settings.homeLatitude = Store.rough(found.latitude)
-        state.settings.homeLongitude = Store.rough(found.longitude)
+        state.settings.homeLatitude = Store.rough(found.spot.latitude)
+        state.settings.homeLongitude = Store.rough(found.spot.longitude)
         state.settings.homeCity = found.city
-        state.settings.homeRegion = found.region
+        state.settings.homeRegion = found.state
         state.settings.homeCountry = found.country
         for (id, var e) in state.events {
             e.distanceKm = distance(e)
@@ -25,6 +25,12 @@ extension Store {
         _ = try await Fetcher.download(feed.url)
         state.feeds.removeAll { $0.id == feed.id }
         state.feeds.append(feed)
+    }
+
+    /// What removing a source does, for the question before it. Sharing takes it off the other devices too.
+    func removalNote(_ feed: Feed, shared: Bool) -> String {
+        "Its rides will disappear from the list. Rides you marked Going stay in your calendar."
+            + (shared && feed.type != .chat ? " It's removed from the devices RollCall shares with too." : "")
     }
 
     func forgetFeed(_ id: String) {
@@ -59,6 +65,22 @@ extension Store {
         }
     }
 
+    /// Makes your change to a ride, which stays through refreshes. Every copy of a cross-posted ride gets it, so the
+    /// copies still match and show as one ride. A chat ride's notes hold its message, so copies from elsewhere, which sync
+    /// shares in full, keep their own. Returns the copies' ids, for the calendar.
+    func saveEdit(_ edit: RideEdit, to ride: RideEvent) -> [String] {
+        let all = [ride] + copies(of: ride)
+        for copy in all {
+            var edit = edit
+            if Sync.isFromChat(ride), !Sync.isFromChat(copy) { edit.notes = copy.notes }
+            state.rideEdits[copy.id] = edit
+            var e = copy.applying(edit)
+            e.distanceKm = distance(e)
+            state.events[copy.id] = e
+        }
+        return all.map(\.id)
+    }
+
     /// Puts the ride in the RollCall calendar while you're going, and takes it out when you're not.
     func syncCalendar(_ id: String, using calendar: CalendarSync) throws {
         let existing = state.calendarItems[id]
@@ -67,9 +89,19 @@ extension Store {
             let card = Crew.card(ride, together: state.settings.crew, links: state.crew[Crew.key(forSource: ride.source)])
             state.calendarItems[id] = try calendar.upsert(ride, existingID: existing, crewCard: card)
         } else if let existing {
-            calendar.remove(itemID: existing)
+            if !leavesCalendarEvent(id) { calendar.remove(itemID: existing) }
             state.calendarItems[id] = nil
         }
+    }
+
+    /// A ride that's over keeps its calendar event, as a record of the day.
+    func leavesCalendarEvent(_ id: String) -> Bool { state.events[id].map { $0.finish < Date() } ?? false }
+
+    /// Takes a finished ride off Past rides; its calendar event stays.
+    func forgetPastRide(_ id: String) {
+        state.decisions[id] = nil
+        state.calendarItems[id] = nil
+        prune(refreshedSources: [], refreshStarted: Date())
     }
 
     /// Reads one source and keeps its rides, noting when it was checked or what went wrong. Returns what it gave (nil
@@ -79,6 +111,7 @@ extension Store {
             let r = try await SourceReader.read(feed, store: self)
             var changed = merge(r.events, source: feed.id, sourceName: feed.name)
             changed += merge(r.guessed, source: feed.id, sourceName: feed.name, needsCheck: true)
+            changed += await readMeetingPlaces(from: feed.id)
             // Only your own Facebook calendar's replies are yours; other calendars' are someone else's.
             let replied = feed.id == FeedLinks.facebookCalendarID ? carryResponses(r.events, source: feed.id) : []
             state.feedErrors[feed.id] = nil

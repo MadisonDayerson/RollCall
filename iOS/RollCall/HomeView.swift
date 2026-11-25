@@ -40,6 +40,8 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(width == .regular ? .inline : .automatic)
             .pullToRefresh(progress: model.refreshProgress, refreshing: $pulledDown) {
                 await model.refresh()
+                // Takes a while, so the page doesn't stay pulled down for it.
+                Task { await model.findMoreDetails() }
             }
             .toolbar {
                 if model.refreshing, !pulledDown { ToolbarItem { ProgressView() } }
@@ -94,7 +96,9 @@ struct HomeView: View {
                     open(ride)
                     HStack(spacing: 10) {
                         Button("Going") { Task { await model.decide(ride.id, .attending) } }
+                            .accessibilityLabel("Going: \(ride.title)")
                         Button("Skip") { Task { await model.decide(ride.id, .skip) } }
+                            .accessibilityLabel("Skip: \(ride.title)")
                     }
                     .buttonStyle(.bordered)
                     .padding(.leading, 54)

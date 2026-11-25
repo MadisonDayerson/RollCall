@@ -16,6 +16,20 @@ enum MapsApp: String, Codable, CaseIterable {
 
     /// Apple Maps and Waze links only hold one place, so a route with stops goes to the first one.
     var holdsStops: Bool { self == .google || self == .kurviger }
+
+    /// What choosing it in Settings means.
+    var help: String {
+        switch self {
+        case .automatic: return "Apple Maps for a trip straight to the meeting place, Google Maps when the ride has stops. A route the organiser shared opens as they shared it."
+        case _ where holdsStops: return "Route goes from your suburb through the meeting place and any stops. A route the organiser shared opens as they shared it."
+        default: return "\(name) links hold one place, so Route goes to the meeting place. A route the organiser shared opens as they shared it."
+        }
+    }
+
+    /// Its name in a ride's route menu.
+    func title(for ride: RideEvent) -> String {
+        name + (holdsStops || Route.places(meetingPlace: ride.location, notes: ride.notes).count < 2 ? "" : " (meeting place only)")
+    }
 }
 
 /// Directions for a ride. A route the organiser shared in the description wins. Otherwise it's from home
@@ -73,10 +87,10 @@ enum Route {
         return s
     }
 
-    /// "6:30pm at Shell Laverton" → "Shell Laverton"; stops can be listed as "A → B; C".
+    /// "6:30pm at Shell Laverton" → "Shell Laverton", "7:00 pm sharp" → nothing; stops can be listed as "A → B; C".
     private static func clean(_ value: String, split: Bool) -> [String] {
         var v = value.replacingOccurrences(of: #"https?://\S+"#, with: "", options: .regularExpression)
-        v = v.replacingOccurrences(of: #"(?i)^\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\s*(?:at|@|from|-|–)?\s*"#, with: "",
+        v = v.replacingOccurrences(of: #"(?i)^\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\s*(?:(?:sharp|prompt|on the dot|onwards?)\b)?\s*(?:at\b|@|from\b|-|–)?\s*"#, with: "",
                                    options: .regularExpression)
         let parts = split ? v.components(separatedBy: CharacterSet(charactersIn: "→;|")).flatMap { $0.components(separatedBy: "->") } : [v]
         return parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".,"))) }
@@ -232,6 +246,13 @@ enum Route {
         return notPlaces.contains(where: { name.hasPrefix($0) }) ? nil : name
     }
 
+    /// "destination decided on the night", for a post that says riders choose where to go once they've met.
+    static func decidedLater(_ notes: String) -> String? {
+        let pattern = #"(?i)\b(?:decid|choos|chose|pick|vot)\w*\b[^.!?\n]{0,40}\bon the (?:night|day)\b"#
+        guard let r = notes.range(of: pattern, options: .regularExpression) else { return nil }
+        return "destination decided on the " + (notes[r].lowercased().hasSuffix("night") ? "night" : "day")
+    }
+
     /// "Yarra Glen to Sugarloaf Reservoir" → (Yarra Glen, Sugarloaf Reservoir); "Ride to Lorne" → (nil, Lorne).
     static func titlePlaces(_ title: String) -> (String?, String)? {
         guard let re = try? NSRegularExpression(pattern: "^" + placeName + #"\s+(?:to|→|->)\s+"# + placeName + #"\s*$"#),
@@ -316,7 +337,8 @@ extension Route {
     }
     /// 2: Google links' dragged-through points on stops given only in the path, and "Avoid highways".
     /// 3: shared maps.app.goo.gl routes, which lead to Google's older from/to: links.
-    static let finderVersion = 3
+    /// 4: "7:00 pm sharp" isn't a place called "sharp", and places that depend on the week.
+    static let finderVersion = 4
 }
 
 extension RideEvent {

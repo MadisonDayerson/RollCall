@@ -33,11 +33,7 @@ final class UIModel: ObservableObject {
     @Published var readingReview: String?
     @Published var rideFilter: RideFilter = .all
     /// Ride id -> more details Refresh is looking for, while it looks and what it found (until RollCall quits).
-    @Published var lookups: [String: Lookup] = [:]
-    enum Lookup {
-        case looking(String)
-        case done([RideSearch.Finding], checked: String)
-    }
+    @Published var lookups: [String: RideSearch.Lookup] = [:]
     private var observer: NSObjectProtocol?
 
     init(app: AppDelegate) {

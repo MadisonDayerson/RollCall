@@ -70,7 +70,7 @@ extension AppDelegate {
         await snap("1-rides", window)
         // A ride Refresh is looking up more details for, with its spinner (only shown).
         if let id = ui.rides().first?.id {
-            ui.lookups[id] = .looking("Looking through your sources…")
+            ui.lookups[id] = .starting
             await snap("1-rides-looking", window)
             ui.lookups[id] = nil
         }

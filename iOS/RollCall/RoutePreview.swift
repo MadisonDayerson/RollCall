@@ -34,7 +34,7 @@ struct RoutePreview: View {
                     if let planned {
                         // One row, so the alerts load (and are marked on the map) before they're scrolled to.
                         VStack(alignment: .leading, spacing: 10) {
-                            map(planned, places: places).id(key)
+                            map(planned, places: places).id(planned.key)
                             details(planned, places: places).padding(.horizontal, 12)
                         }
                         .padding(.bottom, 6)
@@ -56,7 +56,7 @@ struct RoutePreview: View {
     @ViewBuilder private func details(_ p: RoutePlanner.Planned, places: [String]) -> some View {
         let shown = model.state.settings.roadAlertsShown
         let arriving = places.first == model.store.homePlace
-        Text(RoutePlanner.describe(p, places: places, notes: ride.notes)).font(.callout).foregroundStyle(.secondary)
+        Text(RoutePlanner.describe(p, places: places, notes: ride.notes, arriving: arriving)).font(.callout).foregroundStyle(.secondary)
         if ride.finish > Date() {
             Divider()
             RouteWeatherView(route: p, ride: ride, places: places, arriving: arriving)

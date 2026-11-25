@@ -42,7 +42,7 @@ enum Brief {
     }
 
     /// Just the letters and digits, lowercased, so "12 Example St," matches "12 example st".
-    private static func letters(_ s: String) -> String {
+    static func letters(_ s: String) -> String {
         String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
     }
 
@@ -51,6 +51,24 @@ enum Brief {
         let text = Web.readableNotes(notes)
         return text.count > 280 || text.components(separatedBy: .newlines).filter { !$0.isEmpty }.count > 6
             || text.range(of: #"https?://\S{80,}"#, options: .regularExpression) != nil
+    }
+
+    /// A description as a ride's page shows it.
+    struct Summary {
+        /// Its labelled lines in plain words, when it's long and has some.
+        var items: [Item] = []
+        /// What shows under them: all of a short description, the opening of a long one without labelled lines.
+        var text: String?
+        /// The whole of a long one, under See more.
+        var more: String?
+    }
+
+    static func summary(of notes: String, location: String) -> Summary {
+        guard !notes.isEmpty else { return Summary() }
+        let full = Web.readableNotes(notes)
+        guard needsSummary(notes) else { return Summary(text: full) }
+        let items = items(in: notes, location: location)
+        return Summary(items: items, text: items.isEmpty ? opening(notes) : nil, more: full)
     }
 
     /// The opening of a description, links taken out, for when there are no labelled lines to pick from.

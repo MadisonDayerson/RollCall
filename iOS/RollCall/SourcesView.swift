@@ -8,6 +8,8 @@ struct SourcesView: View {
     @State private var link = ""
     @State private var working = false
     @State private var problem: String?
+    /// The source you're asked about before it's removed.
+    @State private var removing: Feed?
 
     var body: some View {
         NavigationStack {
@@ -19,14 +21,22 @@ struct SourcesView: View {
                         Text(status(feed)).font(.subheadline)
                             .foregroundStyle(model.state.feedErrors[feed.id] == nil ? Color.secondary : Color.orange)
                     }
+                    .swipeActions {
+                        Button("Remove", systemImage: "trash") { removing = feed }.tint(.red)
+                    }
                     .contextMenu {
                         if let page = Web.link(feed.groupURL ?? feed.url) {
                             Button("Open website", systemImage: "safari") { openURL(page) }
                         }
-                        Button("Remove", systemImage: "trash", role: .destructive) { model.removeSource(feed.id) }
+                        Button("Remove", systemImage: "trash", role: .destructive) { removing = feed }
                     }
                 }
-                .onDelete { rows in rows.map { feeds[$0].id }.forEach(model.removeSource) }
+            }
+            .confirmationDialog("Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+                                titleVisibility: .visible, presenting: removing) { feed in
+                Button("Remove", role: .destructive) { model.removeSource(feed.id) }
+            } message: { feed in
+                Text(model.store.removalNote(feed, shared: model.macFolder != nil))
             }
             .navigationTitle("Sources")
             .overlay {
@@ -69,7 +79,7 @@ struct SourcesView: View {
 
     private func status(_ feed: Feed) -> String {
         if let error = model.state.feedErrors[feed.id] { return error }
-        let rides = model.state.events.values.filter { $0.source == feed.id && $0.finish >= Date() }.count
+        let rides = model.store.upcoming(oneEach: false).filter { $0.source == feed.id }.count
         guard let checked = model.state.lastChecked[feed.id] else { return "Not checked yet" }
         let ago = checked.formatted(.relative(presentation: .named))
         return "\(rides) upcoming ride\(rides == 1 ? "" : "s") · checked \(ago)"

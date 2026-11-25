@@ -72,7 +72,11 @@ struct RidesView: View {
         }
         .listSectionSpacing(.compact)
         .navigationTitle("Rides")
-        .pullToRefresh(progress: model.refreshProgress, refreshing: $pulledDown) { await model.refresh() }
+        .pullToRefresh(progress: model.refreshProgress, refreshing: $pulledDown) {
+            await model.refresh()
+            // Takes a while, so the list doesn't stay pulled down for it: each ride shows a spinner while it's looked up.
+            Task { await model.findMoreDetails() }
+        }
         .overlay { if layout == .list, model.sections.allSatisfy(\.rides.isEmpty) { empty } }
         .toolbar {
             if model.refreshing, !pulledDown { ToolbarItem { ProgressView() } }
@@ -92,7 +96,14 @@ struct RideRow: View {
 
     var body: some View {
         let decision = model.decision(ride.id)
-        RideSummary(ride: ride, past: past)
+        HStack(spacing: 12) {
+            RideSummary(ride: ride, past: past)
+            // Refresh is looking for more details about this ride.
+            if case .looking? = model.lookups[ride.id] {
+                Spacer(minLength: 0)
+                ProgressView().accessibilityLabel("Looking for more details").transition(.opacity)
+            }
+        }
         .padding(.vertical, 2)
         .swipeActions(edge: .leading) {
             if !past {
@@ -110,7 +121,7 @@ struct RideRow: View {
                 .tint(.gray)
             }
         }
-        .contextMenu { DecisionButtons(id: ride.id) }
+        .contextMenu { if !past { DecisionButtons(id: ride.id) } }
     }
 }
 

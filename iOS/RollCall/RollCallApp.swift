@@ -37,10 +37,10 @@ struct RootView: View {
             Text(model.problem ?? "")
         }
         // Takes in the Mac's changes every minute while RollCall is open.
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
-                if phase == .active { model.shareNow() }
+        .task(id: phase) {
+            while phase == .active {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                model.shareNow()
             }
         }
         .onChange(of: phase) { _, now in

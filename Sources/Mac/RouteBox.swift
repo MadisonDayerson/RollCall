@@ -31,9 +31,9 @@ struct RouteBox: View {
                         if let r = route.value {
                             let shown = model.store.state.settings.roadAlertsShown
                             RouteMap(route: r, places: places, alerts: shown == .none ? [] : marked) { model.app.openRoute(ride) }
-                                .id(RouteMapImage.key(r))
+                                .id(r.key)
                             let arriving = places.first == model.store.homePlace
-                            Text(RoutePlanner.describe(r, places: places, notes: ride.notes))
+                            Text(RoutePlanner.describe(r, places: places, notes: ride.notes, arriving: arriving))
                                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             Divider()
                             RouteWeatherView(route: r, ride: ride, places: places, arriving: arriving)

@@ -49,10 +49,11 @@ struct SettingsPage: View {
                     .disabled(Sync.macFolder == nil)
                 Text(Sync.macFolder == nil
                      ? "Turn on iCloud Drive first, in System Settings → your name → iCloud."
-                     : "Your rides, Going/Maybe/Skip choices, ride changes and sources go to a RollCall folder in iCloud Drive, and RollCall on your iPhone and iPad shares theirs the same way. Rides from chats go without their messages: chats stay on this Mac.")
+                     : "Your rides, Going/Maybe/Skip choices, ride changes, sources, riding-together details and how long past rides are kept go to a RollCall folder in iCloud Drive, and RollCall on your iPhone and iPad shares theirs the same way. Rides from chats go without their messages: chats stay on this Mac.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let problem = app.syncProblem {
-                    Label("Couldn't share: \(problem)", systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.callout)
+                    Label(problem, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Section("Facebook") {
@@ -76,15 +77,13 @@ struct SettingsPage: View {
                     get: { maps }, set: { model.store.state.settings.mapsApp = $0; model.store.save() })) {
                     ForEach(MapsApp.allCases, id: \.self) { Text($0.name).tag($0) }
                 }
-                Text(maps == .automatic ? "Apple Maps for a trip straight to the meeting place, Google Maps when the ride has stops. A route the organiser shared opens as they shared it."
-                     : maps.holdsStops ? "Route goes from your suburb through the meeting place and any stops. A route the organiser shared opens as they shared it."
-                     : "\(maps.name) links hold one place, so Route goes to the meeting place. A route the organiser shared opens as they shared it.")
+                Text(maps.help)
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Button("Open calendar") { app.openCalendarApp() }
                 Button("Run setup…") { model.later { app.showSetup() } }
             }
             Section("Privacy") {
-                Text((model.store.state.settings.syncDevices == true ? "Your chats stay on this Mac, readable only by you; rides, choices and sources are also shared with your iPhone and iPad through your iCloud Drive." : "Your rides, chats and settings stay on this Mac, readable only by you.") + " RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
+                Text((model.store.state.settings.syncDevices == true ? "Your chats stay on this Mac, readable only by you; rides, choices, sources and riding-together details are also shared with your iPhone and iPad through your iCloud Drive." : "Your rides, chats and settings stay on this Mac, readable only by you.") + " RollCall has no accounts, no tracking and no online AI, and it never posts or sends messages. Removing a chat also removes what RollCall kept from it.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Picker("Keep past rides and plans", selection: Binding(
                     get: { model.store.state.settings.keepDays },
@@ -93,10 +92,7 @@ struct SettingsPage: View {
                         model.store.prune(refreshedSources: [], refreshStarted: Date())
                         model.store.save()
                     })) {
-                    Text("Don't keep").tag(0)
-                    Text("1 day").tag(1)
-                    Text("1 week").tag(7)
-                    Text("2 weeks").tag(14)
+                    ForEach(Settings.keepChoices, id: \.0) { days, name in Text(name).tag(days) }
                 }
                 Text("Rides you went on stay under Past for this long once they're over, and plans you mark Not a ride wait under Reviewed with their messages, so you can still add one. Then they're deleted. Calendar events stay in Calendar.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -150,7 +146,6 @@ struct SettingsPage: View {
 }
 
 
-/// Location sharing, voice chat, Discord and tags, used in setup and Settings. Saves by itself.
 /// Where the road alerts key is pasted, and which alerts routes show. The key is the rider's own free key from the
 /// Transport Victoria Open Data Portal, kept in the keychain.
 struct RoadAlertsBox: View {
@@ -194,6 +189,7 @@ struct RoadAlertsBox: View {
     }
 }
 
+/// Location sharing, voice chat, Discord and tags, used in setup and Settings. Saves by itself.
 struct TogetherForm: View {
     let app: AppDelegate
     @StateObject private var t = Box(Together())

@@ -129,7 +129,6 @@ enum DownloadsWatcher {
 /// Results are cached in the state file; Apple's geocoder is used one request at a time.
 @MainActor
 final class Geocoder {
-    private let geocoder = CLGeocoder()
     /// A place name that's only a business ("Example Bodyworks") can match one overseas; group rides from your sources
     /// aren't this far away, so a match further than this counts as not found.
     static let farthestKm = 1000.0
@@ -158,15 +157,16 @@ final class Geocoder {
     func fill(_ store: Store) async {
         Self.forgetFarMatches(store)
         let s = store.state.settings
-        let region = CLCircularRegion(center: CLLocationCoordinate2D(latitude: s.homeLatitude, longitude: s.homeLongitude),
-                                      radius: 300_000, identifier: "home")
         for (id, e) in store.state.events where e.latitude == nil && !e.location.isEmpty {
             let key = e.location.lowercased()
             var coords = store.state.geocodeCache[key]
             if coords == nil {
-                let found = (try? await geocoder.geocodeAddressString(e.location, in: region)) ?? []
+                var found = (try? await Places.find(e.location, near: store.homeSpot))?.map(\.spot) ?? []
+                // A meeting place from a post is often a name ("Example Zoo, main entrance"), which the search for places
+                // finds and the search for addresses doesn't.
+                if found.isEmpty, e.placeByWeek == true, let spot = await RoutePlanner.locate(e.location, near: store.homeSpot) { found = [spot] }
                 if Task.isCancelled { return }  // a search that was stopped doesn't mean there's no such place
-                coords = Self.nearest(found.compactMap { $0.location?.coordinate }, homeLatitude: s.homeLatitude, homeLongitude: s.homeLongitude)
+                coords = Self.nearest(found, homeLatitude: s.homeLatitude, homeLongitude: s.homeLongitude)
                 store.state.geocodeCache[key] = coords
                 try? await Task.sleep(nanoseconds: 1_200_000_000)  // be gentle with Apple's rate limit
             }
@@ -175,21 +175,5 @@ final class Geocoder {
             ev.distanceKm = store.distance(ev)
             store.state.events[id] = ev
         }
-    }
-}
-
-enum CLGeocoderShim {
-    struct Found { var latitude: Double; var longitude: Double; var city: String?; var region: String?; var country: String?; var label: String }
-
-    /// Looks a place up, preferring matches in the Mac's own country (so "Ringwood" is the Victorian one here).
-    @MainActor
-    static func find(_ place: String) async throws -> Found? {
-        let marks = try await CLGeocoder().geocodeAddressString(place)
-        let here = Locale.current.region?.identifier
-        guard let m = marks.first(where: { $0.isoCountryCode == here }) ?? marks.first,
-              let c = m.location?.coordinate else { return nil }
-        let label = [m.locality ?? m.name, m.administrativeArea, m.country].compactMap { $0 }.joined(separator: ", ")
-        return Found(latitude: c.latitude, longitude: c.longitude, city: m.locality ?? m.subAdministrativeArea,
-                     region: m.administrativeArea, country: m.country, label: label)
     }
 }

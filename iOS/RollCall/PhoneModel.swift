@@ -28,6 +28,8 @@ final class PhoneModel {
     var settingUp = false
     var roadAlertsKeySaved = Keychain.roads.read() != nil
     var calendarAllowed = false
+    /// Ride id -> more details Refresh is looking for, while it looks and what it found (until RollCall quits).
+    var lookups: [String: RideSearch.Lookup] = [:]
 
     init() {
         state = store.state
@@ -83,8 +85,9 @@ final class PhoneModel {
         saved()
     }
 
-    func remove(_ id: String) {
-        store.removeRide(id) { syncCalendar($0) }
+    /// Removes a ride, or takes one that's over off Past (its calendar event stays).
+    func remove(_ ride: RideEvent) {
+        if ride.finish < Date() { store.forgetPastRide(ride.id) } else { store.removeRide(ride.id) { syncCalendar($0) } }
         saved()
     }
 
@@ -102,6 +105,12 @@ final class PhoneModel {
     func route(_ ride: RideEvent) -> (places: [String], avoidHighways: Bool) {
         _ = state.foundRoutes[ride.id]
         return store.route(ride)
+    }
+
+    /// Where the ride is from, read from the state SwiftUI watches so it follows the sources.
+    func sourceLine(_ ride: RideEvent) -> String {
+        _ = state
+        return store.sourceLine(ride)
     }
 
     func findRoute(for ride: RideEvent) async {

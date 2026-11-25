@@ -87,8 +87,7 @@ struct RouteWeatherView: View {
         if f.km == total, let last = places.last, Route.point(last) == nil { return RideDetails.shortPlace(last) }
         let key = String(format: "%.2f,%.2f", f.spot.latitude, f.spot.longitude)
         if let known = Self.names[key] { return known }
-        let mark = try? await CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: f.spot.latitude, longitude: f.spot.longitude)).first
-        guard let suburb = mark?.locality ?? mark?.subAdministrativeArea else { return "\(Int(f.km.rounded())) km in" }
+        guard let suburb = await Places.suburb(at: f.spot) else { return "\(Int(f.km.rounded())) km in" }
         Self.names[key] = suburb
         return suburb
     }

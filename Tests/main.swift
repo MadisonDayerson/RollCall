@@ -189,6 +189,11 @@ do {
     check(Geocoder.nearest([overseas, melb], homeLatitude: h.homeLatitude, homeLongitude: h.homeLongitude) == [melb.latitude, melb.longitude],
           "the match closest to home is used")
     check(Geocoder.nearest([overseas], homeLatitude: h.homeLatitude, homeLongitude: h.homeLongitude).isEmpty, "a match overseas counts as not found")
+    check(Places.state(in: "Ringwood VIC 3134, Australia", city: "Ringwood") == "VIC", "the state is read from an address")
+    check(Places.state(in: "12 Fake St, Alice Springs NT 0870, Australia", city: "Alice Springs") == "NT", "...with a street and a town of two words")
+    check(Places.state(in: "Darwin NT\nAustralia", city: "Darwin") == "NT", "...without a postcode, on two lines")
+    check(Places.state(in: "Cupertino, CA 95014, United States", city: "Cupertino") == "CA", "...and after the town")
+    check(Places.state(in: "Wellington, New Zealand", city: "Wellington") == nil && Places.state(in: "", city: nil) == nil, "an address without a state has none")
     var shop = RideEvent(id: "shop", title: "Made-up bike night", start: now, end: nil, allDay: false, location: "Example Bodyworks",
                          notes: "", url: nil, source: "feed", sourceName: "Feed", lastSeen: now)
     shop.latitude = overseas.latitude; shop.longitude = overseas.longitude; shop.distanceKm = 16900
@@ -810,6 +815,33 @@ do {
     check(shown == ["forum", "other"], "cross-posts show once, as the copy you decided on")
     check(store.copies(of: store.state.events["forum"]!).map(\.id) == ["fb"], "the other copies are listed")
 
+    // The same in both apps: a page names every source, your change goes to every copy, and Refresh searches the ones you might go to.
+    let posted = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rc-posted-\(UUID()).json"))
+    let club = ride("club", "Pretendville Bike Night", 16, "Waterfront, Pretendville", source: "Example Club")
+    let site = ride("site", "NOVEMBER '26 - PRETENDVILLE BIKE NIGHT", 16, "Pretendville Waterfront", source: "Example Site")
+    for e in [club, site, other] { posted.state.events[e.id] = e }
+    check(posted.sourceLine(club) == "Sources: Example Club, Example Site", "a cross-posted ride's page names every source")
+    check(posted.sourceLine(other) == "Source: feed", "a ride posted once names its one source")
+    let extra = ride("extra", "Pretendville Bike Night food trucks", 21, source: "Example Forum")
+    posted.state.events["extra"] = extra
+    let clues = Set(posted.listingClues(for: club).map(\.from))
+    check(clues.contains("Example Forum") && clues.isDisjoint(with: ["Example Club", "Example Site"]), "another source's listing that day is a clue; the ride's own copies aren't")
+    let moved = RideSearch.edit(club, adding: RideSearch.Finding(field: .place, value: "Pretendville Hall", from: "x"))
+    check(Set(posted.saveEdit(moved, to: club)) == ["club", "site"] && posted.state.events["site"]?.location == "Pretendville Hall"
+          && posted.state.rideEdits["site"] == moved, "a found detail you add goes to every copy")
+    var chatted = ride("chatted", "Pretendville Bike Night", 16, "Waterfront, Pretendville", source: "Example Chat")
+    chatted.source = "beeper-example"
+    chatted.notes = "A made-up chat message"
+    posted.state.events["chatted"] = chatted
+    _ = posted.saveEdit(RideSearch.edit(chatted, adding: RideSearch.Finding(field: .place, value: "Pretendville Pier", from: "x")), to: chatted)
+    check(posted.state.events["site"]?.location == "Pretendville Pier" && posted.state.rideEdits["chatted"]?.notes == "A made-up chat message"
+          && posted.state.rideEdits["site"]?.notes == site.notes && posted.state.events["site"]?.notes == site.notes,
+          "a chat ride's message isn't put in its copies from elsewhere")
+    let twoFinds = [RideSearch.Finding(field: .place, value: "A", from: "x"), RideSearch.Finding(field: .stops, value: "B", from: "x")]
+    if case .done(let left, _) = RideSearch.Lookup.done(twoFinds, checked: "").without(twoFinds[0]) {
+        check(left == [twoFinds[1]], "a find you add comes off the list")
+    } else { check(false, "a find you add comes off the list") }
+
     let msg = "Camping trip this weekend! Leaving Saturday 8am from the Example Servo in Sunshine, bring a tent and snacks"
     func plan(_ id: String, chat: String, _ text: String) -> PlanReview {
         let line = ChatLine(id: id, sender: "Sam", sent: now, text: text, mentionsWhen: true)
@@ -1317,11 +1349,27 @@ do {
     r = phone.exchange(previous: phoneFile, others: [back.file], now: now.addingTimeInterval(240))
     check(phone.state.decisions["a"] == .skip && r.changed.isEmpty, "nothing bounces back")
 
+    // A change to a chat ride goes both ways without the chat's message, and leaves the Mac's own copy of it.
+    func edit(_ e: RideEvent, place: String) -> RideEdit {
+        RideSearch.edit(e, adding: RideSearch.Finding(field: .place, value: place, from: "x"))
+    }
+    _ = phone.saveEdit(edit(phone.state.events["chat"]!, place: "Pretend Park"), to: phone.state.events["chat"]!)
+    let p1 = phone.exchange(previous: r.file, others: [back.file], now: now.addingTimeInterval(250))
+    var m1 = mac.exchange(previous: back.file, others: [p1.file], now: now.addingTimeInterval(260))
+    check(mac.state.events["chat"]?.location == "Pretend Park" && mac.state.events["chat"]?.notes == "A made-up chat message"
+          && mac.state.rideEdits["chat"]?.notes == "A made-up chat message", "a phone's change to a chat ride keeps the Mac's message")
+    _ = mac.saveEdit(edit(mac.state.events["chat"]!, place: "Pretend Pier"), to: mac.state.events["chat"]!)
+    m1 = mac.exchange(previous: m1.file, others: [p1.file], now: now.addingTimeInterval(270))
+    check(m1.file.edits["chat"]?.value?.location == "Pretend Pier" && m1.file.edits["chat"]?.value?.notes == "", "the Mac's change to a chat ride is shared without its message")
+    let p3 = phone.exchange(previous: p1.file, others: [m1.file], now: now.addingTimeInterval(280))
+    check(phone.state.events["chat"]?.location == "Pretend Pier", "the phone takes in the Mac's change to a chat ride")
+    r = p3
+
     // A source removed on the phone goes on the Mac too; a ride removed on the Mac goes on the phone.
     phone.state.feeds = []
     mac.state.removedRides["a"] = start; mac.state.events["a"] = nil
-    let p2 = phone.exchange(previous: r.file, others: [back.file], now: now.addingTimeInterval(300)).file
-    let m2 = mac.exchange(previous: back.file, others: [p2], now: now.addingTimeInterval(360))
+    let p2 = phone.exchange(previous: r.file, others: [m1.file], now: now.addingTimeInterval(300)).file
+    let m2 = mac.exchange(previous: m1.file, others: [p2], now: now.addingTimeInterval(360))
     check(mac.state.feeds.map(\.id) == ["beeper-x"] && m2.file.rides["a"] == nil, "a removed source and ride stay removed")
     _ = phone.exchange(previous: p2, others: [m2.file], now: now.addingTimeInterval(420))
     check(phone.state.events["a"] == nil, "a ride removed on the Mac goes from the phone")
@@ -1331,7 +1379,7 @@ do {
     _ = try? Sync.run(phone, folder: dir, name: "iPhone", now: now.addingTimeInterval(540))
     check(FileManager.default.fileExists(atPath: dir.appendingPathComponent("Mac.json").path)
           && FileManager.default.fileExists(atPath: dir.appendingPathComponent("iPhone.json").path), "each device writes its own file")
-    check(Sync.otherFiles(in: dir, besides: "Mac.json").map(\.lastPathComponent).contains("iPhone.json"), "the Mac finds the phone's file")
+    check((try? Sync.fileNames(in: dir))?.contains("iPhone.json") == true, "the Mac finds the phone's file")
     check(Sync.isMacs(dir) && !Sync.isMacs(dir.appendingPathComponent("elsewhere")), "the Mac's folder is told from others")
 
     // A phone set up again leaves its old file behind: joining takes on what the Mac has, and removes nothing there.
@@ -1352,6 +1400,242 @@ do {
     _ = try? Sync.run(again, folder: dir, name: "iPhone", now: now.addingTimeInterval(840))
     _ = try? Sync.run(mac, folder: dir, name: "Mac", now: now.addingTimeInterval(900))
     check(mac.state.decisions["b"] == .skip, "once joined, its later choices count")
+}
+
+// Sync: calendars, riding together and rides that are over.
+do {
+    let dir = FileManager.default.temporaryDirectory
+    func store(_ name: String) -> Store { Store(file: dir.appendingPathComponent("rollcall-sync2-\(name)-\(UUID().uuidString).json")) }
+    func ride(_ id: String, days: Double, notes: String = "", place: String = "Example Servo", seen: Date = now) -> RideEvent {
+        RideEvent(id: id, title: "Ride \(id)", start: now.addingTimeInterval(days * 86400), end: nil, allDay: false, location: place, notes: notes, url: nil,
+                  source: "club", sourceName: "Example", latitude: nil, longitude: nil, distanceKm: nil, lastSeen: seen)
+    }
+    let mac = store("mac"), phone = store("phone")
+    mac.state.events["a"] = ride("a", days: 3)
+
+    // Riding together goes in the calendar event, which both devices write, so both need the same details.
+    mac.state.settings.together = Together()
+    mac.state.settings.together?.discord = "https://discord.gg/example"
+    mac.state.settings.keepDismissedDays = 1
+    mac.state.crew["club"] = CrewLinks(discord: nil, tags: "#example")
+    var m = mac.exchange(previous: nil, others: [], now: now)
+    phone.state.decisions["a"] = .attending
+    phone.state.calendarItems["a"] = "cal"
+    var p = phone.exchange(previous: nil, others: [m.file], now: now.addingTimeInterval(10))
+    check(phone.state.settings.crew.discord == "https://discord.gg/example" && phone.state.crew["club"]?.tags == "#example"
+          && phone.state.settings.keepDays == 1, "the phone takes on the Mac's riding-together details and how long past rides are kept")
+    check(p.changed.contains("a"), "and puts them in its calendar events")
+    m = mac.exchange(previous: m.file, others: [p.file], now: now.addingTimeInterval(20))
+    check(mac.state.settings.crew.discord == "https://discord.gg/example" && m.file.settings?["together"] == p.file.settings?["together"], "a phone with none of its own leaves the Mac's")
+    phone.state.settings.keepDismissedDays = 14
+    p = phone.exchange(previous: p.file, others: [m.file], now: now.addingTimeInterval(30))
+    m = mac.exchange(previous: m.file, others: [p.file], now: now.addingTimeInterval(40))
+    check(mac.state.settings.keepDays == 14 && mac.state.settings.crew.discord == "https://discord.gg/example", "a later change on the phone counts on the Mac")
+    var plain = Sync.File()
+    plain.settings = nil
+    check((try? Store.decoder.decode(Sync.File.self, from: Store.encoder.encode(plain))) != nil, "a file from an older RollCall still reads")
+
+    // A change made on one device goes in the other's calendar too, and keeps the spot found there.
+    var moved = ride("a", days: 3, place: "Pretend Pier"); moved.latitude = -38; moved.longitude = 145
+    _ = phone.saveEdit(RideEdit(title: "Ride a", start: moved.start, end: nil, allDay: false, location: "Pretend Pier", notes: "", url: nil), to: phone.state.events["a"]!)
+    phone.state.events["a"]?.latitude = -38; phone.state.events["a"]?.longitude = 145
+    p = phone.exchange(previous: p.file, others: [m.file], now: now.addingTimeInterval(50))
+    m = mac.exchange(previous: m.file, others: [p.file], now: now.addingTimeInterval(60))
+    check(m.changed.contains("a"), "the other device's calendar takes a ride's change")
+    check(mac.state.events["a"]?.location == "Pretend Pier" && mac.state.events["a"]?.distanceKm != nil, "with the distance of its new place")
+
+    // The other device's newer copy of the ride doesn't undo your change before it has taken it in.
+    var stale = Sync.File()
+    stale.rides["a"] = ride("a", days: 3, seen: now.addingTimeInterval(70))
+    _ = mac.exchange(previous: m.file, others: [stale], now: now.addingTimeInterval(80))
+    check(mac.state.events["a"]?.location == "Pretend Pier", "your change stays over another device's newer copy")
+
+    // A week's meeting place the model read here isn't undone by a device that can't read it.
+    let post = "We meet at a different spot each week. Example Zoo on the 1st and 3rd Thursday, Sample Pier on the 2nd and 4th Thursday."
+    var thursday = DateComponents(); thursday.year = 2026; thursday.month = 11; thursday.day = 26; thursday.hour = 19
+    var weekly = ride("w", days: 0, notes: post, place: "Sample Pier")
+    weekly.start = Calendar.current.date(from: thursday)!
+    weekly.placeByWeek = true
+    mac.state.events["w"] = weekly
+    weekly.location = "Melbourne, Australia"; weekly.placeByWeek = nil; weekly.lastSeen = now.addingTimeInterval(90)
+    stale.rides = ["w": weekly]
+    _ = mac.exchange(previous: m.file, others: [stale], now: now.addingTimeInterval(100))
+    check(mac.state.events["w"]?.location == "Sample Pier" && mac.state.events["w"]?.placeByWeek == true, "a meeting place read here stays")
+
+    // Rides over for longer than you keep them don't come back from another device.
+    mac.state.settings.keepDismissedDays = 1
+    stale.rides = ["gone": ride("gone", days: -5)]
+    _ = mac.exchange(previous: m.file, others: [stale], now: now.addingTimeInterval(110))
+    check(mac.state.events["gone"] == nil, "a ride that's over isn't brought back")
+
+    // One device forgetting a past ride leaves its calendar event, as a record of the day.
+    let calendar = CalendarSync()
+    phone.state.events["past"] = ride("past", days: -2)
+    phone.state.events["past"]?.start = Date().addingTimeInterval(-2 * 86400)
+    phone.state.calendarItems["past"] = "cal-past"
+    phone.state.decisions["past"] = nil
+    check(phone.leavesCalendarEvent("past"), "a past ride's calendar event stays")
+    try? phone.syncCalendar("past", using: calendar)
+    check(phone.state.calendarItems["past"] == nil, "and is no longer RollCall's to change")
+    phone.state.events["next"] = ride("next", days: 2)
+    phone.state.events["next"]?.start = Date().addingTimeInterval(2 * 86400)
+    check(!phone.leavesCalendarEvent("next"), "one still to come is taken out")
+    phone.state.decisions["past"] = .attending
+    phone.forgetPastRide("past")
+    check(phone.state.decisions["past"] == nil && phone.state.calendarItems["past"] == nil && phone.state.removedRides["past"] == nil,
+          "a ride taken off Past isn't marked Skip or removed")
+
+    // Deleting all data takes away this device's file, so setting up again doesn't look like removing everything.
+    let folder = dir.appendingPathComponent("rollcall-sync2-\(UUID().uuidString)")
+    _ = try? Sync.run(mac, folder: folder, name: "Mac", now: now)
+    Sync.forget(folder: folder, name: "Mac")
+    check((try? Sync.fileNames(in: folder)) == [], "deleting all data takes this device's shared file")
+    try? FileManager.default.removeItem(at: folder)
+}
+
+// Sync: files that can't be read, and ones from a newer RollCall.
+do {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-sync3-\(UUID().uuidString)")
+    let folder = dir.appendingPathComponent("RollCall")
+    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let mac = Store(file: dir.appendingPathComponent("mac.json")), phone = Store(file: dir.appendingPathComponent("phone.json"))
+    let macFile = folder.appendingPathComponent("Mac.json"), phoneFile = folder.appendingPathComponent("iPhone.json")
+    var time = now
+    func run(_ store: Store, _ name: String, joining: Bool = false) throws -> (changed: [String], problem: String?) {
+        time = time.addingTimeInterval(60)
+        return try Sync.run(store, folder: folder, name: name, joining: joining, now: time)
+    }
+    func lock(_ url: URL, _ on: Bool) {
+        try? FileManager.default.setAttributes([.posixPermissions: on ? 0o000 : 0o644], ofItemAtPath: url.path)
+    }
+    func change(_ url: URL, _ edit: (inout [String: Any]) -> Void) {
+        guard let data = try? Data(contentsOf: url), var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return check(false, "a shared file to change") }
+        edit(&json)
+        try? JSONSerialization.data(withJSONObject: json).write(to: url)
+    }
+    mac.state.feeds = [Feed(id: "club", name: "Example club", url: "https://example.com/club.ics", groupURL: nil),
+                       Feed(id: "old", name: "Old club", url: "https://example.com/old.ics", groupURL: nil)]
+    mac.state.decisions["a"] = .maybe
+    phone.state.feeds = []
+    check((try? run(mac, "Mac"))?.problem == nil, "a device's first file is shared without a problem")
+    _ = try? run(phone, "iPhone", joining: true)
+    _ = try? run(mac, "Mac")
+
+    // The Mac can't read its own file while the phone makes later choices: it waits, so they aren't undone.
+    phone.state.decisions["a"] = .attending
+    phone.state.feeds.removeAll { $0.id == "old" }
+    _ = try? run(phone, "iPhone")
+    let shared = try? Data(contentsOf: macFile)
+    lock(macFile, true)
+    var refused: Error?
+    do { _ = try run(mac, "Mac") } catch { refused = error }
+    check(refused is Sync.Problem && refused?.localizedDescription.hasPrefix("RollCall can't read its own file") == true, "a device that can't read its own file says so")
+    check(mac.state.decisions["a"] == .maybe && mac.state.feeds.count == 2, "and takes nothing in meanwhile")
+    lock(macFile, false)
+    check(shared != nil && (try? Data(contentsOf: macFile)) == shared, "or writes anything")
+    _ = try? run(mac, "Mac")
+    _ = try? run(phone, "iPhone")
+    check(mac.state.decisions["a"] == .attending && phone.state.decisions["a"] == .attending, "the later choice wins once it can be read")
+    check(mac.state.feeds.map(\.id) == ["club"] && phone.state.feeds.map(\.id) == ["club"], "and a source removed meanwhile stays removed")
+
+    // One that's only in iCloud so far is there too.
+    try? FileManager.default.moveItem(at: macFile, to: folder.appendingPathComponent(".Mac.json.icloud"))
+    check((try? run(mac, "Mac")) == nil, "a file iCloud hasn't downloaded isn't a first one")
+    try? FileManager.default.moveItem(at: folder.appendingPathComponent(".Mac.json.icloud"), to: macFile)
+
+    // A file of its own that makes no sense: the others' choices count, and it isn't stuck.
+    phone.state.decisions["a"] = .skip
+    _ = try? run(phone, "iPhone")
+    try? Data("{".utf8).write(to: macFile)
+    _ = try? run(mac, "Mac")
+    _ = try? run(phone, "iPhone")
+    check(mac.state.decisions["a"] == .skip && phone.state.decisions["a"] == .skip, "a spoilt file doesn't undo later choices")
+    lock(phoneFile, true)
+    check((try? run(phone, "iPhone", joining: true)) != nil, "a joining device doesn't need its own old file")
+    lock(phoneFile, false)
+
+    // Another device's file that can't be read: the rest are taken in, and it says so.
+    let pad = Store(file: dir.appendingPathComponent("pad.json"))
+    _ = try? run(pad, "iPad", joining: true)
+    pad.state.decisions["a"] = .maybe
+    _ = try? run(pad, "iPad")
+    lock(phoneFile, true)
+    let some = try? run(mac, "Mac")
+    check(mac.state.decisions["a"] == .maybe && some?.problem?.contains("can't read what your iPhone shared") == true, "the other devices' changes still come, with the problem")
+    lock(phoneFile, false)
+    check((try? run(mac, "Mac")) != nil && (try? run(mac, "Mac"))?.problem == nil, "the problem goes once it can be read")
+
+    // Joining needs the Mac's file, and no other.
+    let joiner = Store(file: dir.appendingPathComponent("joiner.json"))
+    let joinerFile = folder.appendingPathComponent("Joiner.json")
+    func joinProblem() -> String? {
+        do { _ = try run(joiner, "Joiner", joining: true); return nil } catch { return error.localizedDescription }
+    }
+    lock(macFile, true)
+    check(joinProblem()?.contains("can't read what your Mac shared just now. Give iCloud a minute") == true, "a device can't join while the Mac's file can't be read")
+    lock(macFile, false)
+    let macs = try? Data(contentsOf: macFile)
+    try? Data("not RollCall's".utf8).write(to: macFile)
+    check(joinProblem()?.contains("doesn't understand what your Mac shared") == true, "or makes no sense")
+    try? macs?.write(to: macFile)
+    check(!FileManager.default.fileExists(atPath: joinerFile.path) && joiner.state.decisions.isEmpty, "and nothing is shared or taken in")
+    lock(phoneFile, true)
+    check(joinProblem() == nil && joiner.state.decisions["a"] == .maybe, "it joins once the Mac's can be read, whatever another device's is like")
+    lock(phoneFile, false)
+    try? FileManager.default.removeItem(at: joinerFile)
+    let good = try? Data(contentsOf: phoneFile)
+    try? Data("not RollCall's".utf8).write(to: phoneFile)
+    check((try? run(mac, "Mac"))?.problem?.contains("doesn't understand what your iPhone shared") == true, "a file that makes no sense is said")
+    try? good?.write(to: phoneFile)
+
+    // A newer RollCall's setting, choice and kind of source are left out, and everything else is taken in.
+    phone.state.settings.keepDismissedDays = 3
+    phone.state.decisions["b"] = .attending
+    _ = try? run(phone, "iPhone")
+    change(phoneFile) { json in
+        func put(_ part: String, _ key: String, _ value: Any) {
+            var all = json[part] as? [String: Any] ?? [:]
+            all[key] = ["value": value, "at": "2030-01-01T00:00:00Z"]
+            json[part] = all
+        }
+        put("settings", "new", ["somethingNew": ["_0": true]])
+        put("settings", "together", ["somethingNew": ["_0": true]])
+        put("decisions", "c", "perhaps")
+        put("decisions", "a", "perhaps")
+        put("feeds", "club", ["id": "club", "name": "Example", "url": "x", "kind": "hologram"])
+    }
+    mac.state.settings.together = Together()
+    let newer = try? run(mac, "Mac")
+    check(newer?.problem == nil && mac.state.settings.keepDays == 3 && mac.state.decisions["b"] == .attending, "a newer RollCall's file still counts")
+    check(mac.state.decisions["c"] == nil && mac.state.decisions["a"] == .maybe && mac.state.feeds.contains { $0.id == "club" && $0.type == .calendar }
+          && mac.state.settings.together != nil, "and what this one doesn't know changes or removes nothing")
+}
+
+// A choice made under a date's new id isn't replaced by one left under the old one.
+do {
+    let file = FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-repeats2.json")
+    var s = AppState()
+    let url = "https://www.facebook.com/events/111111111/?event_time_id=222222221"
+    func ride(_ id: String) -> RideEvent {
+        RideEvent(id: id, title: id, start: now.addingTimeInterval(86400), end: nil, allDay: false, location: "", notes: "", url: url,
+                  source: "facebook-calendar", sourceName: "Facebook", latitude: nil, longitude: nil, distanceKm: nil, lastSeen: now)
+    }
+    s.events = ["facebook:111111111": ride("facebook:111111111"), "facebook:222222221": ride("facebook:222222221")]
+    s.decisions = ["facebook:111111111": .maybe, "facebook:222222221": .attending]
+    s.calendarItems = ["facebook:222222221": "cal"]
+    try! Store.encoder.encode(s).write(to: file)
+    let store = Store(file: file)
+    check(store.state.events.keys.sorted() == ["facebook:222222221"] && store.state.events["facebook:222222221"]?.title == "facebook:222222221"
+          && store.decision("facebook:222222221") == .attending && store.state.calendarItems == ["facebook:222222221": "cal"],
+          "the newer id's choice and calendar event stay")
+    try? FileManager.default.removeItem(at: file)
+}
+
+// What a link opens: only web pages, whatever a source put in it.
+do {
+    check(Web.link("https://example.com/ride")?.host == "example.com", "a web page opens")
+    check(Web.link("tel:000") == nil && Web.link("file:///etc/hosts") == nil && Web.link("beeper-chat:x") == nil && Web.link(nil) == nil, "nothing else does")
 }
 
 // New rides, told about once.
@@ -1398,6 +1682,107 @@ do {
     var fb = r; fb.url = "https://www.facebook.com/events/123456789"
     check(RideNotice.going(fb, inCalendar: true).body.contains("press Going on the event page"), "with what's left to do on Facebook")
     check(RideNotice.going(r, inCalendar: false).body.contains("isn't in your calendar yet"), "and a calendar that isn't allowed")
+}
+
+// Meeting places that depend on the week of the month
+do {
+    let post = """
+    Meeting Locations:
+
+    - 1st, 3rd & 5th Thursday: Pretend Theatre Car Park, Example Boulevard, Northtown.
+    - 2nd & 4th Thursday: Example Zoo, Sample Avenue Main Entrance.
+
+    Meet: 6:30 pm
+    Departure: 7:00 pm sharp
+
+    We decide together on the night which way to go and pick a destination for dinner along the way.
+    """
+    func ride(_ y: Int, _ m: Int, _ d: Int, notes: String = post, source: String = "feed") -> RideEvent {
+        let start = Calendar.current.date(from: DateComponents(year: y, month: m, day: d, hour: 18, minute: 30))!
+        return RideEvent(id: "r", title: "Thursday throttle", start: start, end: nil, allDay: false, location: "Bigtown, Australia", notes: notes,
+                         url: nil, source: source, sourceName: source, latitude: -37, longitude: 145, distanceKm: 5, lastSeen: now)
+    }
+    func place(_ r: RideEvent, old: RideEvent? = nil) -> String { MeetingPlaces.settled(r, old: old).location }
+    let zoo = "Example Zoo, Sample Avenue Main Entrance", theatre = "Pretend Theatre Car Park, Example Boulevard, Northtown"
+    // December 2026 starts on a Tuesday, so its Thursdays are the 3rd, 10th, 17th, 24th and 31st.
+    check([3, 10, 17, 24, 31].map { place(ride(2026, 12, $0)) } == [theatre, zoo, theatre, zoo, theatre], "each week gets its own meeting place")
+    check(place(ride(2026, 11, 26)) == zoo, "and the fourth Thursday of a month with four")
+    let settled = MeetingPlaces.settled(ride(2026, 11, 26), old: nil)
+    check(settled.placeByWeek == true && settled.latitude == nil && settled.distanceKm == nil, "the new place is looked up on the map")
+    check(place(ride(2026, 12, 4)) == "Bigtown, Australia", "a ride on another day of the week keeps its place")
+    check(place(ride(2026, 12, 3, source: "manual")) == "Bigtown, Australia", "so does one you typed in")
+
+    let dates = "Meet at the hall.\n1st December: setup day\n3rd December: the ride\nThe 2nd and 4th of December are rest days"
+    check(!MeetingPlaces.varies(ride(2026, 12, 3, notes: dates)), "dates aren't weeks of the month")
+    let grades = "Levels:\n1st & 3rd Thursday: beginners\n2nd & 4th Thursday: everyone"
+    check(place(ride(2026, 12, 3, notes: grades)) == "Bigtown, Australia", "weeks that aren't about where it meets don't change the place")
+    check(MeetingPlaces.varies(ride(2026, 12, 3, notes: grades)), "though the post does name weeks")
+    let lastWeek = "Where we start\nFirst and third Thursdays: Example Servo\nLast Thursday of the month – Sample Pier"
+    check(place(ride(2026, 12, 31, notes: lastWeek)) == "Sample Pier" && place(ride(2026, 12, 3, notes: lastWeek)) == "Example Servo", "the last week of the month")
+    check(place(ride(2026, 12, 10, notes: lastWeek)) == "Bigtown, Australia", "a week with no place keeps the source's")
+
+    // Looser wording is read by the model, and only believed when the post says the same.
+    let loose = "First and third Thursdays we meet at Example Servo, Northtown. Second and fourth we roll out from the Big Cafe, Southville."
+    let r = ride(2026, 12, 10, notes: loose)
+    check(MeetingPlaces.varies(r) && place(r) == "Bigtown, Australia", "loosely worded places need the model")
+    let rules = MeetingPlaces.rules(from: "PLACE: Example Servo, Northtown | WEEKS: 1, 3\nBig Cafe, Southville | 2, 4", ride: r)
+    check(MeetingPlaces.pick(rules, on: r.start) == "Big Cafe, Southville", "the model's list, and the week from the date")
+    check(MeetingPlaces.rules(from: "PLACE: Example Servo, Northtown, first and third Thursdays | WEEKS: 1, 3\nBig Cafe, Southville | 2, 4", ride: r) == rules,
+          "weeks the model adds to the place are taken off")
+    check(MeetingPlaces.rules(from: "Example Servo, Northtown | 1, 3\nBig Cafe, Southville | 2, 4, 6, 8", ride: r).isEmpty, "weeks the post doesn't say")
+    check(MeetingPlaces.rules(from: "Example Servo, Northtown | 1, 3\nMade Up Pub | 2, 4", ride: r).isEmpty, "a place the post doesn't say")
+    var read = r
+    read.location = "Big Cafe, Southville"; read.placeByWeek = true
+    check(place(r, old: read) == "Big Cafe, Southville", "what the model read stays when the source is checked again")
+    check(place(ride(2026, 12, 17, notes: loose), old: read) == "Bigtown, Australia", "but not for another date")
+
+    // Saved through a refresh, with your own changes first.
+    let store = Store(file: FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-weeks.json"))
+    store.state = AppState()
+    let item = ICSEvent(uid: "r", title: "Thursday throttle", start: ride(2026, 11, 26).start, end: nil, allDay: false, location: "Bigtown, Australia", notes: post, url: nil)
+    store.merge([item], source: "feed", sourceName: "Club", now: item.start.addingTimeInterval(-86400))
+    let saved = store.state.events["feed:r"]!
+    check(saved.location == zoo && store.meetingNote(saved) == "The post's meeting place for the 4th Thursday of the month.", "the ride's page says which week it is")
+    check(store.routePlaces(saved) == [store.homePlace, zoo], "with no destination, the route is the way there")
+    check(store.meetingNote(r) == "The meeting place depends on the week. Check the post for where to go.", "or to check the post when it isn't clear")
+    var edit = RideSearch.edit(saved, adding: .init(field: .place, value: "My Corner", from: "you"))
+    edit.location = "My Corner"
+    _ = store.saveEdit(edit, to: saved)
+    check(store.state.events["feed:r"]!.placeByWeek == nil && store.meetingNote(store.state.events["feed:r"]!) == nil, "your own place has no note")
+    store.merge([item], source: "feed", sourceName: "Club", now: item.start.addingTimeInterval(-86400))
+    check(store.state.events["feed:r"]!.location == "My Corner", "and stays")
+
+    check(Route.stops(in: "Departure: 7:00 pm sharp").meet == nil, "'sharp' isn't a place")
+    check(Route.stops(in: "Departure: 7pm sharp from Example Servo").meet == "Example Servo", "a place after it is")
+    check(Route.stops(in: "Meet: 9am Atown Hall").meet == "Atown Hall", "a place starting with 'At' keeps its name")
+    check(Route.decidedLater(post) == "destination decided on the night" && Route.decidedLater("Lunch at Sampleton on the day") == nil, "a destination chosen on the night")
+}
+
+// Each date of a repeating Facebook event is its own ride
+do {
+    let url = { (n: Int) in "https://www.facebook.com/events/111111111/?event_time_id=22222222\(n)" }
+    check(Store.facebookEventID(url(1)) == "222222221", "a repeating event's date has its own id")
+    func item(_ n: Int, days: Double) -> ICSEvent {
+        ICSEvent(uid: "e111111111@facebook.com", title: "Weekly throttle", start: now.addingTimeInterval(days * 86400), end: nil, allDay: false,
+                 location: "Example Zoo", notes: "", url: url(n))
+    }
+    let file = FileManager.default.temporaryDirectory.appendingPathComponent("rollcall-repeats.json")
+    var old = AppState()
+    old.events["facebook:111111111"] = RideEvent(id: "facebook:111111111", title: "Weekly throttle", start: now.addingTimeInterval(86400), end: nil, allDay: false,
+                                                 location: "Example Zoo", notes: "", url: url(1), source: "facebook-calendar", sourceName: "Facebook",
+                                                 latitude: nil, longitude: nil, distanceKm: nil, lastSeen: now)
+    old.decisions["facebook:111111111"] = .attending
+    old.calendarItems["facebook:111111111"] = "cal"
+    old.knownRides = ["facebook:111111111": now]
+    try! Store.encoder.encode(old).write(to: file)
+    let store = Store(file: file)
+    let first = "facebook:222222221", next = "facebook:222222222"
+    check(store.state.events.keys.sorted() == [first] && store.state.events[first]?.id == first, "a saved one moves to its date's id")
+    check(store.decision(first) == .attending && store.state.calendarItems == [first: "cal"] && store.state.knownRides?[first] == now,
+          "with your choice and its calendar event")
+    store.merge([item(1, days: 1), item(2, days: 8)], source: "facebook-calendar", sourceName: "Facebook", now: now)
+    check(store.state.events.count == 2 && store.decision(next) == .undecided, "Going to one date isn't Going to the next")
+    try? FileManager.default.removeItem(at: file)
 }
 
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")

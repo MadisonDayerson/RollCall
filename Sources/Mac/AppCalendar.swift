@@ -21,13 +21,10 @@ extension AppDelegate {
         }
     }
 
-    /// Takes a finished ride off Past rides; the calendar event stays, as a record of the day.
     func forgetPastRide(_ id: String) {
-        store.state.decisions[id] = nil
-        store.state.calendarItems[id] = nil
-        store.prune(refreshedSources: [], refreshStarted: Date())
+        store.forgetPastRide(id)
         store.save()
-        NotificationCenter.default.post(name: Store.changed, object: nil)
+        syncDevices()
     }
 
     func syncCalendar(_ id: String) {
@@ -61,7 +58,6 @@ extension AppDelegate {
         store.save()
     }
 
-    /// Rewrites the crew details on calendar events for rides you're going to.
     /// Rides added from chats used to carry the conversation in their notes, and that went into the calendar.
     /// Swaps it for the plan's summary, and updates calendar events from chats so they leave the messages out.
     func tidyChatNotes() {
@@ -78,6 +74,7 @@ extension AppDelegate {
         for id in changed where store.decision(id) == .attending && store.state.calendarItems[id] != nil { syncCalendar(id) }
     }
 
+    /// Rewrites the crew details on calendar events for rides you're going to.
     func resyncCalendar() {
         guard calendar.authorised else { return }
         for (id, d) in store.state.decisions where d == .attending && store.state.calendarItems[id] != nil { syncCalendar(id) }

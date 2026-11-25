@@ -23,5 +23,7 @@ struct RideSummary: View {
             }
             .multilineTextAlignment(.leading)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(model.decision(ride.id).spoken(needsCheck: ride.needsCheck == true))
     }
 }

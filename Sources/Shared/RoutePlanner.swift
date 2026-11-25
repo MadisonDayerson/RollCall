@@ -14,6 +14,9 @@ enum RoutePlanner {
         var metres: Double
         var seconds: Double
 
+        /// Tells one route from another, so a map is drawn afresh when the route changes.
+        var key: String { stops.map { "\($0.latitude),\($0.longitude)" }.joined(separator: ";") + "|\(metres)" }
+
         /// The whole road route as one line of spots.
         var line: [CLLocationCoordinate2D] {
             legs.flatMap { leg in let p = leg.points(); return (0..<leg.pointCount).map { p[$0].coordinate } }
@@ -76,27 +79,29 @@ enum RoutePlanner {
         request.naturalLanguageQuery = place
         // Places in the rider's part of the world first: "Shell Coldstream", not one overseas.
         request.region = MKCoordinateRegion(center: home, latitudinalMeters: within, longitudinalMeters: within)
-        let spot = try? await MKLocalSearch(request: request).start().mapItems.first?.placemark.coordinate
+        let spot = try? await MKLocalSearch(request: request).start().mapItems.first?.spot
         found[key] = spot
         return spot
     }
 
     private static func drive(from a: CLLocationCoordinate2D, to b: CLLocationCoordinate2D, avoidHighways: Bool) async -> MKRoute? {
         let request = MKDirections.Request()
-        request.source = MKMapItem(placemark: MKPlacemark(coordinate: a))
-        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: b))
+        request.source = MKMapItem.at(a)
+        request.destination = MKMapItem.at(b)
         request.transportType = .automobile
         if avoidHighways { request.highwayPreference = .avoid }
         return try? await MKDirections(request: request).calculate().routes.first
     }
 
     /// "123 km · about 2 h 10 min riding · Frankston → Healesville", or "the organiser's route" for a route link.
-    static func describe(_ p: Planned, places: [String], notes: String) -> String {
+    /// `arriving` is a ride at one place, with the way there from your suburb.
+    static func describe(_ p: Planned, places: [String], notes: String, arriving: Bool) -> String {
         let km = Int((p.metres / 1000).rounded())
         let minutes = Int((p.seconds / 60 / 5).rounded()) * 5
         let time = minutes >= 60 ? "\(minutes / 60) h" + (minutes % 60 > 0 ? " \(minutes % 60) min" : "") : "\(max(minutes, 5)) min"
         // A route link's stops are map points, so it's described rather than listed.
         let through = Route.link(in: notes) != nil && places.contains { Route.point($0) != nil } ? "the organiser's route" : places.joined(separator: " → ")
-        return "\(km) km · about \(time) riding · \(through)"
+        let undecided = arriving ? Route.decidedLater(notes).map { " · \($0)" } ?? "" : ""
+        return "\(km) km · about \(time) riding · \(through)\(undecided)"
     }
 }

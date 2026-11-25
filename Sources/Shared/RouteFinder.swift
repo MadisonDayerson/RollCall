@@ -31,7 +31,9 @@ enum RouteFinder {
         let text = [ride.title, ride.location.isEmpty ? "" : "Location: " + ride.location, ride.notes]
             .filter { !$0.isEmpty }.joined(separator: "\n")
         guard let d = await RideDetails.extract(RideDetails.input(post: text)) else { return guessed }
-        let read = await checked([d.meet ?? ride.location] + d.stops + [d.destination ?? ""], ride: ride, home: home)
+        // The model can't tell which week's meeting place it is, so the ride's own is kept.
+        let meet = MeetingPlaces.varies(ride) ? nil : d.meet
+        let read = await checked([meet ?? ride.location] + d.stops + [d.destination ?? ""], ride: ride, home: home)
         return read.count > guessed.count ? read : guessed
     }
 

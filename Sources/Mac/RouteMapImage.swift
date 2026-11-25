@@ -24,14 +24,9 @@ enum RouteMapImage {
         return cache
     }()
 
-    /// Which route a picture shows.
-    static func key(_ route: RoutePlanner.Planned) -> String {
-        route.stops.map { "\($0.latitude),\($0.longitude)" }.joined(separator: ";") + "|\(route.metres)"
-    }
-
     /// `scale` is the screen's pixels per point.
     static func draw(_ route: RoutePlanner.Planned, size: CGSize, scale: CGFloat, dark: Bool) async -> Drawn? {
-        let key = "\(key(route))|\(size.width)x\(size.height)@\(scale)|\(dark)" as NSString
+        let key = "\(route.key)|\(size.width)x\(size.height)@\(scale)|\(dark)" as NSString
         if let kept = drawn.object(forKey: key) { return kept }
         let options = MKMapSnapshotter.Options()
         options.size = size

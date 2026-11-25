@@ -16,7 +16,8 @@
   conversations waiting to be looked at go after two weeks, and places are only remembered for rides RollCall
   still has. Removing a chat removes what was kept from it.
 - **You're in control.** Settings → Privacy → **Delete all data** removes everything RollCall kept
-  on your Mac and disconnects Beeper.
+  on your Mac and disconnects Beeper, and takes away the file it shares with your iPhone and iPad. The iPhone and iPad
+  app's own **Delete all data** does the same there.
 - **What goes online.** Only this, with no cookies or details about you:
   - **Sources:** the pages and calendars on your Sources list. **Refresh** also downloads the event pages of the rides
     it looks for more details about (never Facebook or Instagram).
@@ -32,9 +33,10 @@
     Booked roadworks are kept on your Mac between downloads; they're public road data, nothing about you.
   - **Updates:** it checks this project's GitHub page. An update is only installed if it comes from those releases and
     its seal shows it hasn't been changed.
-- **Sharing with your iPhone and iPad** (only if you turn it on). Your rides, choices, ride changes and sources
-  (including private calendar links) go to a RollCall folder in your own iCloud Drive, where RollCall on your
+- **Sharing with your iPhone and iPad** (only if you turn it on). Your rides, choices, ride changes, sources
+  (including private calendar links), riding-together details and how long past rides are kept go to a RollCall folder in your own iCloud Drive, where RollCall on your
   iPhone and iPad reads them. Chat messages don't: rides from chats, and your changes to them, are shared without them.
+  Turning sharing off leaves the folder in iCloud Drive, for when you turn it on again; delete it there if you don't want it.
 - **What you share.** Rides you're going to are added to the RollCall calendar, in the calendar account you
   choose. Text from chat messages isn't added, except a detail Refresh found that you add yourself.
 

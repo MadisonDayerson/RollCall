@@ -5,7 +5,7 @@ extension PhoneModel {
     func setHome(_ place: String) async -> String? {
         let place = place.trimmingCharacters(in: .whitespaces)
         guard !place.isEmpty else { return "Type your suburb or town." }
-        guard let found = try? await CLGeocoderShim.find(place) else {
+        guard let found = try? await Places.home(place) else {
             return "Couldn't find “\(place)”. Try a suburb or town with its state, like Ringwood VIC or Newtown NSW."
         }
         store.setHome(found, typed: place)
@@ -15,6 +15,13 @@ extension PhoneModel {
 
     func change(_ edit: (inout Settings) -> Void) {
         edit(&store.state.settings)
+        saved()
+    }
+
+    /// Sets how many days past rides are kept, and deletes any that are over it.
+    func keepPastRides(_ days: Int) {
+        store.state.settings.keepDismissedDays = days
+        store.prune(refreshedSources: [], refreshStarted: Date())
         saved()
     }
 
@@ -61,6 +68,7 @@ extension PhoneModel {
         RideNotice.clear()
         try? FileManager.default.removeItem(at: store.file)
         store.state = AppState()
+        lookups = [:]
         state = store.state
     }
 }

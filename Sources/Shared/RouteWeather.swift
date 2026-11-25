@@ -95,20 +95,20 @@ enum RouteWeather {
         }
     }
 
-    private static var fetched: [URL: (at: Date, forecasts: [Forecast])] = [:]
+    private static var fetched: [URL: (at: Date, data: Data)] = [:]
 
-    /// The forecasts along the route, kept for an hour in memory.
+    /// The forecasts along the route. Open-Meteo's reply is kept for an hour in memory, and read again for when you'd
+    /// be at each point, which changes with the ride's time or stops.
     @MainActor
     static func fetch(_ points: [Point], now: Date = Date()) async -> [Forecast]? {
         guard let url = url(for: points) else { return nil }
-        if let kept = fetched[url], now.timeIntervalSince(kept.at) < 3600 { return kept.forecasts }
+        if let kept = fetched[url], now.timeIntervalSince(kept.at) < 3600 { return read(kept.data, for: points) }
         var request = URLRequest(url: url, timeoutInterval: 20)
         request.setValue(Web.userAgent, forHTTPHeaderField: "User-Agent")
         guard let (data, reply) = try? await Net.session.data(for: request),
               (reply as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        let forecasts = read(data, for: points)
-        fetched[url] = (now, forecasts)
-        return forecasts
+        fetched[url] = (now, data)
+        return read(data, for: points)
     }
 
     /// When you'd leave the route's first place: the ride's start, or earlier by the riding time when the route

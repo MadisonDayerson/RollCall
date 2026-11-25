@@ -35,8 +35,11 @@ enum Format {
         }
     }
 
-    static func when(_ ride: RideEvent) -> String {
-        ride.allDay ? "\(day.string(from: ride.start)), all day" : "\(day.string(from: ride.start)), \(time.string(from: ride.start))"
+    /// `end` adds when it finishes, on the ride's page.
+    static func when(_ ride: RideEvent, end: Bool = false) -> String {
+        if ride.allDay { return "\(day.string(from: ride.start)), all day" }
+        let finish = end ? ride.end.map { " – " + time.string(from: $0) } ?? "" : ""
+        return "\(day.string(from: ride.start)), \(time.string(from: ride.start))\(finish)"
     }
 
     static func place(_ ride: RideEvent) -> String? {
