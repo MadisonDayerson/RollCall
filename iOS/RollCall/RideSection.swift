@@ -3,11 +3,11 @@ import SwiftUI
 /// One section of the rides list: a heading that opens and closes, and its rides. Skipped and Past start closed, as on
 /// the Mac; whatever you open or close is remembered.
 struct RideSection: View {
-    let section: PhoneModel.Section
+    let section: GroupedRides
     @AppStorage private var open: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(section: PhoneModel.Section) {
+    init(section: GroupedRides) {
         self.section = section
         _open = AppStorage(wrappedValue: ![.skipped, .past].contains(section.group), "open\(section.group.rawValue)Rides")
     }

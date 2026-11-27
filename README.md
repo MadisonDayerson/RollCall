@@ -24,8 +24,9 @@ A setup guide then takes you through your area, chats, groups and calendar. Open
 
 ## Using it
 
-- Click **RC** in the menu bar to see upcoming rides and mark them **Going**, **Maybe** or **Skip**.
-- Choose **Open RollCall…** for the full window: your rides, chat plans to review, sources and settings.
+- Click **RC** in the menu bar and choose **Open RollCall…** for the full window. **Home** shows your next ride, this
+  week and next, and rides to decide on; **Rides** lists them all, or shows a week or month. Mark each ride **Going**,
+  **Maybe** or **Skip** there.
 - Click **+** to add a ride (a poster, a post, a calendar file or your own) or a source to keep checking.
 
 The [guide](docs/GUIDE.md) covers the rest: [group chats](docs/GUIDE.md#group-chats),

@@ -1,0 +1,21 @@
+{
+  "fill" : { "linear-gradient" : [ "extended-gray:0.17000,1.00000", "extended-gray:0.00000,1.00000" ] },
+  "groups" : [
+    {
+      "layers" : [ { "image-name" : "RC.png", "name" : "RC" } ],
+      "shadow" : { "kind" : "neutral", "opacity" : 0.5 },
+      "specular" : true,
+      "translucency" : { "enabled" : false, "value" : 0.5 }
+    },
+    {
+      "layers" : [
+        { "image-name" : "Name.png", "name" : "Name" },
+        { "image-name" : "Frame.png", "name" : "Frame" }
+      ],
+      "shadow" : { "kind" : "none", "opacity" : 0.5 },
+      "specular" : false,
+      "translucency" : { "enabled" : false, "value" : 0.5 }
+    }
+  ],
+  "supported-platforms" : { "squares" : [ "iOS" ] }
+}

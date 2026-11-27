@@ -78,7 +78,7 @@ struct StepCount: ViewModifier {
     }
 }
 
-/// The wide button at the bottom of every page.
+/// The wide glass button at the bottom of every page: black, or white in dark mode, like the logo.
 struct SetupFooter: ViewModifier {
     let title: String
     var filled = true
@@ -89,7 +89,7 @@ struct SetupFooter: ViewModifier {
     func body(content: Content) -> some View {
         content.safeAreaBar(edge: .bottom) {
             Group {
-                if filled { button.buttonStyle(.borderedProminent) } else { button.buttonStyle(.bordered) }
+                if filled { button.buttonStyle(.glassProminent).tint(.primary) } else { button.buttonStyle(.glass) }
             }
             .controlSize(.large)
             .disabled(working || disabled)
@@ -101,7 +101,11 @@ struct SetupFooter: ViewModifier {
 
     private var button: some View {
         Button(action: action) {
-            Group { if working { ProgressView() } else { Text(title) } }.frame(maxWidth: .infinity)
+            Group { if working { ProgressView() } else { Text(title) } }
+                .fontWeight(.semibold)
+                // Left to the system, it's white on white in dark mode.
+                .foregroundStyle(filled && !working && !disabled ? DateBadge.paper : .primary)
+                .frame(maxWidth: .infinity)
         }
     }
 }
@@ -114,7 +118,7 @@ struct CloseSetup: ViewModifier {
         content.toolbar {
             if model.settingUp {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close", systemImage: "xmark") { Task { await model.finishSetup() } }
+                    Button(role: .close) { Task { await model.finishSetup() } }
                 }
             }
         }

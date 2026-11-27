@@ -1,15 +1,17 @@
 // Draws the gothic lettering the window uses: black letters on a clear background, which the app tints to
 // match the text around it, so it suits light and dark mode.
 // Run: swift Design/make_wordmark.swift Design/Wordmark.png              ("Roll Call", foot of the sidebar; pull to refresh on iPhone and iPad)
-//      swift Design/make_wordmark.swift Design/Monogram.png RC           (the "RC" on empty pages)
-//      … [text] [font file or font name]
+//      swift Design/make_wordmark.swift Design/Monogram.png RC 600             (the "RC" on empty pages; opening on iPhone and iPad)
+//      swift Design/make_wordmark.swift Design/Title.png RollCall 300          (under that "RC")
+//      … [text] [size] [font file or font name]
 import AppKit
 import CoreText
 
 let args = Array(CommandLine.arguments.dropFirst())
 let out = args.first ?? "Wordmark.png"
 let text = args.count > 1 ? args[1] : "Roll Call"
-let fontChoice = args.count > 2 ? args[2] : "Design/fonts/bosieh/Bosieh-Regular.otf"
+let size = args.count > 2 ? Double(args[2])! : 200
+let fontChoice = args.count > 3 ? args[3] : "Design/fonts/bosieh/Bosieh-Regular.otf"
 
 /// A font from a file in this folder, or one installed on the Mac.
 func font(_ choice: String, size: Double) -> CTFont {
@@ -22,7 +24,7 @@ func font(_ choice: String, size: Double) -> CTFont {
 }
 
 let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [
-    .init(kCTFontAttributeName as String): font(fontChoice, size: 200),
+    .init(kCTFontAttributeName as String): font(fontChoice, size: size),
     .init(kCTForegroundColorAttributeName as String): CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)]))
 
 // Measure the drawn letters, then draw them into a canvas that just fits, with a little room around.

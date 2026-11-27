@@ -78,18 +78,18 @@ struct RideDetail: View {
             Section {
                 Button(past ? "Remove from past rides…" : "Remove…", systemImage: "trash", role: .destructive) { confirmRemove = true }
                     .listItemTint(.red)
+                    .confirmationDialog("Remove this ride?", isPresented: $confirmRemove, titleVisibility: .visible) {
+                        Button("Remove", role: .destructive) {
+                            model.remove(ride)
+                            close()
+                        }
+                    } message: {
+                        Text(past ? "Its calendar event stays." : "It won't come back when its source is checked again.")
+                    }
             }
         }
         // Work out the route's start, stops and destination from the description; the map updates once they're found.
         .task(id: Route.fingerprint(ride)) { await model.findRoute(for: ride) }
-        .confirmationDialog("Remove this ride?", isPresented: $confirmRemove, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                model.remove(ride)
-                close()
-            }
-        } message: {
-            Text(past ? "Its calendar event stays." : "It won't come back when its source is checked again.")
-        }
     }
 
     private func openRoute(in app: MapsApp?) async {

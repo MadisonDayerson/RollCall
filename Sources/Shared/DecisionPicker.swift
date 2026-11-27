@@ -6,6 +6,12 @@ struct DecisionPicker: View {
     let decision: Decision
     let choose: (Decision) -> Void
 
+    #if os(iOS)
+    private static let padding: CGFloat = 11  // Tall enough to tap.
+    #else
+    private static let padding: CGFloat = 5
+    #endif
+
     private static let choices: [(Decision, String)] = [(.attending, "Going"), (.maybe, "Maybe"), (.skip, "Skip")]
 
     var body: some View {
@@ -15,9 +21,9 @@ struct DecisionPicker: View {
                 Button { choose(on ? .undecided : d) } label: {
                     Text(name)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
+                        .padding(.vertical, Self.padding)
                         .foregroundStyle(on ? Color.white : Color.primary)
-                        .background(on ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                        .background(on ? Color.accentColor : Color.clear, in: .capsule)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -27,7 +33,7 @@ struct DecisionPicker: View {
             }
         }
         .padding(2)
-        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.secondary.opacity(0.12), in: .capsule)
     }
 }
 

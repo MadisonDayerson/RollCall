@@ -30,13 +30,13 @@ struct SourcesView: View {
                         }
                         Button("Remove", systemImage: "trash", role: .destructive) { removing = feed }
                     }
+                    .confirmationDialog("Remove \(feed.name)?", isPresented: Binding(get: { removing?.id == feed.id }, set: { if !$0 { removing = nil } }),
+                                        titleVisibility: .visible) {
+                        Button("Remove", role: .destructive) { model.removeSource(feed.id) }
+                    } message: {
+                        Text(model.store.removalNote(feed, shared: model.macFolder != nil))
+                    }
                 }
-            }
-            .confirmationDialog("Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-                                titleVisibility: .visible, presenting: removing) { feed in
-                Button("Remove", role: .destructive) { model.removeSource(feed.id) }
-            } message: { feed in
-                Text(model.store.removalNote(feed, shared: model.macFolder != nil))
             }
             .navigationTitle("Sources")
             .overlay {
@@ -62,7 +62,7 @@ struct SourcesView: View {
                 Text(problem ?? "")
             }
             .overlay(alignment: .bottom) {
-                if working { ProgressView("Reading the source…").padding().background(.regularMaterial, in: .capsule).padding() }
+                if working { ProgressView("Reading the source…").padding().glassEffect().padding() }
             }
         }
     }

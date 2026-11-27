@@ -15,7 +15,7 @@ struct RideCalendarSections: View {
         let shown = (oneDay ? [start] : RideCalendar.days(of: span, at: day)).filter { rides[$0] != nil }
         Section {
             heading
-            RideGrid(weeks: RideCalendar.grid(of: span, at: day), rides: rides, chosen: oneDay ? start : nil) { new in
+            RideGrid(weeks: RideCalendar.grid(of: span, at: day), rides: rides, chosen: oneDay ? start : nil, decision: model.decision) { new in
                 oneDay = !(oneDay && new == start)
                 day = new
             }

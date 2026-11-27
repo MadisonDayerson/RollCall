@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let quiet = CommandLine.arguments.contains("--snapshots") || CommandLine.arguments.contains("--window")
         if !store.state.setupDone && !CommandLine.arguments.contains("--snapshots") { showSetup() }
         // Opening RollCall opens its window; starting with the Mac (Open at login) stays in the menu bar.
-        else if store.state.setupDone && !quiet && !launchedAtLogin { showWindow(page: .rides) }
+        else if store.state.setupDone && !quiet && !launchedAtLogin { showWindow(page: .home) }
         if let i = CommandLine.arguments.firstIndex(of: "--window") {
             // `--window sources` opens straight to a page (handy for checking the window).
             let page = CommandLine.arguments.dropFirst(i + 1).first.flatMap(UIModel.Page.init(rawValue:))

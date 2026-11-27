@@ -50,16 +50,6 @@ extension AppDelegate {
         }
     }
 
-    @objc func removeRide(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        removeRide(id: id)
-    }
-
-    @objc func editRide(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        editRide(id: id)
-    }
-
     /// Opens the ride's details to change. The changes stay through refreshes and go to the calendar.
     func editRide(id: String) {
         guard let ride = store.state.events[id] else { return }

@@ -35,7 +35,7 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .animation(reduceMotion ? nil : .default, value: undecided.map(\.id) + going.map(\.id))
             }
-            .background(Color(.systemGroupedBackground))
+            .glassBackdrop()
             .navigationTitle("Home")
             .navigationBarTitleDisplayMode(width == .regular ? .inline : .automatic)
             .pullToRefresh(progress: model.refreshProgress, refreshing: $pulledDown) {
@@ -44,7 +44,7 @@ struct HomeView: View {
                 Task { await model.findMoreDetails() }
             }
             .toolbar {
-                if model.refreshing, !pulledDown { ToolbarItem { ProgressView() } }
+                if model.refreshing, !pulledDown { ToolbarItem { ProgressView() }.sharedBackgroundVisibility(.hidden) }
             }
             .navigationDestination(item: $selected) { id in
                 RidePage(id: id) { selected = nil }
@@ -76,7 +76,7 @@ struct HomeView: View {
         let today = Date()
         let weeks = [today, RideCalendar.move(today, by: 1, .week)].flatMap { RideCalendar.grid(of: .week, at: $0) }
         return HomeCard(title: "This week and next", action: "Month", perform: { layout = .month; model.tab = .rides }) {
-            RideGrid(weeks: weeks, rides: RideCalendar.byDay(model.calendarRides)) { day in
+            RideGrid(weeks: weeks, rides: RideCalendar.byDay(model.calendarRides), decision: model.decision) { day in
                 model.dayToOpen = day
                 model.tab = .rides
             }
@@ -95,12 +95,16 @@ struct HomeView: View {
                     if ride.id != rides[0].id { Divider() }
                     open(ride)
                     HStack(spacing: 10) {
-                        Button("Going") { Task { await model.decide(ride.id, .attending) } }
+                        // Black on its white fill in dark mode, where the button's own text would be white too.
+                        Button { Task { await model.decide(ride.id, .attending) } } label: {
+                            Text("Going").foregroundStyle(Color(.systemBackground))
+                        }
                             .accessibilityLabel("Going: \(ride.title)")
+                            .buttonStyle(.borderedProminent).tint(.primary)
                         Button("Skip") { Task { await model.decide(ride.id, .skip) } }
                             .accessibilityLabel("Skip: \(ride.title)")
+                            .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                     .padding(.leading, 54)
                 }
             }

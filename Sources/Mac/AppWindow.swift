@@ -59,23 +59,23 @@ extension AppDelegate {
             try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
                 .write(to: folder.appendingPathComponent(name + ".png"))
         }
-        showWindow(page: .rides)
+        showWindow(page: .home)
         // `--snapshot-size 640x400` checks how the window looks tiled into a corner of the screen.
         if let i = CommandLine.arguments.firstIndex(of: "--snapshot-size"), i + 1 < CommandLine.arguments.count {
             let wh = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
             if wh.count == 2 { window?.setContentSize(NSSize(width: wh[0], height: wh[1])); window?.center() }
         }
-        if ui.rides().isEmpty { ui.rideFilter = .skipped }
-        ui.selectedRide = ui.rides().first?.id
+        await snap("0-home", window)
+        ui.page = .rides
+        let layout = ui.ridesLayout, closed = ui.closedRideSections
+        ui.ridesLayout = .list
+        ui.selectedRide = store.groupedRides().first { !$0.rides.isEmpty }?.rides.first?.id
         await snap("1-rides", window)
         // A ride Refresh is looking up more details for, with its spinner (only shown).
-        if let id = ui.rides().first?.id {
+        if let id = ui.selectedRide {
             ui.lookups[id] = .starting
             await snap("1-rides-looking", window)
-            ui.lookups[id] = nil
-        }
-        // Sample finds from Refresh (made up; they're only shown).
-        if let id = ui.selectedRide {
+            // Sample finds from Refresh (made up; they're only shown).
             ui.lookups[id] = .done([
                 .init(field: .time, value: "9:30 am – 2:00 pm", from: "Example chat"),
                 .init(field: .place, value: "Example Servo, 12 Fake St, Sunshine VIC", from: "the event page"),
@@ -84,19 +84,30 @@ extension AppDelegate {
             await snap("1-findings", window)
             ui.lookups[id] = nil
         }
-        let filter = ui.rideFilter
-        ui.rideFilter = .past
         // A sample finished ride if there isn't a real one (never saved: it's removed straight after).
         let pastDemo: RideEvent? = store.past().isEmpty ? RideEvent(
             id: "demo:past", title: "Sunday breakfast run, Black Spur", start: Date().addingTimeInterval(-2 * 86400),
             end: Date().addingTimeInterval(-2 * 86400 + 4 * 3600), allDay: false, location: "Coldstream VIC", notes: "",
             url: nil, source: "manual", sourceName: "Added by you", lastSeen: Date()) : nil
         if let pastDemo { store.state.events[pastDemo.id] = pastDemo; store.state.decisions[pastDemo.id] = .attending }
-        ui.selectedRide = store.past().first?.id
+        if let id = store.past().first?.id { ui.reveal(ride: id) }
         await snap("1-past", window)
+        // The week and month, then one day of the month.
+        ui.selectedRide = nil
+        ui.calendarDay = Date()
+        ui.oneDay = false
+        ui.ridesLayout = .week
+        await snap("1-week", window)
+        ui.ridesLayout = .month
+        await snap("1-month", window)
+        if let day = store.calendarRides().first(where: { $0.start >= Date() })?.start {
+            ui.show(day: day)
+            await snap("1-month-day", window)
+        }
+        ui.oneDay = false
         if let pastDemo { store.state.events[pastDemo.id] = nil; store.state.decisions[pastDemo.id] = nil }
         // A ride with a start and a destination, for its route map.
-        ui.rideFilter = .all
+        ui.ridesLayout = .list
         // A sample one if there isn't a real one (never saved: it's removed straight after).
         let routeDemo: RideEvent? = (store.upcoming() + store.past()).contains { Route.places(meetingPlace: $0.location, notes: $0.notes).count >= 2 } ? nil : RideEvent(
             id: "demo:route", title: "Yarra Glen to Sugarloaf Reservoir", start: Date().addingTimeInterval(86400),
@@ -110,8 +121,9 @@ extension AppDelegate {
             await snap("1-route", window)
         }
         if let routeDemo { store.state.events[routeDemo.id] = nil }
-        ui.rideFilter = filter
-        // Back from another tab: the list must redraw cleanly, with no rows left over from the last one.
+        ui.ridesLayout = layout
+        ui.closedRideSections = closed
+        // Back from another layout: the list must redraw cleanly, with no rows left over from the last one.
         ui.selectedRide = nil
         await snap("1-rides-again", window)
         ui.page = .review
@@ -254,7 +266,7 @@ extension AppDelegate {
         store.state.setupDone = true
         store.save()
         setupWindow?.close()
-        if openWindow { showWindow(page: .rides) }
+        if openWindow { showWindow(page: .home) }
         Task { await refresh() }
     }
 }

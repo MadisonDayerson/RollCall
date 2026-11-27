@@ -131,7 +131,7 @@ struct SourceDetail: View {
                         .font(.callout)
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
+                        .background(Color.orange.opacity(0.15), in: Brand.note)
                 }
 
                 switch row.kind {

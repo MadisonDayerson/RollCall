@@ -19,7 +19,7 @@ struct RouteMap: View {
             .frame(maxWidth: .infinity)
             .onGeometryChange(for: CGSize.self) { CGSize(width: $0.size.width.rounded(), height: $0.size.height.rounded()) } action: { size.value = $0 }
             .overlay { content }
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(Brand.note)
             .task(id: "\(size.value)|\(scale)|\(scheme)") { await draw() }
     }
 

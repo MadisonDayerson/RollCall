@@ -104,7 +104,7 @@ struct RoutePreview: View {
             camera = .rect(rect)
         }
         .onMapCameraChange(frequency: .onEnd) { showing = $0.rect }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
         .accessibilityElement()

@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import CoreLocation
+import Metal
 
 var failures = 0
 func check(_ cond: Bool, _ msg: String, line: Int = #line) {
@@ -1783,6 +1784,46 @@ do {
     store.merge([item(1, days: 1), item(2, days: 8)], source: "facebook-calendar", sourceName: "Facebook", now: now)
     check(store.state.events.count == 2 && store.decision(next) == .undecided, "Going to one date isn't Going to the next")
     try? FileManager.default.removeItem(at: file)
+}
+
+// The embers the opening letters burst out of and burn into (where there's a graphics chip to work them out)
+do {
+    // A picture drawn only in its top left quarter.
+    let context = CGContext(data: nil, width: 100, height: 100, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    context.fill(CGRect(x: 0, y: 50, width: 50, height: 50))
+    let picture = context.makeImage()!, size = CGSize(width: 200, height: 300), frame = CGRect(x: 60, y: 110, width: 80, height: 80)
+    let quarter = CGRect(x: 60, y: 110, width: 40, height: 40)
+    check(Fire.scatter(200, over: [(picture, frame)]).allSatisfy { quarter.contains($0) }, "embers start inside the letters")
+    if MTLCreateSystemDefaultDevice() != nil {
+        let fire = Fire(size: size, scale: 1, lit: picture, frame: frame, letters: [(picture, frame)])
+        check(fire != nil, "the fire's shaders compile")
+        if let fire {
+            let d = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: Fire.format, width: 200, height: 300, mipmapped: false)
+            (d.usage, d.storageMode) = (.renderTarget, .shared)
+            let target = fire.device.makeTexture(descriptor: d)!
+            fire.draw(at: 0.1, into: target)
+            check(fire.embersNow().contains { $0.heat > 0 }, "the letters burst in with embers")
+            fire.draw(at: Fire.wipe, into: target)
+            check(fire.embersNow().allSatisfy { $0.heat <= 0 } && fire.embersNow().contains { $0.heat < 0 },
+                  "which are out while the letters are read, and none of the letters' leaves before they burn")
+            fire.draw(at: Fire.wipe + 0.55, into: target)
+            let waiting = fire.embersNow().filter { $0.heat < 0 }.map(\.place.x)
+            check(!waiting.isEmpty && waiting.count < 1800 && waiting.reduce(0, +) / Float(waiting.count) > 82, "the left burns first")
+            fire.draw(at: Fire.wipe + 1.4, into: target)
+            let flying = fire.embersNow()
+            check(flying.allSatisfy { $0.heat >= 0 } && flying.contains { !quarter.insetBy(dx: -20, dy: -20).contains(CGPoint(x: Double($0.place.x), y: Double($0.place.y))) },
+                  "then they all do, and fly out")
+            check(flying.allSatisfy { $0.place.x >= 0 && $0.place.x <= 200 && $0.place.y <= 300 }, "inside the screen's edges")
+            fire.draw(at: Fire.seconds, into: target)
+            check(fire.embersNow().allSatisfy { $0.heat == 0 }, "and they're out by the end")
+            var pixels = [UInt8](repeating: 1, count: 200 * 300 * 4)
+            target.getBytes(&pixels, bytesPerRow: 200 * 4, from: MTLRegionMake2D(0, 0, 200, 300), mipmapLevel: 0)
+            check(pixels.allSatisfy { $0 <= 1 }, "with nothing left over the app")
+        }
+    }
+    context.clear(CGRect(x: 0, y: 0, width: 100, height: 100))
+    check(Fire.scatter(200, over: [(context.makeImage()!, frame)]).isEmpty, "no letters, no embers")
 }
 
 print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")

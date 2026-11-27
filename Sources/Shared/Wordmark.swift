@@ -17,44 +17,20 @@ struct Wordmark: View {
     @StateObject private var breath = Box(0.0)
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Near-white blue letters in a deep blue haze.
-    private static let core = Color(red: 0.62, green: 0.94, blue: 1.0)
-    private static let haze = Color(red: 0.1, green: 0.45, blue: 1.0)
-    /// The soft leading edge of the glow, in points.
-    private static let edge: CGFloat = 14
-
     var body: some View {
         let letters = picture.renderingMode(.template).resizable().scaledToFit()
         letters
             .foregroundStyle(.secondary)
             .overlay {
-                glowing(letters.foregroundStyle(Self.core).mask(alignment: .leading) { reveal }, breath: breath.value)
+                letters.foregroundStyle(Neon.core).mask(alignment: .leading) { NeonReveal(lit: lit.value) }.neonHaze(breath: breath.value)
             }
-            .overlay { glowing(letters.foregroundStyle(Self.core)).opacity(pulse.value) }
+            .overlay { letters.foregroundStyle(Neon.core).neonHaze().opacity(pulse.value) }
             .frame(maxWidth: width)
             .frame(maxWidth: .infinity)
             .accessibilityElement()
             .accessibilityLabel("Roll Call")
             .accessibilityValue(progress.value.map { "Checking sources, \(Int($0 * 100)) percent" } ?? "")
             .onChange(of: progress.value) { old, new in changed(from: old, to: new) }
-    }
-
-    /// Lit up to how far the check has got, fading out at the leading edge.
-    private var reveal: some View {
-        GeometryReader { g in
-            HStack(spacing: 0) {
-                Rectangle().frame(width: max(0, g.size.width * lit.value - Self.edge))
-                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
-                    .frame(width: lit.value > 0 ? Self.edge : 0)
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    /// The blue haze around the letters; `breath` softens it and spreads it a little further.
-    private func glowing(_ v: some View, breath: Double = 0) -> some View {
-        v.shadow(color: Self.haze, radius: 2)
-            .shadow(color: Self.haze.opacity(1 - 0.5 * breath), radius: 6 + 4 * breath)
     }
 
     private func changed(from old: Double?, to new: Double?) {

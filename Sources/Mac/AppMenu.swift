@@ -58,7 +58,7 @@ enum AppMenu {
             item("Paste", #selector(NSText.paste(_:)), "v"),
             item("Select All", #selector(NSText.selectAll(_:)), "a"),
         ])
-        let pages: [(String, UIModel.Page)] = [("Rides", .rides), ("To Review", .review), ("Sources", .sources), ("Settings", .settings)]
+        let pages: [(String, UIModel.Page)] = [("Home", .home), ("Rides", .rides), ("To Review", .review), ("Sources", .sources), ("Settings", .settings)]
         _ = menu("View", pages.enumerated().map { n, p in
             let i = item(p.0, #selector(AppDelegate.showPageMenu(_:)), "\(n + 1)", target: d)
             i.representedObject = p.1.rawValue

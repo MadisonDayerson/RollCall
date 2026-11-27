@@ -156,7 +156,7 @@ struct PlanCard: View {
             }
         }
         .padding(14)
-        .background(Color.secondary.opacity(model.selectedReview == review.id ? 0.16 : 0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(Color.secondary.opacity(model.selectedReview == review.id ? 0.16 : 0.08), in: Brand.card)
     }
 }
 

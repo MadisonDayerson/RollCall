@@ -5,25 +5,11 @@ import AppKit
 @MainActor
 final class UIModel: ObservableObject {
     enum Page: String, Hashable, CaseIterable {
-        case rides, review, sources, settings
-    }
-    enum RideFilter: String, CaseIterable {
-        case all = "All", undecided = "Undecided", going = "Going", skipped = "Skipped", past = "Past"
-
-        /// What an empty tab says: what belongs here and how rides get here.
-        var emptyText: String {
-            switch self {
-            case .all: return "No rides yet. RollCall checks your sources by itself; add more with +."
-            case .undecided: return "Nothing to decide on. New rides from your sources show up here."
-            case .going: return "Rides you mark Going show here, and go in your RollCall calendar."
-            case .skipped: return "Rides you skip show here, in case you change your mind."
-            case .past: return "Rides you mark Going move here once they're over."
-            }
-        }
+        case home, rides, review, sources, settings
     }
 
     unowned let app: AppDelegate
-    @Published var page: Page = .rides
+    @Published var page: Page = .home
     /// The Add sheet that's open, if any.
     @Published var adding: AddKind?
     @Published var selectedSource: String?
@@ -31,7 +17,13 @@ final class UIModel: ObservableObject {
     @Published var selectedReview: String?
     /// The plan Apple Intelligence is reading for the Add ride form.
     @Published var readingReview: String?
-    @Published var rideFilter: RideFilter = .all
+    /// List, week or month, remembered like the iPhone's.
+    @Published var ridesLayout = RidesLayout(rawValue: UserDefaults.standard.string(forKey: "ridesLayout") ?? "") ?? .list {
+        didSet { UserDefaults.standard.set(ridesLayout.rawValue, forKey: "ridesLayout") }
+    }
+    /// The day the week or month is at, and whether only that day's rides are listed.
+    @Published var calendarDay = Date()
+    @Published var oneDay = false
     /// Ride id -> more details Refresh is looking for, while it looks and what it found (until RollCall quits).
     @Published var lookups: [String: RideSearch.Lookup] = [:]
     private var observer: NSObjectProtocol?
@@ -52,37 +44,7 @@ final class UIModel: ObservableObject {
 
     // MARK: Rides
 
-    func rides() -> [RideEvent] {
-        if rideFilter == .past { return store.past() }
-        let all = store.upcoming()
-        switch rideFilter {
-        case .past: return []
-        // Same as the All tab's Undecided section: not decided yet, or maybe.
-        case .undecided: return all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }
-        case .all: return rideSections().flatMap(\.rides)
-        case .going: return all.filter { store.decision($0.id) == .attending }
-        case .skipped: return all.filter { store.decision($0.id) == .skip }
-        }
-    }
-
-    /// The All tab: every ride once, in folding sections.
-    struct RideSection: Identifiable {
-        var id: String { name }
-        var name: String
-        var rides: [RideEvent]
-    }
-
-    func rideSections() -> [RideSection] {
-        let all = store.upcoming()
-        return [
-            RideSection(name: "Undecided", rides: all.filter { [.undecided, .maybe].contains(store.decision($0.id)) }),
-            RideSection(name: "Going", rides: all.filter { store.decision($0.id) == .attending }),
-            RideSection(name: "Skipped", rides: all.filter { store.decision($0.id) == .skip }),
-            RideSection(name: "Past", rides: store.past()),
-        ]
-    }
-
-    func section(of id: String) -> String? { rideSections().first { $0.rides.contains { $0.id == id } }?.name }
+    func section(of id: String) -> RideGroup? { store.groupedRides().first { $0.rides.contains { $0.id == id } }?.group }
 
     /// Skipped and Past start folded away; whatever the person opens or closes is remembered.
     @Published var closedRideSections = Set((UserDefaults.standard.stringArray(forKey: "closedRideSections") ?? ["Skipped", "Past"])
@@ -95,11 +57,20 @@ final class UIModel: ObservableObject {
                 set: { open in if open { self.closedRideSections.remove(name) } else { self.closedRideSections.insert(name) } })
     }
 
-    /// Shows a ride on the Rides page, opening its section on the All tab.
+    /// Shows a ride on the Rides page, opening its section in the list.
     func reveal(ride id: String) {
-        if rideFilter != .all { rideFilter = .all }
-        if let s = section(of: id) { closedRideSections.remove(s) }
+        ridesLayout = .list
+        if let s = section(of: id) { closedRideSections.remove(s.rawValue) }
         selectedRide = id
+        page = .rides
+    }
+
+    /// Shows a day's rides on the Rides page, in the week (or the month, if that's showing), with the first one's details.
+    func show(day: Date) {
+        calendarDay = day
+        oneDay = true
+        if ridesLayout == .list { ridesLayout = .week }
+        selectedRide = RideCalendar.byDay(store.calendarRides())[Calendar.current.startOfDay(for: day)]?.first?.id
         page = .rides
     }
 

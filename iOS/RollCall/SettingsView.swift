@@ -76,6 +76,11 @@ struct SettingsView: View {
                     }
                     Link("Privacy details", destination: URL(string: "https://github.com/MadisonDayerson/RollCall#your-privacy")!)
                     Button("Delete all data…", role: .destructive) { confirmDelete = true }
+                        .confirmationDialog("Delete all RollCall data?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                            Button("Delete", role: .destructive) { model.deleteAllData() }
+                        } message: {
+                            Text("This removes your saved rides, sources and settings from this device, and what it shared with your Mac. It can't be undone.\n\nThe RollCall calendar stays in Calendar. You can delete it there if you like.")
+                        }
                 } header: {
                     PatchLabel(text: "Privacy")
                 } footer: {
@@ -84,11 +89,6 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .onAppear { home = s.homeName }
-            .confirmationDialog("Delete all RollCall data?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) { model.deleteAllData() }
-            } message: {
-                Text("This removes your saved rides, sources and settings from this device, and what it shared with your Mac. It can't be undone.\n\nThe RollCall calendar stays in Calendar. You can delete it there if you like.")
-            }
         }
     }
 }

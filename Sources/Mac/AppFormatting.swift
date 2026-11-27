@@ -9,7 +9,6 @@ extension AppDelegate {
     static let longFmt: DateFormatter = fmt("EEEE d MMMM, h:mm a")
     static let longDayFmt: DateFormatter = fmt("EEEE d MMMM '(all day)'")
     static let timeFmt: DateFormatter = fmt("h:mm a")
-    static let monthFmt: DateFormatter = fmt("yyyy-MM")
     static let relative: RelativeDateTimeFormatter = {
         let r = RelativeDateTimeFormatter()
         r.unitsStyle = .full

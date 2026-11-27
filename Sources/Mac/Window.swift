@@ -9,6 +9,7 @@ struct MainView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: Binding(get: { model.page }, set: { if let p = $0 { model.page = p } })) {
+                Label("Home", systemImage: "house").tag(UIModel.Page.home)
                 // The tag must come last: a badge added after it hides the tag and the row can't be selected.
                 Label("Rides", systemImage: "motorcycle")
                     .badge(model.undecidedCount)
@@ -25,12 +26,16 @@ struct MainView: View {
                 if let img = Brand.wordmark { Wordmark(picture: Image(nsImage: img), progress: model.app.refreshProgress).padding(.bottom, 14) }
             }
         } detail: {
-            switch model.page {
-            case .rides: RidesPage(model: model)
-            case .review: ReviewPage(model: model)
-            case .sources: SourcesPage(model: model)
-            case .settings: SettingsPage(model: model)
+            Group {
+                switch model.page {
+                case .home: HomePage(model: model)
+                case .rides: RidesPage(model: model)
+                case .review: ReviewPage(model: model)
+                case .sources: SourcesPage(model: model)
+                case .settings: SettingsPage(model: model)
+                }
             }
+            .clearTopEdge()
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -128,36 +133,40 @@ struct ListAndDetail<ListContent: View, Detail: View>: View {
                     list.frame(maxWidth: .infinity, maxHeight: .infinity)
                     if showingDetail {
                         Color.black.opacity(0.12)
+                            .ignoresSafeArea(edges: .top)
                             .contentShape(Rectangle())
                             .onTapGesture(perform: close)
                             .accessibilityHidden(true)  // Back does the same
                             .transition(.opacity)
                         drawer
-                            .frame(width: max(g.size.width - 28, 0))
+                            .frame(width: max(g.size.width - 36, 0))
+                            .padding([.trailing, .bottom], 8)
                             // With Reduce Motion on, it fades in instead of sliding.
                             .transition(reduceMotion ? .opacity : .move(edge: .trailing))
                     }
                 }
-                .clipped()
                 .animation(.spring(response: 0.32, dampingFraction: 0.9), value: showingDetail)
             }
         }
     }
 
     private var drawer: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: close) { Label(back, systemImage: "chevron.left") }
-                    .buttonStyle(.borderless)
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
+        detail.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .floatingBar(.top) {
+                HStack {
+                    Button(action: close) { Label(back, systemImage: "chevron.left") }
+                        .glassButton()
+                        .keyboardShortcut(.cancelAction)
+                    Spacer()
+                }
+                .padding(10)
+                .background(Brand.paper)  // or the list behind the drawer would show faintly through the bar
             }
-            .padding(.horizontal, 12).padding(.vertical, 8)
-            Divider()
-            detail.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .background(Color(nsColor: .windowBackgroundColor))
-        .shadow(color: .black.opacity(0.18), radius: 8, x: -2)
+            .clipShape(Brand.panel)
+            // A fine edge, which sets it apart in dark mode, where the shadow doesn't show.
+            .overlay(Brand.panel.strokeBorder(Color.primary.opacity(0.12)).allowsHitTesting(false))
+            // The shadow is the panel's own, not its text's.
+            .background(Brand.panel.fill(Brand.paper).shadow(color: .black.opacity(0.22), radius: 12, y: 3))
     }
 }
 

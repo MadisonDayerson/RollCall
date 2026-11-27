@@ -188,14 +188,15 @@ struct GuideFooter: View {
             Button(step == .done ? "Back" : "Leave Beeper setup") {
                 if step == .done { model.guideBack() } else { model.leaveGuide() }
             }
+            .glassButton()
             Spacer()
-            if step != .done, step != .download { Button("Back") { model.guideBack() } }
+            if step != .done, step != .download { Button("Back") { model.guideBack() }.glassButton() }
             if step == .done {
                 Button("Continue") { model.leaveGuide(); model.next() }
-                    .keyboardShortcut(.defaultAction).brandFill()
+                    .glassButton(prominent: true).keyboardShortcut(.defaultAction).brandFill()
             } else {
                 Button("Next") { model.guideNext() }
-                    .keyboardShortcut(.defaultAction).brandFill()
+                    .glassButton(prominent: true).keyboardShortcut(.defaultAction).brandFill()
             }
         }
     }

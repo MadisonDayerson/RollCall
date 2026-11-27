@@ -24,7 +24,7 @@ struct AddSheet: View {
             }
             HStack {
                 Spacer()
-                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction).controlSize(.large)
             }
         }
         .padding(24)
@@ -78,6 +78,7 @@ struct AddSheet: View {
             Spacer()
             Button("Add link", action: go)
                 .keyboardShortcut(.defaultAction)
+                .controlSize(.large)
                 .disabled(link.value.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         Divider()
@@ -112,7 +113,25 @@ struct AddSheet: View {
             .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+        .buttonStyle(ChoiceButton())
+    }
+}
+
+/// A box to choose from: it lights up under the pointer and more when pressed, as glass controls do.
+struct ChoiceButton: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Choice(label: configuration.label, pressed: configuration.isPressed)
+    }
+
+    private struct Choice<Label: View>: View {
+        let label: Label
+        let pressed: Bool
+        @StateObject private var hovering = Box(false)
+
+        var body: some View {
+            label
+                .background(Color.primary.opacity(pressed ? 0.16 : hovering.value ? 0.1 : 0.06), in: Brand.card)
+                .onHover { hovering.value = $0 }
+        }
     }
 }

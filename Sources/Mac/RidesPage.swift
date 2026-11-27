@@ -5,56 +5,25 @@ import AppKit
 
 struct RidesPage: View {
     @ObservedObject var model: UIModel
-    @StateObject private var width = Box(CGFloat(0))  // starts as the menu, which never widens the window
 
     var body: some View {
-        let rides = model.rides()
         ListAndDetail(showingDetail: model.selectedRide != nil, back: "Rides", close: { model.selectedRide = nil }) {
-            VStack(spacing: 0) {
-                // Tabs when there's room; a menu when the list is narrow (beside a ride's details). Measured
-                // rather than left to the tabs, whose full width would otherwise push the window wider.
-                Group {
-                    if width.value >= 440 {
-                        Picker("Show", selection: $model.rideFilter) {
-                            ForEach(UIModel.RideFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                    } else {
-                        Picker("Show", selection: $model.rideFilter) {
-                            ForEach(UIModel.RideFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.menu)
-                        .fixedSize()
-                    }
+            Group {
+                switch model.ridesLayout {
+                case .list: list
+                case .week: RideCalendarView(model: model, span: .week)
+                case .month: RideCalendarView(model: model, span: .month)
                 }
+            }
+            .floatingBar(.top) {
+                Picker("Show", selection: $model.ridesLayout) {
+                    ForEach(RidesLayout.allCases, id: \.self) { Text($0.name).tag($0) }
+                }
+                .pickerStyle(.segmented)
                 .labelsHidden()
-                // The menu sits at the left, in line with the section headings; the tabs stay centred.
-                .frame(maxWidth: .infinity, alignment: width.value >= 440 ? .center : .leading)
+                .fixedSize()
+                .frame(maxWidth: .infinity)
                 .padding(10)
-                .background(GeometryReader { g in
-                    Color.clear
-                        .onAppear { width.value = g.size.width }
-                        .onChange(of: g.size.width) { _, w in width.value = w }
-                })
-                if rides.isEmpty {
-                    EmptyState(text: model.app.refreshing && model.rideFilter != .past ? "Checking sources…" : model.rideFilter.emptyText)
-                } else if model.rideFilter == .all {
-                    // Drawn by hand rather than as an outline list: macOS's outline list left stray, wrongly placed
-                    // section headings behind when sections opened and closed.
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(model.rideSections()) { s in
-                                RideSectionView(section: s, model: model)
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 12)
-                    }
-                } else {
-                    List(selection: $model.selectedRide) {
-                        ForEach(rides, id: \.id) { ListRideRow(ride: $0, model: model).tag($0.id) }
-                    }
-                }
             }
         } detail: {
             Group {
@@ -67,23 +36,120 @@ struct RidesPage: View {
         }
         .navigationTitle("Rides")
     }
+
+    @ViewBuilder private var list: some View {
+        let sections = model.store.groupedRides()
+        if sections.allSatisfy(\.rides.isEmpty) {
+            EmptyState(text: model.app.refreshing ? "Checking sources…" : "No rides yet. RollCall checks your sources by itself; add more with +.")
+        } else {
+            // Drawn by hand rather than as an outline list: macOS's outline list left stray, wrongly placed
+            // section headings behind when sections opened and closed.
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(sections) { RideSectionView(section: $0, model: model) }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+            }
+        }
+    }
 }
 
-/// One section of the All tab: a heading that opens and closes, and its rides.
+/// The week or month: the days in a grid, with their rides listed underneath. Choosing a day lists just its rides;
+/// choosing it again goes back to all of them.
+struct RideCalendarView: View {
+    @ObservedObject var model: UIModel
+    let span: RideCalendar.Span
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let rides = RideCalendar.byDay(model.store.calendarRides())
+        let day = model.calendarDay
+        let start = Calendar.current.startOfDay(for: day)
+        let shown = (model.oneDay ? [start] : RideCalendar.days(of: span, at: day)).filter { rides[$0] != nil }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    heading
+                    RideGrid(weeks: RideCalendar.grid(of: span, at: day), rides: rides, chosen: model.oneDay ? start : nil,
+                             decision: model.store.decision) { new in
+                        model.oneDay = !(model.oneDay && new == start)
+                        model.calendarDay = new
+                        // A day with rides shows its first one's details.
+                        if model.oneDay, let first = rides[new]?.first { model.selectedRide = first.id }
+                    }
+                    Text("Filled: going. Dashed: maybe. Outlined: undecided.")
+                        .font(.caption).foregroundStyle(.secondary).padding(.top, 8)
+                }
+                .padding(.horizontal, 12).padding(.bottom, 12)
+                .glassCard()
+                .padding(.top, 8)
+                ForEach(shown, id: \.self) { date in
+                    PatchLabel(text: Format.day.string(from: date)).padding(.leading, 20).padding(.top, 18).padding(.bottom, 7)
+                    Divider()
+                    ForEach(rides[date] ?? [], id: \.id) { r in
+                        SectionRideRow(ride: r, model: model)
+                        Divider().padding(.leading, 20)
+                    }
+                }
+                if shown.isEmpty {
+                    Text(model.oneDay ? "No rides on \(Format.day.string(from: day))." : span == .week ? "No rides this week." : "No rides this month.")
+                        .foregroundStyle(.secondary).padding(.top, 18)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .glassBackdrop()
+    }
+
+    private var heading: some View {
+        HStack(spacing: 4) {
+            Text(Format.span(span, at: model.calendarDay)).font(.headline)
+            Spacer()
+            if !RideCalendar.days(of: span, at: model.calendarDay).contains(Calendar.current.startOfDay(for: Date())) {
+                Button("Today") { show(Date()) }.padding(.trailing, 8)
+            }
+            arrow("Previous \(name)", "chevron.left", -1)
+            arrow("Next \(name)", "chevron.right", 1)
+        }
+        .buttonStyle(.borderless)
+        .padding(.vertical, 8)
+    }
+
+    private func arrow(_ title: String, _ icon: String, _ n: Int) -> some View {
+        Button { show(RideCalendar.move(model.calendarDay, by: n, span)) } label: {
+            Label(title, systemImage: icon).labelStyle(.iconOnly).frame(width: 28, height: 28).contentShape(Rectangle())
+        }
+        .help(title)
+    }
+
+    private var name: String { span == .week ? "week" : "month" }
+
+    /// Goes to the week or month with the day in it.
+    private func show(_ new: Date) {
+        withAnimation(reduceMotion ? nil : .default) {
+            model.calendarDay = new
+            model.oneDay = false
+        }
+    }
+}
+
+/// One section of the list: a heading that opens and closes, and its rides.
 struct RideSectionView: View {
-    let section: UIModel.RideSection
+    let section: GroupedRides
     @ObservedObject var model: UIModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let open = model.rideSectionOpen(section.name)
+        let open = model.rideSectionOpen(section.group.rawValue)
         VStack(alignment: .leading, spacing: 0) {
             Button { withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { open.wrappedValue.toggle() } } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(width: 12)
                         .rotationEffect(.degrees(open.wrappedValue ? 90 : 0))
-                    PatchLabel(text: section.name, count: section.rides.count)
+                    PatchLabel(text: section.group.rawValue, count: section.rides.count)
                     Spacer()
                 }
                 .padding(.top, 14).padding(.bottom, 7)
@@ -93,7 +159,7 @@ struct RideSectionView: View {
             Divider()
             if open.wrappedValue {
                 if section.rides.isEmpty {
-                    Text(section.name == "Past" ? "Rides you went on show here once they're over, for as long as Settings → Privacy keeps them." : "None right now.")
+                    Text(section.group == .past ? "Rides you went on show here once they're over, for as long as Settings → Privacy keeps them." : "None right now.")
                         .font(.callout).foregroundStyle(.secondary)
                         .padding(.leading, 28).padding(.vertical, 8)
                 }
@@ -107,19 +173,7 @@ struct RideSectionView: View {
     }
 }
 
-/// A ride in a list: its ⋯ button shows under the pointer or when it's chosen.
-struct ListRideRow: View {
-    let ride: RideEvent
-    @ObservedObject var model: UIModel
-    @StateObject private var hovering = Box(false)
-
-    var body: some View {
-        RideRow(ride: ride, model: model, showMenu: model.selectedRide == ride.id || hovering.value)
-            .onHover { hovering.value = $0 }
-    }
-}
-
-/// A ride on the All tab, which is drawn by hand: it lights up under the pointer and when chosen, like a list row.
+/// A ride in the list or under a day, which is drawn by hand: it lights up under the pointer and when chosen, like a list row.
 struct SectionRideRow: View {
     let ride: RideEvent
     @ObservedObject var model: UIModel
@@ -130,7 +184,7 @@ struct SectionRideRow: View {
         RideRow(ride: ride, model: model, showMenu: selected || hovering.value)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 6).padding(.horizontal, 8)
-            .background(Color.primary.opacity(selected ? 0.1 : hovering.value ? 0.05 : 0), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.primary.opacity(selected ? 0.1 : hovering.value ? 0.05 : 0), in: Brand.note)
             .contentShape(Rectangle())
             .onTapGesture { model.selectedRide = ride.id }
             .onHover { inside in withAnimation(.easeOut(duration: 0.12)) { hovering.value = inside } }
@@ -218,7 +272,7 @@ struct RideDetail: View {
                         .font(.callout)
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
+                        .background(Color.orange.opacity(0.15), in: Brand.note)
                 }
                 RideAbout(ride: ride, model: model).id(ride.id)
 

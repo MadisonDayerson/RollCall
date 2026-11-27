@@ -1,11 +1,5 @@
 import SwiftUI
 
-/// How the Rides tab shows the rides.
-enum RidesLayout: String, CaseIterable {
-    case list, week, month
-    var name: String { rawValue.capitalized }
-}
-
 /// The rides as a list, or the week's or month's in a calendar. With room (most iPad windows) a ride's page is beside the
 /// list, under one title bar: a split view has its own bars, which ended up under the floating tabs when an iPad
 /// window changed shape. Otherwise the page opens over the list.
@@ -30,9 +24,8 @@ struct RidesView: View {
                 }
                 .background(Color(.systemGroupedBackground))
                 .navigationBarTitleDisplayMode(.inline)
-                // Two lists scroll under the bar, so it's kept solid: otherwise what's scrolled shows around the tabs.
-                .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
-                .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+                // A hard edge would be over only the half that scrolls.
+                .scrollEdgeEffectStyle(.soft, for: .top)
             } else {
                 list.navigationDestination(item: $selected) { id in
                     RidePage(id: id) { selected = nil }.navigationTitle(model.state.events[id]?.title ?? "").navigationBarTitleDisplayMode(.inline)
@@ -49,20 +42,14 @@ struct RidesView: View {
             day = new
             oneDay = true
             if layout == .list { layout = .week }
-            selected = nil
+            // The day's first ride, so its details open, as on the Mac.
+            selected = RideCalendar.byDay(model.calendarRides)[Calendar.current.startOfDay(for: new)]?.first?.id
             model.dayToOpen = nil
         }
     }
 
     private var list: some View {
         List(selection: $selected) {
-            Section {
-                Picker("Show", selection: $layout) {
-                    ForEach(RidesLayout.allCases, id: \.self) { Text($0.name).tag($0) }
-                }
-                .pickerStyle(.segmented).labelsHidden()
-                .listRowBackground(Color.clear).listRowInsets(EdgeInsets())
-            }
             switch layout {
             case .list:
                 ForEach(model.sections) { if !$0.rides.isEmpty { RideSection(section: $0) } }
@@ -79,7 +66,17 @@ struct RidesView: View {
         }
         .overlay { if layout == .list, model.sections.allSatisfy(\.rides.isEmpty) { empty } }
         .toolbar {
-            if model.refreshing, !pulledDown { ToolbarItem { ProgressView() } }
+            if model.refreshing, !pulledDown { ToolbarItem { ProgressView() }.sharedBackgroundVisibility(.hidden) }
+            ToolbarItem {
+                Menu {
+                    Picker("Show", selection: $layout) {
+                        ForEach(RidesLayout.allCases, id: \.self) { Label($0.name, systemImage: $0.icon).tag($0) }
+                    }
+                } label: {
+                    Label("Show", systemImage: layout.icon)
+                }
+                .accessibilityValue(layout.name)
+            }
         }
     }
 

@@ -6,16 +6,12 @@ struct SetupView: View {
     @ObservedObject var model: SetupModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            StepDots(model: model)
-                .padding(.top, 18).padding(.bottom, 10)
-            Divider()
-            // Each step fades into the next, and the dots fill in as you go.
-            ScrollView {
-                Group {
-                    if model.guide != nil {
-                        BeeperGuide(model: model)
-                    } else {
+        // Each step fades into the next, and the dots fill in as you go.
+        ScrollView {
+            Group {
+                if model.guide != nil {
+                    BeeperGuide(model: model)
+                } else {
                     switch model.step {
                     case .welcome: WelcomeStep(model: model)
                     case .home: HomeStep(model: model)
@@ -25,48 +21,66 @@ struct SetupView: View {
                     case .together: TogetherStep(model: model)
                     case .finish: FinishStep(model: model)
                     }
-                    }
                 }
-                .id(model.step)
-                .transition(.opacity)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 36).padding(.vertical, 24)
             }
-            Divider()
-            if let g = model.guide {
-                GuideFooter(model: model, step: g).padding(16)
-            } else {
-            HStack {
-                if model.step == .welcome {
-                    Button("Skip setup") { model.app.finishSetup(openWindow: false) }
-                } else {
-                    Button("Back") { model.back() }
-                }
-                Spacer()
-                if model.step == .finish {
-                    Button("Start") { model.app.finishSetup(openWindow: true) }
-                        .keyboardShortcut(.defaultAction).brandFill()
-                } else {
-                    // Once a step is done, Continue is the only choice (no "Skip" for something already done).
-                    if ![.welcome, .home].contains(model.step) && !model.stepDone {
-                        Button("Skip") { model.next() }
-                    }
-                    Button(model.step == .welcome ? "Get started" : "Continue") { model.next() }
-                        .keyboardShortcut(.defaultAction).brandFill()
-                }
+            .id(model.step)
+            .transition(.opacity)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 36).padding(.vertical, 24)
+        }
+        .floatingBar(.top) { StepDots(model: model).padding(.top, 14).padding(.bottom, 10) }
+        .floatingBar(.bottom) {
+            Group {
+                if let g = model.guide { GuideFooter(model: model, step: g) } else { SetupFooter(model: model) }
             }
             .padding(16)
-            }
         }
         .frame(minWidth: 520, minHeight: 400)
         .animation(.easeInOut(duration: 0.2), value: model.step)
     }
 }
 
+struct SetupFooter: View {
+    @ObservedObject var model: SetupModel
+
+    var body: some View {
+        HStack {
+            if model.step == .welcome {
+                Button("Skip setup") { model.app.finishSetup(openWindow: false) }.glassButton()
+            } else {
+                Button("Back") { model.back() }.glassButton()
+            }
+            Spacer()
+            if model.step == .finish {
+                Button("Start") { model.app.finishSetup(openWindow: true) }
+                    .glassButton(prominent: true).keyboardShortcut(.defaultAction).brandFill()
+            } else {
+                // Once a step is done, Continue is the only choice (no "Skip" for something already done).
+                if ![.welcome, .home].contains(model.step) && !model.stepDone {
+                    Button("Skip") { model.next() }.glassButton()
+                }
+                Button(model.step == .welcome ? "Get started" : "Continue") { model.next() }
+                    .glassButton(prominent: true).keyboardShortcut(.defaultAction).brandFill()
+            }
+        }
+    }
+}
+
 extension View {
-    /// Setup's main buttons are black and white, like the logo: near-black, so their white text still reads
-    /// in dark mode. Only the filled buttons get it; ordinary buttons keep the system's own text colour.
-    func brandFill() -> some View { tint(Color(white: 0.12)) }
+    /// Setup's main buttons are black and white, like the logo: near-black, and near-white in dark mode, so the one to
+    /// choose stands out in both. Only the filled buttons get it; ordinary buttons keep the system's own text colour.
+    func brandFill() -> some View { modifier(BrandFill()) }
+}
+
+private struct BrandFill: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+
+    /// The button's own text turns black on a light fill; before macOS 26 it stays white.
+    private var blackText: Bool { if #available(macOS 26, *) { true } else { false } }
+
+    func body(content: Content) -> some View {
+        content.tint(Color(white: scheme == .dark && blackText ? 0.9 : 0.12))
+    }
 }
 
 struct StepDots: View {
@@ -106,7 +120,7 @@ struct Card<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) { content }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.secondary.opacity(0.08), in: Brand.card)
     }
 }
 

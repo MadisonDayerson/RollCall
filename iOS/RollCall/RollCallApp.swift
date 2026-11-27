@@ -20,9 +20,12 @@ enum PhoneTab { case home, rides, sources, settings }
 struct RootView: View {
     @Environment(PhoneModel.self) private var model
     @Environment(\.scenePhase) private var phase
+    /// The splash is on as RollCall opens: once, not again for another iPad window or when RollCall comes back.
+    @State private var opening = !SplashScreen.played
 
     var body: some View {
         @Bindable var model = model
+        let settingUp = !model.state.setupDone || model.settingUp
         TabView(selection: $model.tab) {
             Tab("Home", systemImage: "house", value: .home) { HomeView() }
             Tab("Rides", systemImage: "motorcycle", value: .rides) { RidesView() }
@@ -30,11 +33,16 @@ struct RootView: View {
             Tab("Settings", systemImage: "gearshape", value: .settings) { SettingsView() }
         }
         .tabViewStyle(.sidebarAdaptable)
-        .fullScreenCover(isPresented: .constant(!model.state.setupDone || model.settingUp)) { SetupView() }
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .fullScreenCover(isPresented: .constant(settingUp)) { SetupView().overlay { splash } }
         .alert("RollCall", isPresented: Binding(get: { model.problem != nil }, set: { if !$0 { model.problem = nil } })) {
             Button("OK") {}
         } message: {
             Text(model.problem ?? "")
+        }
+        .overlay {
+            // Setup covers this page, so it has the splash; black here until it does.
+            if !settingUp { splash } else if opening { Color.black.ignoresSafeArea() }
         }
         // Takes in the Mac's changes every minute while RollCall is open.
         .task(id: phase) {
@@ -55,5 +63,9 @@ struct RootView: View {
                   (model.state.lastRefresh ?? .distantPast) < Date().addingTimeInterval(-3 * 3600) else { return }
             Task { await model.refresh() }
         }
+    }
+
+    @ViewBuilder private var splash: some View {
+        if opening { SplashScreen { opening = false } }
     }
 }
